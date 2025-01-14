@@ -1,5 +1,7 @@
 cluster_name: k3s-HA
 amount_nodes: 1
+# can be overridden by node settings
+node_user: vlad
 # https://github.com/k3s-io/k3s/releases
 k3s_ver: v1.31.4+k3s1
 # https://github.com/kube-vip/kube-vip/releases
@@ -11,23 +13,24 @@ kube_vip_as_ha: 1
 kube_vip_as_lb: 1
 kube_vip_lb_range: 192.168.100.101-192.168.100.200
 cert_name: id_rsa
+# node settings
 node:
 - node_id: 1
   node_name: k3s1
   node_ip4: 192.168.100.51
   kube_vip_interface: eth1
   node_user: vlad
-  node_is_master: 1
+  node_is_control_plane: 1
   node_is_worker: 1
 - node_id: 2
   node_name: k3s2
   node_ip4: 192.168.100.52
-  node_user: vlad
-  node_is_master: 1
+  kube_vip_interface: eth1
+  node_is_control_plane: 1
   node_is_worker: 1
 - node_id: 3
   node_name: k3s3
   node_ip4: 192.168.100.53
-  node_user: vlad
-  node_is_master: 1
+  kube_vip_interface: eth1
+  node_is_control_plane: 1
   node_is_worker: 1    

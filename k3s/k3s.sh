@@ -60,8 +60,6 @@ install_k3s_tools()
 
 gen_kube_vip_manifest()
 {
-  if [[ $kube_vip_use -eq 0 ]]; then return 0; fi
-
   #local version
   #run "curl -o ~/tmp/rbac.yaml https://kube-vip.io/manifests/rbac.yaml" || exit 1
   #run "scp -i ~/.ssh/$cert_name ~/tmp/rbac.yaml $node_user@$node_ip4:~/rbac.yaml" || exit 1
@@ -88,7 +86,7 @@ gen_kube_vip_manifest()
   fi
 
   run "curl -o ~/tmp/rbac.yaml https://kube-vip.io/manifests/rbac.yaml" || exit 1
-  run "echo "---\n" >>> ~/tmp/rbac.yaml" || exit 1
+  run "echo "---" >> ~/tmp/rbac.yaml" || exit 1
   # https://kube-vip.io/docs/installation/flags/
   if [[ "$kube_vip_mode" == "ARP" ]]; then
     #--services \
@@ -101,7 +99,7 @@ gen_kube_vip_manifest()
     --arp \
     --leaderElection \
     --enableNodeLabeling \
-    > ~/tmp/kube-vip-node.yaml" || exit 1
+    >> ~/tmp/rbac.yaml" || exit 1
   else # BGP mode
     #--servicesElection
     run "docker run --network host --rm ghcr.io/kube-vip/kube-vip:$kube_vip_ver manifest daemonset \
@@ -114,16 +112,17 @@ gen_kube_vip_manifest()
     --localAS 65000 \
     --bgpRouterID 192.168.0.2 \
     --bgppeers 192.168.0.10:65000::false,192.168.0.11:65000::false
-    > ~/tmp/kube-vip-node.yaml"
+    >> ~/tmp/rbac.yaml"
   fi
-  if ! test -s ~/tmp/kube-vip-node.yaml; then echo "~/tmp/kube-vip-node.yaml file is empty"; fi
+  if ! test -s ~/tmp/rbac.yaml; then echo "~/tmp/rbac.yaml file is empty"; fi
   #while [[ $(docker inspect -f {{.State.Running}} ghcr.io/kube-vip/kube-vip:$kube_vip_ver) == "true" ]]; do
   #  sleep 1
   #done
   #if ! test -s ~/tmp/kube-vip-node.yaml; then echo "~/tmp/kube-vip-node.yaml file is empty"; fi
-  run "scp -i ~/.ssh/$cert_name ~/tmp/kube-vip-node.yaml $node_user@$node_ip4:~/kube-vip-node.yaml" || exit 1
-  run "ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo mv ~/kube-vip-node.yaml /var/lib/rancher/k3s/server/manifests/kube-vip-node.yaml'" || exit 1
-  run "ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo mv ~/kube-vip-node.yaml /var/lib/rancher/k3s/server/manifests/kube-vip-node.yaml'" || exit 1
+  run "scp -i ~/.ssh/$cert_name ~/tmp/rbac.yaml $node_user@$node_ip4:~/rbac.yaml" || exit 1
+  run "ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo mkdir -p /var/lib/rancher/k3s/server/manifests/'" || exit 1
+  run "ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo mv ~/rbac.yaml /var/lib/rancher/k3s/server/manifests/rbac.yaml'" || exit 1
+  #run "ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo mv ~/kube-vip-node.yaml /var/lib/rancher/k3s/server/manifests/kube-vip-node.yaml'" || exit 1
 }
 install_first_node()
 {
@@ -155,19 +154,29 @@ install_first_node()
   inf "Upload kube-vip RBAC Manifest. (Line:$LINENO)\n"
   
   # Step 3: Generate a kube-vip DaemonSet Manifest
-  gen_kube_vip_manifest
+  if [[ $kube_vip_use -eq 1 ]]; then gen_kube_vip_manifest; fi
 
   hl.blue "Step 2: Bootstrap First k3s Node. (Line:$LINENO)"
   # https://docs.k3s.io/cli/certificate#certificate-authority-ca-certificates
   # https://github.com/k3s-io/k3s/blob/master/contrib/util/generate-custom-ca-certs.sh
-  run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${k3s_ver} INSTALL_K3S_EXEC="server" sh -'" || exit 1
-  #run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'export INSTALL_K3S_VERSION=${k3s_ver};sudo curl -sfL https://get.k3s.io | sh -'" || exit 1
-  #run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'export INSTALL_K3S_VERSION=${k3s_ver};sudo curl -sfL https://get.k3s.io | sh -'" || exit 1
-  #run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo curl -sfL https://get.k3s.io | sh -'" || exit 1
+  # https://blog.chkpwd.com/posts/k3s-ha-installation-kube-vip-and-metallb/
+  if ! [[ $node_is_control_plane -eq 1 ]]; then err_and_exit "Error: First node has to be part of Control Plane: '$k3s_settings'." ${LINENO}; fi
+  install_k3s_cmd_parm="server --cluster-init";
+  cluster_config_ip=$node_ip4
+  if [[ $kube_vip_use -eq 1 ]]; then
+    install_k3s_cmd_parm="$install_k3s_cmd_parm \
+    --disable traefik \
+    --disable servicelb \
+    --write-kubeconfig-mode 644 \
+    --tls-san $kube_vip_address"
+    cluster_config_ip=$kube_vip_address
+  fi
+  run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${k3s_ver} sh -s - ${install_k3s_cmd_parm}'" || exit 1
+  #run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${k3s_ver} INSTALL_K3S_EXEC="server" sh -'" || exit 1
   run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo cp /etc/rancher/k3s/k3s.yaml ~/k3s.yaml'" || exit 1
   run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo chmod 777 ~/k3s.yaml'" || exit 1
   run "scp -i ~/.ssh/$cert_name $node_user@$node_ip4:./k3s.yaml ~/$cluster_name.yaml" || exit 1
-  yq -i ".clusters[0].cluster.server = \"https://${node_ip4}:6443\"" ~/$cluster_name.yaml
+  yq -i ".clusters[0].cluster.server = \"https://${cluster_config_ip}:6443\"" ~/$cluster_name.yaml
   cp ~/$cluster_name.yaml ~/.kube/$cluster_name
   #check_result $LINENO
   #run cp --backup=t ~/$cluster_name.yaml ~/.kube/$cluster_name
@@ -255,7 +264,7 @@ h2 "Install K3s cluster according parameters from '$k3s_settings' file. (Line:$L
 #source k3s-func.sh
 
 if [[ $(yq --exit-status 'tag == "!!map" or tag== "!!seq"' $k3s_settings > /dev/null) ]]; then
-  err "Error: Invalid format for YAML file: '$k3s_settings'."
+  err_and_exit "Error: Invalid format for YAML file: '$k3s_settings'." ${LINENO}
 fi
 
 # SSH agent to enter id_rsa password only one time
@@ -314,7 +323,7 @@ fi
 readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
 for node in "${nodes[@]}"; do
   eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
-  inf "          k3s_node: id='$node_id', ip4='$node_ip4', eth='$node_interface', master='$node_is_master', worker='$node_is_worker', name='$node_name', user='$node_user'"
+  inf "          k3s_node: id='$node_id', ip4='$node_ip4', eth='$node_interface', master='$node_is_control_plane', worker='$node_is_worker', name='$node_name', user='$node_user'"
   # k3s installation
   if [[ $node_id -eq 1 ]]; then # first cluster node
     first_node_address=$node_ip4
