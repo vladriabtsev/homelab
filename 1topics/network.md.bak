@@ -1,0 +1,133 @@
+## Network
+
+https://canyouseeme.org/
+https://datacentersupport.lenovo.com/us/en/products/servers/thinkserver/ts140/downloads/driver-list/
+
+
+
+
+
+
+
+### Client network switch (24 1G ports)
+	192.168.2.1 gateway, router
+	metallb in microk8s -- external load balancer
+	192.168.2.11 - 192.168.2.19
+	dhcp
+	192.168.2.21 - 192.168.2.49
+
+
+	192.168.2.71 ch1
+	192.168.2.72 ch2
+	192.168.2.73 dev
+	192.168.2.75 updated BIOS TS140, u1
+	192.168.2.76 updated BIOS TS140,
+	192.168.2.77 updated BIOS TD340
+	192.168.2.78 updated BIOS TD340, Windows 10 2004, desktop-dev
+	192.168.2.79 updated 2021 BIOS TS140, Windows 10, desktop-dad3
+	192.168.2.81 on ch1
+	192.168.2.82 on ch2
+	192.168.2.83 on dev
+	192.168.2.86 VY8RJ-N29HQ-HJMY2-3VD7H-M4JWF pg12-win2019 PostgreSql DNS: pg12-win2019-2
+	192.168.2.91 3dot-IIS
+	192.168.2.92 3dot-Ubuntu
+	192.168.2.93 viktor-win10 Windows 10 Professional CFD9J-FRNCY-K688F-QK6VP-CKCKG
+	192.168.2.? viktor-win10 Windows 10 Professional 
+	192.168.2.112 win10dev DR8YN-F747D-Y866G-QR8C8-7FR9M
+	192.168.2.115 dad-pc
+
+	192.168.2.121 3d0t-PC Viktor
+
+	192.168.2.200 files ???
+	192.168.2.221 synology downloader, admin Q1.., vladadmin Q1..
+	192.168.2.222 synology backup, witness for office cluster
+	192.168.2.225 synology office1 192.168.2.227, Q1.., vlQ1
+	192.168.2.226 synology office2 192.168.2.227
+	192.168.2.227 synology office, vladadmin Q1..
+
+	192.168.2.228 k8s-dev VM on synology office, 
+
+	192.168.108.231 Rancher, virtual on dev(.73)
+	192.168.108.232 k3s-dev, virtual on synology office, root Q4..
+	192.168.108.233 k3s-dev1, Ubuntu on TS140 vlad Q4..
+	192.168.108.234 k3s-dev2, Ubuntu on TS140
+
+    192.168.108.241 - 250 load balancer pool
+
+Virtual on synology backup
+
+
+	192.168.2.70 ch cluster virtual
+	192.168.2.227 office cluster, virtual, witness for ch cluster, iSCSI failover for ch
+	192.168.2.36 by DHCP, alpine gateway from 108 to 2, anat108to2
+   	192.168.2.91 virtual ViktorIIS, 2019
+
+
+
+???
+	192.168.2.251?(36 by DHCP) alpine gateway ???, ana108to2
+	192.168.2.7
+	192.168.2.90
+	192.168.2.99
+	192.168.2.110
+	192.168.2.111
+	192.168.2.169
+	192.168.2.176
+	
+### 109 switch 8 1G ports
+	192.168.109.73 dev
+	*192.168.109.75 mk8s1
+	*192.168.109.76 mk8s2
+	192.168.109.225 office1 synology
+	192.168.109.226 office2 synology
+	*192.168.109.222 backup synology
+	
+	virt
+	192.168.109.227 office, iSCSI failover for kubernetes
+
+### 108 switch 8 1G ports
+	to switch 8 10G ports
+	192.168.108.77 k-clr-work3
+	192.168.108.78 desktop-dev
+	192.168.108.79 desktop-dad3
+	192.168.108.222 backup synology
+		192.168.108.225 office1 synology
+		192.168.108.226 office2 synology
+	
+### 108 switch 8 10G ports
+	to switch 8 1G ports
+	192.168.108.71 ch1
+	192.168.108.72 ch2	
+	192.168.108.73 dev
+	192.168.108.75 mk8s1
+	192.168.108.76 mk8s2
+	192.168.108.225 office1 synology
+	192.168.108.226 office2 synology
+	
+	virt
+
+	192.168.108.1 alpine gateway, anat108to2
+
+	192.168.108.227 office synology, iSCSI main
+	//192.168.108.51 mck8s1 on ch1
+	//192.168.108.52 mck8s2 on ch2
+	192.168.108.53 mck8s3-virt on ch
+	192.168.108.55 debsos1 on ch1
+	192.168.108.56 debsos2 on ch2
+	192.168.108.57 debsos3 on ch
+	192.168.108.112 win10dev
+	192.168.108.81 VY8RJ-N29HQ-HJMY2-3VD7H-M4JWF sql-2019 MS SQL 2019
+	*192.168.108.82 VY8RJ-N29HQ-HJMY2-3VD7H-M4JWF sql-2019-core
+	*192.168.108.84 VY8RJ-N29HQ-HJMY2-3VD7H-M4JWF pg12-win2019-core
+	192.168.108.85 VY8RJ-N29HQ-HJMY2-3VD7H-M4JWF md-win2019 MariaDb
+	192.168.108.86 VY8RJ-N29HQ-HJMY2-3VD7H-M4JWF pg12-win2019 PostgreSql
+	192.168.108.87 VY8RJ-N29HQ-HJMY2-3VD7H-M4JWF db2-win2019 DB2
+	192.168.108.89 VY8RJ-N29HQ-HJMY2-3VD7H-M4JWF oracle19-win2019 Oracle
+
+### 107 direct 10G connection ch1, ch2
+	192.168.107.71 ch1
+	192.168.107.72 ch2	
+
+### 107 direct 1G connection office1, office2
+	192.168.107.225 office1
+	192.168.107.226 office2	

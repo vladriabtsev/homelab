@@ -1,0 +1,12 @@
+# https://github.com/k3s-io/k3s/releases
+k3s_ver: v1.31.4+k3s1
+amount_nodes: 1
+#cert_name: my-key
+node:
+- node_id: 1
+  node_name: dad-pc
+  node_user: vlad
+  node_interface: eth0
+  node_ip4: localhost
+  node_is_master: 1
+  node_is_worker: 1
