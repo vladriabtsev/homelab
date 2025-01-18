@@ -1,25 +1,28 @@
 #!/bin/bash
-# ./k3s.sh ./k3s.yaml
+# ./install-k3s.sh ./k3s.yaml 1
 
-#if [[ -f "${BASHMATIC_INIT}" ]]; then source "${BASHMATIC_INIT}"; else source ${BASHMATIC_HOME}/init.sh; fi
-debug-on
-run.set-all abort-on-error show-command-on show-output-on
-#run.set-all ask-on-error on-decline-exit
+# https://www.shell-tips.com/bash/debug-script/#gsc.tab=0
+#set -v # Enabling verbose Mode (print every line before it's processed). +v for disable
+#set -n # Syntax Checking Using noexec Mode. +n for disable
+#set -x # Debugging Using xtrace Mode. +x for disable
+#set -u # Identifying Unset Variables. +u for disable
+# trap 'echo "Line- ${LINENO}: five_val=${five_val}, two_val=${two_val}, total=${total}" ' DEBUG
+# apt install shellcheck # https://linuxsimply.com/bash-scripting-tutorial/error-handling-and-debugging/debugging/bash-shellcheck/#How_to_Install_ShellCheck_on_Ubuntu
+# shellcheck ./k3s.sh
 
-#bashmatic.validate-subshell || return 1
-#source ${BASHMATIC_HOME}/init.sh
-#bashmatic.bash.exit-unless-version-four-or-later
+# Remove Windows CR from bash script
+# sed -i -e 's/\r$//' scriptname.sh
 
 # Functions
 err_and_exit()
 {
   if [ -z "$1" ]; then
-    err "Function err_exit is expecting error message as a first parameter"
+    err "Function err_and_exit is expecting error message as a first parameter"
   fi
   #caller.stack
   #exit
   if [ -z "$2" ]; then
-    err "Function err_exit is expecting \$LINENO as a second parameter"
+    err "Function err_and_exit is expecting \$LINENO as a second parameter"
     exit
   fi
   local call_lineno="$2"
@@ -72,13 +75,22 @@ gen_kube_vip_manifest()
   inf "Generate a kube-vip DaemonSet Manifest. (Line:$LINENO)\n"
   # https://kube-vip.io/docs/installation/daemonset/#generating-a-manifest
   if [ "$node_id" -eq "1" ]; then
+    # kube-vip
     kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r ".[0].name")
     #kvversion_latest=$(curl -SL --retry 3 https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r ".[0].name")
     if [ -z $kube_vip_ver ]; then
       $kube_vip_ver=$kvversion_latest
     fi
     if ! [ "$kvversion_latest" == "$kube_vip_ver" ]; then
-      inf "Latest version kube-vip: $kvversion_latest, but installing: $kube_vip_ver\n"
+      warn "Latest version kube-vip: '$kvversion_latest', but installing: '$kube_vip_ver'\n"
+    fi
+    # MetalLB
+    metal_lb_latest=$(curl -sL https://api.github.com/repos/metallb/metallb/releases | jq -r ".[0].tag_name")
+    if [ -z $metal_lb_ver ]; then
+      $metal_lb_ver=$metal_lb_latest
+    fi
+    if ! [ "$metal_lb_latest" == "$metal_lb_ver" ]; then
+      warn "Latest version MetalLB: '$metal_lb_latest', but installing: '$metal_lb_ver'\n"
     fi
   fi
   if [ -z $kube_vip_interface ]; then
@@ -96,11 +108,13 @@ gen_kube_vip_manifest()
     --inCluster \
     --taint \
     --controlplane \
+    --services \
     --arp \
     --leaderElection \
     --enableNodeLabeling \
     >> ~/tmp/rbac.yaml" || exit 1
   else # BGP mode
+    err_and_exit "Not implemented yet" ${LINENO}
     #--servicesElection
     run "docker run --network host --rm ghcr.io/kube-vip/kube-vip:$kube_vip_ver manifest daemonset \
     --interface $kube_vip_interface \
@@ -108,6 +122,7 @@ gen_kube_vip_manifest()
     --inCluster \
     --taint \
     --controlplane \
+    --services \
     --bgp \
     --localAS 65000 \
     --bgpRouterID 192.168.0.2 \
@@ -126,6 +141,8 @@ gen_kube_vip_manifest()
 }
 install_first_node()
 {
+  install_step=$((install_step+1))
+  hl.blue "$install_step. Bootstrap First k3s node $node_name($node_ip4). (Line:$LINENO)"
     #if ! test -e ~/downloads; then mkdir ~/downloads; fi
     #if ! test -e "${HOME}/downloads/${k3s_ver}"; then 
     #  mkdir "${HOME}/downloads/${k3s_ver}";
@@ -133,112 +150,202 @@ install_first_node()
     #fi
   if ! test -e ~/.kube; then  mkdir ~/.kube;  fi
   if test -e "${HOME}/.kube/${cluster_name}"; then 
+    if [ $opt_install_new -eq 1 ]; then
+      run.ui.ask "Cluster config '${cluster_name}' already exist. Uninstall and proceed new installation?" || exit 1
+    fi
+    #if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; then
     #run.ui.press-any-key "Config for cluster '${cluster_name}' already exists. Override? (^C for cancel)"
-    run.ui.ask "Cluster config '${cluster_name}' already exist. Uninstall and proceed new installation?" || exit 1
     run "kubectl --kubeconfig ~/.kube/${cluster_name} delete daemonset kube-vip-ds -n kube-system"
     run "rm ~/.kube/${cluster_name}" || exit 1
     run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo rm -f /var/lib/rancher/k3s/server/tls/*'" || exit 1
     #run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name  '/usr/local/bin/k3s-uninstall.sh'" || exit 1
   fi
-
-  hl.blue "Step 0: Prepare node '$node_ip4'. (Line:$LINENO)"
   run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name  'if test -e /usr/local/bin/k3s-uninstall.sh; then /usr/local/bin/k3s-uninstall.sh; fi'" || exit 1
-
-  hl.blue "Step 1: Prepare Kube-VIP for HA. (Line:$LINENO)"
   # https://kube-vip.io/docs/usage/k3s/
   # [Remotely Execute Multi-line Commands with SSH](https://thornelabs.net/posts/remotely-execute-multi-line-commands-with-ssh/)
   inf "Clean Environment. (Line:$LINENO)\n"
   run "ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo rm -rf /var/lib/rancher /etc/rancher ~/.kube/*'" || exit 1
   run "ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo ip addr flush dev lo'" || exit 1
   run "ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo ip addr add 127.0.0.1/8 dev lo'" || exit 1
-  inf "Upload kube-vip RBAC Manifest. (Line:$LINENO)\n"
   
-  # Step 3: Generate a kube-vip DaemonSet Manifest
-  if [[ $kube_vip_use -eq 1 ]]; then gen_kube_vip_manifest; fi
+  if [ $opt_install_new -eq 1 ]; then
+    # Step 3: Generate a kube-vip DaemonSet Manifest
+    inf "Upload kube-vip RBAC Manifest. (Line:$LINENO)\n"
+    if [[ $kube_vip_use -eq 1 ]]; then gen_kube_vip_manifest; fi
 
-  hl.blue "Step 2: Bootstrap First k3s Node. (Line:$LINENO)"
-  # https://docs.k3s.io/cli/certificate#certificate-authority-ca-certificates
-  # https://github.com/k3s-io/k3s/blob/master/contrib/util/generate-custom-ca-certs.sh
-  # https://blog.chkpwd.com/posts/k3s-ha-installation-kube-vip-and-metallb/
-  if ! [[ $node_is_control_plane -eq 1 ]]; then err_and_exit "Error: First node has to be part of Control Plane: '$k3s_settings'." ${LINENO}; fi
-  install_k3s_cmd_parm="server --cluster-init";
-  cluster_config_ip=$node_ip4
-  if [[ $kube_vip_use -eq 1 ]]; then
-    install_k3s_cmd_parm="$install_k3s_cmd_parm \
-    --disable traefik \
-    --disable servicelb \
-    --write-kubeconfig-mode 644 \
-    --tls-san $kube_vip_address"
-    cluster_config_ip=$kube_vip_address
+    # https://docs.k3s.io/cli/certificate#certificate-authority-ca-certificates
+    # https://github.com/k3s-io/k3s/blob/master/contrib/util/generate-custom-ca-certs.sh
+    # https://blog.chkpwd.com/posts/k3s-ha-installation-kube-vip-and-metallb/
+    if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$k3s_settings'." ${LINENO}; fi
+    install_k3s_cmd_parm="server";
+    cluster_config_ip=$node_ip4
+    if [[ $kube_vip_use -eq 1 ]]; then
+      install_k3s_cmd_parm="$install_k3s_cmd_parm \
+      --cluster-init \
+      --disable traefik \
+      --disable servicelb \
+      --write-kubeconfig-mode 644 \
+      --tls-san $kube_vip_address"
+      cluster_config_ip=$kube_vip_address
+    fi
+    run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo curl -fL https://get.k3s.io | INSTALL_K3S_VERSION=${k3s_ver} sh -s - ${install_k3s_cmd_parm}'" || exit 1
+    run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo cp /etc/rancher/k3s/k3s.yaml ~/k3s.yaml'" || exit 1
+    run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo chmod 777 ~/k3s.yaml'" || exit 1
+    run "scp -i ~/.ssh/$cert_name $node_user@$node_ip4:./k3s.yaml ~/$cluster_name.yaml" || exit 1
+    yq -i ".clusters[0].cluster.server = \"https://${cluster_config_ip}:6443\"" ~/$cluster_name.yaml
+    cp ~/$cluster_name.yaml ~/.kube/$cluster_name
+    #check_result $LINENO
+    #run cp --backup=t ~/$cluster_name.yaml ~/.kube/$cluster_name
+    chown $USER ~/.kube/$cluster_name
+    #check_result $LINENO
+    # https://ss64.com/bash/chmod.html
+    chmod 600 ~/.kube/$cluster_name
+    #check_result $LINENO
+    rm ~/$cluster_name.yaml
+    #check_result $LINENO
+    run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'rm ~/k3s.yaml'" || exit 1
+    cluster_token="$(ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo cat /var/lib/rancher/k3s/server/node-token')"
   fi
-  run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${k3s_ver} sh -s - ${install_k3s_cmd_parm}'" || exit 1
-  #run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=${k3s_ver} INSTALL_K3S_EXEC="server" sh -'" || exit 1
-  run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo cp /etc/rancher/k3s/k3s.yaml ~/k3s.yaml'" || exit 1
-  run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo chmod 777 ~/k3s.yaml'" || exit 1
-  run "scp -i ~/.ssh/$cert_name $node_user@$node_ip4:./k3s.yaml ~/$cluster_name.yaml" || exit 1
-  yq -i ".clusters[0].cluster.server = \"https://${cluster_config_ip}:6443\"" ~/$cluster_name.yaml
-  cp ~/$cluster_name.yaml ~/.kube/$cluster_name
-  #check_result $LINENO
-  #run cp --backup=t ~/$cluster_name.yaml ~/.kube/$cluster_name
-  chown $USER ~/.kube/$cluster_name
-  #check_result $LINENO
-  # https://ss64.com/bash/chmod.html
-  chmod 600 ~/.kube/$cluster_name
-  #check_result $LINENO
-  rm ~/$cluster_name.yaml
-  #check_result $LINENO
-  run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'rm ~/k3s.yaml'" || exit 1
   #while [[ $(kubectl get pods -l app=nginx -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
   # sleep 1
   #done
+}
+install_join_node()
+{
+  install_step=$((install_step+1))
+  hl.blue "$install_step. Join k3s node $node_name($node_ip4). (Line:$LINENO)"
+  #echo $cluster_token
+  install_k3s_cmd_parm=""
+  if [[ $node_is_control_plane -eq 1 ]]; then
+    install_k3s_cmd_parm="server";
+    if [[ $kube_vip_use -eq 1 ]]; then
+      install_k3s_cmd_parm="$install_k3s_cmd_parm \
+      --disable traefik \
+      --disable servicelb \
+      --write-kubeconfig-mode 644 \
+      --tls-san $kube_vip_address"
+    fi
+  fi
+  run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name  'if test -e /usr/local/bin/k3s-uninstall.sh; then /usr/local/bin/k3s-uninstall.sh; fi'" || exit 1
+  run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name  'if test -e /usr/local/bin/k3s-agent-uninstall.sh; then /usr/local/bin/k3s-agent-uninstall.sh; fi'" || exit 1
+  if [ $opt_install_new -eq 1 ]; then
+    run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo curl -fL https://get.k3s.io | K3S_URL=https://$first_node_address:6443 K3S_TOKEN=$cluster_token sh -s - ${install_k3s_cmd_parm}'" || exit 1
+  fi
+}
 
-  inf "To use kubectl: Run 'export KUBECONFIG=$HOME/.kube/$cluster_name' or 'ek $cluster_name'\n"
+install_check_start()
+{
+  # YML,JSON,XML,LUA,TOML https://mikefarah.gitbook.io/yq/how-it-works
+  # https://www.baeldung.com/linux/yq-utility-processing-yaml
 
-exit
+  #source k3s-func.sh
 
-  inf "Step 2: Bootstrap First k3s Node\n"
-    # need sudo without password for $node_user: https://github.com/alexellis/k3sup/issues/298
-  run k3sup install \
-    --ip $node_ip4 \
-    --sudo \
-    --user $node_user \ 
-    --tls-san $vip \
-    --cluster \
-    --k3s-version $k3s_ver \
-    --k3s-extra-args "--disable traefik --disable servicelb --flannel-iface=$interface --node-ip=$first_node_address --node-taint node-role.kubernetes.io/master=true:NoSchedule" \
-    --local-path $HOME/.kube/config \
-    --ssh-key $HOME/.ssh/$cert_name \
-    --context k3s-ha
+  if [[ $(yq --exit-status 'tag == "!!map" or tag== "!!seq"' $k3s_settings > /dev/null) ]]; then
+    err_and_exit "Error: Invalid format for YAML file: '$k3s_settings'." ${LINENO}
+  fi
 
-  inf "Step 3: Download kube-vip\n"
-  run curl -sO https://raw.githubusercontent.com/JamesTurland/JimsGarage/main/Kubernetes/K3S-Deploy/kube-vip
-  run cat kube-vip | sed 's/$interface/'$interface'/g; s/$vip/'$vip'/g' > $HOME/kube-vip.yaml
+  # SSH agent to enter id_rsa password only one time
+  # https://rabexc.org/posts/pitfalls-of-ssh-agents
+  # https://github.com/ccontavalli/ssh-ident
+  ssh-add -l &>/dev/null
+  if [ "$?" == 2 ]; then
+    eval $(ssh-agent -t 2h) &>/dev/null
+    ssh-add ~/.ssh/id_rsa
+  fi
 
-  inf "echo_msg Step 4: Copy kube-vip.yaml to master1\n"
-  run scp -i ~/.ssh/$certName $HOME/kube-vip.yaml $user@$master1:~/kube-vip.yaml
+  # All root scalar settings from yaml file to bash variables
+  # https://github.com/jasperes/bash-yaml
+  # https://suriyakrishna.github.io/shell-scripting/2021/03/28/shell-scripting-yaml-configuration
+  # https://www.baeldung.com/linux/yq-utility-processing-yaml
+  eval "$( yq '.[] |(( select(kind == "scalar") | key + "='\''" + . + "'\''"))'  < $k3s_settings)"
 
-  inf "Step 5: Connect to Master1 and move kube-vip.yaml\n"
-  run ssh $user@$master1 -i ~/.ssh/$certName "sudo mkdir -p /var/lib/rancher/k3s/server/manifests"
-  run ssh $user@$master1 -i ~/.ssh/$certName "sudo mv kube-vip.yaml /var/lib/rancher/k3s/server/manifests/kube-vip.yaml"
+  if ! test -e ~/tmp; then  mkdir ~/tmp;  fi
+
 }
 
 ################################
 ##         M A I N            ##
 ################################
+usage="Usage: `basename $0` [OPTION]... cluster_plan.yaml
+Kubernetes K3s cluster installation script. 
+Cluster plan is described in YAML text file.
+
+Options:
+  -i type # Install kubernetes on each node, default install only some services
+     where type:
+        new     # for new installation with uninstalling if already installed on node
+        remove  # uninstall on each node
+        upgrade  # upgrade cluster on each node
+  -c # show executed commands, not show is default
+  -o # show output of executed commands, not show is default
+"
+
+opt_show_command='show-command-off'
+opt_show_output='show-output-off'
+opt_ktype='k3s'
+opt_install_remove=0
+opt_install_new=0
+opt_install_upgrade=0 
+
+NO_ARGS=0 
+E_OPTERROR=85
+
+if [ $# -eq "$NO_ARGS" ] # Script invoked with no command-line args?
+then
+  echo $usage
+  exit $E_OPTERROR # Exit and explain usage.
+  # Usage: scriptname -options
+  # Note: dash (-) necessary
+fi
+
 [[ -f ~/.bashmatic/init.sh ]] || {
   echo "Can't find or install Bashmatic. Exiting."
   exit 1
 }
 source ~/.bashmatic/init.sh
 
-if ! test -e ~/tmp; then  mkdir ~/tmp;  fi
+while getopts "i:cok:h" opt
+do
+  case $opt in
+    i )
+      case $OPTARG in
+        new ) opt_install_new=1;;
+        remove ) opt_install_remove=1;;
+        upgrade ) opt_install_upgrade=1
+          err_and_exit "Not implemented yet: -i '$OPTARG'" ${LINENO}
+        ;;
+        * ) 
+          err_and_exit "Wrong parameter argument: -i '$OPTARG'" ${LINENO}
+      esac
+    ;;
+    c ) opt_show_command='show-command-on'
+    ;;
+    o ) opt_show_output='show-output-on'
+    ;;
+    k ) process option -b
+    $OPTARG #is the option's argument
+    ;;
+    h ) echo $usage
+    exit 1
+    ;;
+    \? ) echo 'For help: ./install-k3s.sh -h'
+    exit 1
+  esac
+done
+shift $((OPTIND-1))
+#echo "Remaining args are: <${@}>"
+run.set-all abort-on-error $opt_show_command $opt_show_output
 
 # Check number parameters
-if [[ $# -ne 1 ]]; then err_and_exit "Usage: ./k3s.sh setting.yaml." ${LINENO}; fi
+if ! [[ $# -eq 1 ]]; then err_and_exit $usage ${LINENO}; fi
+
+start_time=$(date +%s)
+install_step=0
 k3s_settings=$1
-h2 "Install K3s cluster according parameters from '$k3s_settings' file. (Line:$LINENO)"
 
+h2 "Install K3s cluster according cluster plan from '$k3s_settings' file. (Line:$LINENO)"
 
+install_check_start
 # export KUBECONFIG=/mnt/d/dev/homelab/k3s/kubeconfig
 # kubectl config use-context local
 # kubectl get node -o wide
@@ -246,42 +353,6 @@ h2 "Install K3s cluster according parameters from '$k3s_settings' file. (Line:$L
 # /usr/local/bin/k3s-uninstall.sh
 # /usr/local/bin/k3s-agent-uninstall.sh
 
-# https://www.shell-tips.com/bash/debug-script/#gsc.tab=0
-#set -v # Enabling verbose Mode (print every line before it's processed). +v for disable
-#set -n # Syntax Checking Using noexec Mode. +n for disable
-#set -x # Debugging Using xtrace Mode. +x for disable
-#set -u # Identifying Unset Variables. +u for disable
-# trap 'echo "Line- ${LINENO}: five_val=${five_val}, two_val=${two_val}, total=${total}" ' DEBUG
-# apt install shellcheck # https://linuxsimply.com/bash-scripting-tutorial/error-handling-and-debugging/debugging/bash-shellcheck/#How_to_Install_ShellCheck_on_Ubuntu
-# shellcheck ./k3s.sh
-
-# Remove Windows CR from bash script
-# sed -i -e 's/\r$//' scriptname.sh
-
-# YML,JSON,XML,LUA,TOML https://mikefarah.gitbook.io/yq/how-it-works
-# https://www.baeldung.com/linux/yq-utility-processing-yaml
-
-#source k3s-func.sh
-
-if [[ $(yq --exit-status 'tag == "!!map" or tag== "!!seq"' $k3s_settings > /dev/null) ]]; then
-  err_and_exit "Error: Invalid format for YAML file: '$k3s_settings'." ${LINENO}
-fi
-
-# SSH agent to enter id_rsa password only one time
-# https://rabexc.org/posts/pitfalls-of-ssh-agents
-# https://github.com/ccontavalli/ssh-ident
-ssh-add -l &>/dev/null
-if [ "$?" == 2 ]; then
-  eval $(ssh-agent -t 2h) &>/dev/null
-  ssh-add ~/.ssh/id_rsa
-fi
-
-# All root scalar settings
-# https://github.com/jasperes/bash-yaml
-# https://suriyakrishna.github.io/shell-scripting/2021/03/28/shell-scripting-yaml-configuration
-# https://www.baeldung.com/linux/yq-utility-processing-yaml
-eval "$( yq '.[] |(( select(kind == "scalar") | key + "='\''" + . + "'\''"))'  < $k3s_settings)"
-#env $( yq '.[] |(( select(kind == "scalar") | key + "='\''" + . + "'\''"))'  < $k3s_settings)
 install_k3s_tools
 
 # Amount of nodes
@@ -302,7 +373,15 @@ if [[ $k3s_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
 else
   err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
 fi
+k3s_latest=$(curl -sL https://api.github.com/repos/k3s-io/k3s/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+if [ -z $k3s_ver ]; then
+  k3s_ver=$k3s_latest
+fi
+if ! [ "$k3s_latest" == "$k3s_ver" ]; then
+  warn "Latest version of K3s: '$k3s_latest', but installing: '$k3s_ver'\n"
+fi
 
+# kube vip
 if [[ $kube_vip_use -eq 1 ]]; then
   # Version of Kube-VIP to deploy
   if [[ $kube_vip_ver =~ ^v[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
@@ -318,16 +397,18 @@ if [[ $kube_vip_use -eq 1 ]]; then
   inf "      kube_vip_mode: '$kube_vip_mode'\n"
 fi
 
+if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; then # install on nodes
 # Nodes
 #readarray nodes < <(yq '.nodes[] |= sort_by(.node_id)' < $k3s_settings)
 readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
 for node in "${nodes[@]}"; do
   eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
-  inf "          k3s_node: id='$node_id', ip4='$node_ip4', eth='$node_interface', master='$node_is_control_plane', worker='$node_is_worker', name='$node_name', user='$node_user'"
+  #inf "          k3s_node: id='$node_id', ip4='$node_ip4', eth='$kube_vip_interface', control plane='$node_is_control_plane', worker='$node_is_worker', name='$node_name', user='$node_user'"
   # k3s installation
   if [[ $node_id -eq 1 ]]; then # first cluster node
     first_node_address=$node_ip4
     if [[ $first_node_address = "localhost" ]]; then
+      err_and_exit "Not implemented yet" ${LINENO}
       k3sup install --local --local-path ~/.kube/local \
         --k3s-version $k3s_ver #\
         #--k3s-extra-args "--disable traefik --disable servicelb --flannel-iface=$interface --node-ip=$master1 --node-taint node-role.kubernetes.io/master=true:NoSchedule"
@@ -338,9 +419,101 @@ for node in "${nodes[@]}"; do
       install_first_node
     fi
   else # additional node join cluster
-    echo "kuku"
+      install_join_node
   fi
 done
+  if [ $opt_install_remove -eq 1 ]; then
+    unset KUBECONFIG
+    #rm $HOME/.kube/$cluster_name
+    inf "Kubernetes cluster '$cluster_name' is uninstalled from servers described in cluster plan YAML file '$k3s_settings'\n"
+    exit 1
+  fi
+  export KUBECONFIG=$HOME/.kube/$cluster_name
+  if [ $opt_install_new -eq 1 ]; then
+    inf "New kubernetes cluster '$cluster_name' is installed on servers described in cluster plan YAML file '$k3s_settings'\n"
+  fi
+  if [ $opt_install_upgrade -eq 1 ]; then
+    inf "Kubernetes cluster '$cluster_name' is updated on servers described in cluster plan YAML file '$k3s_settings'\n"
+  fi
+  # inf "To use kubectl: Run 'export KUBECONFIG=$HOME/.kube/$cluster_name' or 'ek $cluster_name'\n"
+fi
+
+exit
+
+# https://argo-cd.readthedocs.io/en/stable/
+install_step=$((install_step+1))
+hl.blue "$install_step. Install Argo CD. (Line:$LINENO)"
+argo_cd_latest=$(curl -sL https://api.github.com/repos/argoproj/argo-cd/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+if [ -z $argo_cd_ver ]; then
+  argo_cd_ver=$argo_cd_latest
+fi
+if ! ($(kubectl get namespace argocd > /dev/null )); then kubectl create namespace argocd; fi
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/$argo_cd_ver/manifests/install.yaml
+kubectl apply -f ./argocd/svc.yaml
+
+
+
+end_time=$(date +%s)
+echo "Elapsed Time: $(($end_time-$start_time)) seconds"
+exit
+
+# https://ranchermanager.docs.rancher.com/getting-started/installation-and-upgrade/install-upgrade-on-a-kubernetes-cluster
+install_step=$((install_step+1))
+hl.blue "$install_step. Install Rancher. (Line:$LINENO)"
+rancher_latest=$(curl -sL https://api.github.com/repos/rancher/rancher/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+if [ -z $rancher_ver ]; then
+  rancher_ver=$rancher_latest
+fi
+helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+#if ! [ "$rancher_latest" == "$rancher_ver" ]; then
+#  warn "Latest version of Rancher: '$rancher_latest', but installing: '$rancher_ver'\n"
+#fi
+if ! ($(kubectl get namespace cattle-system > /dev/null )); then kubectl create namespace cattle-system; fi
+# helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+#run kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml
+
+# https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
+install_step=$((install_step+1))
+hl.blue "$install_step. Install Longhorn. (Line:$LINENO)"
+longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+if [ -z $longhorn_ver ]; then
+  longhorn_ver=$longhorn_latest
+fi
+if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
+  warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
+fi
+run kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml
+
+# https://kube-vip.io/docs/usage/cloud-provider/#install-the-kube-vip-cloud-provider
+install_step=$((install_step+1))
+hl.blue "$install_step. Install the kube-vip Cloud Provider. (Line:$LINENO)"
+run kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provider/main/manifest/kube-vip-cloud-controller.yaml
+run kubectl create configmap -n kube-system kubevip --from-literal range-global=$kube_vip_lb_range
+
+install_step=$((install_step+1))
+hl.blue "$install_step. Install Metallb. (Line:$LINENO)"
+run kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/namespace.yaml
+run kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/$metal_lb_ver/config/manifests/metallb-native.yaml
+run kubectl wait --namespace metallb-system \
+                --for=condition=ready pod \
+                --selector=component=controller \
+                --timeout=120s
+kubectl apply -f ipAddressPool.yaml
+kubectl apply -f https://raw.githubusercontent.com/JamesTurland/JimsGarage/main/Kubernetes/K3S-Deploy/l2Advertisement.yaml
+
+
+
+kubectl get nodes
+kubectl get svc
+kubectl get pods --all-namespaces -o wide
+
+exit
+
+  run "ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo curl -fL https://get.k3s.io | INSTALL_K3S_VERSION=${k3s_ver} sh -s - ${install_k3s_cmd_parm}'" || exit 1
+
+
+
+
 
 exit
 

@@ -130,5 +130,5 @@ homelab() {
   source k8s.sh
 }
 complete -o default -F __start_kubectl k
-[[ -f ~/.bashmatic/init.sh ]] && source ~/.bashmatic/init.sh
+#[[ -f ~/.bashmatic/init.sh ]] && source ~/.bashmatic/init.sh
 #export PATH="${PATH}:${BASHMATIC_HOME}/bin"

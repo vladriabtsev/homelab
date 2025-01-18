@@ -4,15 +4,21 @@ amount_nodes: 1
 node_user: vlad
 # https://github.com/k3s-io/k3s/releases
 k3s_ver: v1.31.4+k3s1
+cert_name: id_rsa
 # https://github.com/kube-vip/kube-vip/releases
 kube_vip_use: 1
-kube_vip_ver: v0.8.8
+kube_vip_ver: v0.8.9
 kube_vip_address: 192.168.100.50
 kube_vip_mode: ARP # ARP or BGP
 kube_vip_as_ha: 1
 kube_vip_as_lb: 1
 kube_vip_lb_range: 192.168.100.101-192.168.100.200
-cert_name: id_rsa
+# https://github.com/longhorn/longhorn
+longhorn_ver: v1.7.2
+# https://github.com/metallb/metallb
+metal_lb_ver: v0.14.9
+# https://github.com/argoproj/argo-cd
+argo_cd: v2.13.3
 # node settings
 node:
 - node_id: 1
