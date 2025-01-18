@@ -142,7 +142,11 @@ gen_kube_vip_manifest()
 install_first_node()
 {
   install_step=$((install_step+1))
-  hl.blue "$install_step. Bootstrap First k3s node $node_name($node_ip4). (Line:$LINENO)"
+  if [ $opt_install_new -eq 1 ]; then
+    hl.blue "$install_step. Bootstrap First k3s node $node_name($node_ip4). (Line:$LINENO)"
+  else
+    hl.blue "$install_step. Remove k3s node $node_name($node_ip4). (Line:$LINENO)"
+  fi
     #if ! test -e ~/downloads; then mkdir ~/downloads; fi
     #if ! test -e "${HOME}/downloads/${k3s_ver}"; then 
     #  mkdir "${HOME}/downloads/${k3s_ver}";
@@ -213,7 +217,11 @@ install_first_node()
 install_join_node()
 {
   install_step=$((install_step+1))
-  hl.blue "$install_step. Join k3s node $node_name($node_ip4). (Line:$LINENO)"
+  if [ $opt_install_new -eq 1 ]; then
+    hl.blue "$install_step. Join k3s node $node_name($node_ip4). (Line:$LINENO)"
+  else
+    hl.blue "$install_step. Remove k3s node $node_name($node_ip4). (Line:$LINENO)"
+  fi
   #echo $cluster_token
   install_k3s_cmd_parm=""
   if [[ $node_is_control_plane -eq 1 ]]; then
@@ -262,6 +270,20 @@ install_check_start()
   if ! test -e ~/tmp; then  mkdir ~/tmp;  fi
 
 }
+wait_kubectl_can_connect_cluster()
+{
+  # wait until cluster is ready
+  timeout=160
+  duration=0
+  until kubectl get nodes > /dev/null 2>&1
+  do
+    sleep 10
+    ((duration=duration+10))
+    if [ $duration -gt $timeout ]; then 
+      err_and_exit "Error: Cluster not started in $timeout seconds." ${LINENO}
+    fi
+  done
+}
 
 ################################
 ##         M A I N            ##
@@ -275,12 +297,11 @@ Options:
      where type:
         new     # for new installation with uninstalling if already installed on node
         remove  # uninstall on each node
-        upgrade  # upgrade cluster on each node
-  -c # show executed commands, not show is default
+        upgrade # upgrade cluster on each node
+        join    # join additional nodes
   -o # show output of executed commands, not show is default
 "
 
-opt_show_command='show-command-off'
 opt_show_output='show-output-off'
 opt_ktype='k3s'
 opt_install_remove=0
@@ -304,7 +325,7 @@ fi
 }
 source ~/.bashmatic/init.sh
 
-while getopts "i:cok:h" opt
+while getopts "i:ok:h" opt
 do
   case $opt in
     i )
@@ -314,11 +335,12 @@ do
         upgrade ) opt_install_upgrade=1
           err_and_exit "Not implemented yet: -i '$OPTARG'" ${LINENO}
         ;;
+        join )
+          err_and_exit "Not implemented yet: -i '$OPTARG'" ${LINENO}
+        ;;
         * ) 
           err_and_exit "Wrong parameter argument: -i '$OPTARG'" ${LINENO}
       esac
-    ;;
-    c ) opt_show_command='show-command-on'
     ;;
     o ) opt_show_output='show-output-on'
     ;;
@@ -334,7 +356,7 @@ do
 done
 shift $((OPTIND-1))
 #echo "Remaining args are: <${@}>"
-run.set-all abort-on-error $opt_show_command $opt_show_output
+run.set-all abort-on-error show-command-on $opt_show_output
 
 # Check number parameters
 if ! [[ $# -eq 1 ]]; then err_and_exit $usage ${LINENO}; fi
@@ -343,9 +365,10 @@ start_time=$(date +%s)
 install_step=0
 k3s_settings=$1
 
-h2 "Install K3s cluster according cluster plan from '$k3s_settings' file. (Line:$LINENO)"
-
 install_check_start
+
+h2 "Install K3s cluster with $amount_nodes nodes. Cluster plan from '$k3s_settings' file. (Line:$LINENO)"
+
 # export KUBECONFIG=/mnt/d/dev/homelab/k3s/kubeconfig
 # kubectl config use-context local
 # kubectl get node -o wide
@@ -401,11 +424,14 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
 # Nodes
 #readarray nodes < <(yq '.nodes[] |= sort_by(.node_id)' < $k3s_settings)
 readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
+i_node=0
 for node in "${nodes[@]}"; do
+  ((i_node++))
+  if [ $i_node -gt $amount_nodes ]; then break; fi
   eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
   #inf "          k3s_node: id='$node_id', ip4='$node_ip4', eth='$kube_vip_interface', control plane='$node_is_control_plane', worker='$node_is_worker', name='$node_name', user='$node_user'"
   # k3s installation
-  if [[ $node_id -eq 1 ]]; then # first cluster node
+  if [[ $i_node -eq 1 ]]; then # first cluster node
     first_node_address=$node_ip4
     if [[ $first_node_address = "localhost" ]]; then
       err_and_exit "Not implemented yet" ${LINENO}
@@ -431,12 +457,25 @@ done
   export KUBECONFIG=$HOME/.kube/$cluster_name
   if [ $opt_install_new -eq 1 ]; then
     inf "New kubernetes cluster '$cluster_name' is installed on servers described in cluster plan YAML file '$k3s_settings'\n"
+    inf "To use kubectl: Run 'export KUBECONFIG=$HOME/.kube/$cluster_name' or 'ek $cluster_name'\n"
   fi
   if [ $opt_install_upgrade -eq 1 ]; then
     inf "Kubernetes cluster '$cluster_name' is updated on servers described in cluster plan YAML file '$k3s_settings'\n"
   fi
-  # inf "To use kubectl: Run 'export KUBECONFIG=$HOME/.kube/$cluster_name' or 'ek $cluster_name'\n"
 fi
+run wait_kubectl_can_connect_cluster
+
+# https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
+install_step=$((install_step+1))
+hl.blue "$install_step. Install Longhorn. (Line:$LINENO)"
+longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+if [ -z $longhorn_ver ]; then
+  longhorn_ver=$longhorn_latest
+fi
+if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
+  warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
+fi
+run kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml
 
 exit
 
@@ -471,18 +510,6 @@ helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
 if ! ($(kubectl get namespace cattle-system > /dev/null )); then kubectl create namespace cattle-system; fi
 # helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
 #run kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml
-
-# https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
-install_step=$((install_step+1))
-hl.blue "$install_step. Install Longhorn. (Line:$LINENO)"
-longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-if [ -z $longhorn_ver ]; then
-  longhorn_ver=$longhorn_latest
-fi
-if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
-  warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
-fi
-run kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml
 
 # https://kube-vip.io/docs/usage/cloud-provider/#install-the-kube-vip-cloud-provider
 install_step=$((install_step+1))
