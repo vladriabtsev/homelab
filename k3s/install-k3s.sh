@@ -1,6 +1,9 @@
 #!/bin/bash
 # ./install-k3s.sh ./k3s.yaml 1
 
+# https://web.archive.org/web/20230401201759/https://wiki.bash-hackers.org/scripting/debuggingtips
+#export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+
 # https://www.shell-tips.com/bash/debug-script/#gsc.tab=0
 #set -v # Enabling verbose Mode (print every line before it's processed). +v for disable
 #set -n # Syntax Checking Using noexec Mode. +n for disable
@@ -78,26 +81,10 @@ gen_kube_vip_manifest()
   #run "ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo mv rbac.yaml /var/lib/rancher/k3s/server/manifests/kube-vip-rbac.yaml'" || exit 1
   
   
-  #inf "Generate a kube-vip DaemonSet Manifest. (Line:$LINENO)\n"
+  inf "Generate a kube-vip DaemonSet Manifest. (Line:$LINENO)\n"
   # https://kube-vip.io/docs/installation/daemonset/#generating-a-manifest
-  if [ "$node_id" -eq "1" ]; then
-    # kube-vip
-    kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r ".[0].name")
-    if [ -z $kube_vip_ver ]; then
-      $kube_vip_ver=$kvversion_latest
-    fi
-    if ! [ "$kvversion_latest" == "$kube_vip_ver" ]; then
-      warn "Latest version kube-vip: '$kvversion_latest', but installing: '$kube_vip_ver'\n"
-    fi
-    # MetalLB
-    metal_lb_latest=$(curl -sL https://api.github.com/repos/metallb/metallb/releases | jq -r ".[0].tag_name")
-    if [ -z $metal_lb_ver ]; then
-      $metal_lb_ver=$metal_lb_latest
-    fi
-    if ! [ "$metal_lb_latest" == "$metal_lb_ver" ]; then
-      warn "Latest version MetalLB: '$metal_lb_latest', but installing: '$metal_lb_ver'\n"
-    fi
-  fi
+  #if [ "$node_id" -eq "1" ]; then
+  #fi
   if [ -z $kube_vip_interface ]; then
     err_and_exit "Error: Node kube_vip_interface is empty." ${LINENO}
   fi
@@ -387,7 +374,6 @@ done
 shift $((OPTIND-1))
 #echo "Remaining args are: <${@}>"
 run.set-all abort-on-error show-command-on $opt_show_output
-# https://web.archive.org/web/20230401201759/https://wiki.bash-hackers.org/scripting/debuggingtips
 
 # Check number parameters
 if ! [[ $# -eq 1 ]]; then err_and_exit $usage ${LINENO}; fi
@@ -411,7 +397,7 @@ install_k3s_tools
 
 # Amount of nodes
 if [[ $amount_nodes =~ ^[0-9]{1,3}$ && $amount_nodes -gt 0 ]]; then
-  inf "      amount_nodes: '$amount_nodes'\n"
+  inf "               amount_nodes: '$amount_nodes'\n"
 else
   err_and_exit "Error: Invalid input for amount_nodes: '$amount_nodes'." ${LINENO}
 fi
@@ -422,14 +408,14 @@ if [[ $amount_nodes -gt $amount_nodes_max ]]; then
 fi
 
 # K3S Version
-if [[ $k3s_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
-  inf "           k3s_ver: '$k3s_ver'\n"
-else
-  err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
-fi
 k3s_latest=$(curl -sL https://api.github.com/repos/k3s-io/k3s/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
 if [ -z $k3s_ver ]; then
   k3s_ver=$k3s_latest
+fi
+if [[ $k3s_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
+  inf "                    k3s_ver: '$k3s_ver'\n"
+else
+  err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
 fi
 if ! [ "$k3s_latest" == "$k3s_ver" ]; then
   warn "Latest version of K3s: '$k3s_latest', but installing: '$k3s_ver'\n"
@@ -437,18 +423,47 @@ fi
 
 # kube vip
 if [[ $kube_vip_use -eq 1 ]]; then
+  #kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r ".[0].name")
+  kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+  if [ -z $kube_vip_ver ]; then
+    $kube_vip_ver=$kvversion_latest
+  fi
   # Version of Kube-VIP to deploy
   if [[ $kube_vip_ver =~ ^v[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
-    inf "      kube_vip_ver: '$kube_vip_ver'\n"
+    inf "               kube_vip_ver: '$kube_vip_ver'\n"
   else
     err_and_exit "Error: Invalid input for kube_vip_ver: '$kube_vip_ver'." ${LINENO}
   fi
+  if ! [ "$kvversion_latest" == "$kube_vip_ver" ]; then
+    warn "Latest version kube-vip: '$kvversion_latest', but installing: '$kube_vip_ver'\n"
+  fi
+
+  # kube-vip-cloud-provider
+  #kvcloudversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip-cloud-provider/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
+  #if [ -z $kube_vip_cloud_provider_ver ]; then
+  #  $kube_vip_cloud_provider_ver=$kvcloudversion_latest
+  #fi
+  #inf "kube_vip_cloud_provider_ver: '$kube_vip_cloud_provider_ver'\n"
+  #if ! [ "$kvcloudversion_latest" == "$kube_vip_cloud_provider_ver" ]; then
+  #  warn "Latest version kube-vip-cloud-provider: '$kvcloudversion_latest', but installing: '$kube_vip_cloud_provider_ver'\n"
+  #fi
 
   # Kube-VIP mode
   if ! [[ "$kube_vip_mode" == "ARP" || "BGP" ]]; then
     err_and_exit "Error: Invalid kube_vip_mode: '$kube_vip_mode'. Expected 'ARP' or 'BGP'." ${LINENO}
   fi
-  inf "      kube_vip_mode: '$kube_vip_mode'\n"
+  inf "              kube_vip_mode: '$kube_vip_mode'\n"
+fi
+
+# MetalLB
+#metal_lb_latest=$(curl -sL https://api.github.com/repos/metallb/metallb/releases | jq -r ".[0].tag_name")
+metal_lb_latest=$(curl -sL https://api.github.com/repos/metallb/metallb/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+if [ -z $metal_lb_ver ]; then
+  $metal_lb_ver=$metal_lb_latest
+fi
+inf "               metal_lb_ver: '$kube_vip_cloud_provider_ver'\n"
+if ! [ "$metal_lb_latest" == "$metal_lb_ver" ]; then
+  warn "Latest version MetalLB: '$metal_lb_latest', but installing: '$metal_lb_ver'\n"
 fi
 
 if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; then # install on nodes
@@ -486,7 +501,7 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
     exit 1
   fi
   export KUBECONFIG=$HOME/.kube/$cluster_name
-  run wait_kubectl_can_connect_cluster
+  run "line '$LINENO';wait_kubectl_can_connect_cluster"
   if [ $opt_install_new -eq 1 ]; then
     inf "New kubernetes cluster '$cluster_name' is installed on servers described in cluster plan YAML file '$k3s_settings'\n"
     inf "To use kubectl: Run 'export KUBECONFIG=$HOME/.kube/$cluster_name' or 'ek $cluster_name'\n"
@@ -495,6 +510,14 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
     inf "Kubernetes cluster '$cluster_name' is updated on servers described in cluster plan YAML file '$k3s_settings'\n"
   fi
 fi
+
+# https://kube-vip.io/docs/usage/cloud-provider/
+# https://kube-vip.io/docs/usage/cloud-provider/#install-the-kube-vip-cloud-provider
+install_step=$((install_step+1))
+hl.blue "$install_step. Install the kube-vip Cloud Provider. (Line:$LINENO)"
+run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provider/main/manifest/kube-vip-cloud-controller.yaml"
+#run kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provider/$kube_vip_cloud_provider_ver/deploy/kube-vip-cloud-controller.yaml
+run "line '$LINENO';kubectl create configmap -n kube-system kubevip --from-literal range-global=$kube_vip_lb_range"
 
 # https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
 install_step=$((install_step+1))
@@ -506,7 +529,7 @@ fi
 if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
   warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
 fi
-run kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml
+run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
 
 exit
 
@@ -541,12 +564,6 @@ helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
 if ! ($(kubectl get namespace cattle-system > /dev/null )); then kubectl create namespace cattle-system; fi
 # helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
 #run kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml
-
-# https://kube-vip.io/docs/usage/cloud-provider/#install-the-kube-vip-cloud-provider
-install_step=$((install_step+1))
-hl.blue "$install_step. Install the kube-vip Cloud Provider. (Line:$LINENO)"
-run kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provider/main/manifest/kube-vip-cloud-controller.yaml
-run kubectl create configmap -n kube-system kubevip --from-literal range-global=$kube_vip_lb_range
 
 install_step=$((install_step+1))
 hl.blue "$install_step. Install Metallb. (Line:$LINENO)"

@@ -1,5 +1,5 @@
 cluster_name: k3s-HA
-amount_nodes: 1
+amount_nodes: 3
 # can be overridden by node settings
 node_user: vlad
 # https://github.com/k3s-io/k3s/releases
@@ -8,6 +8,7 @@ cert_name: id_rsa
 # https://github.com/kube-vip/kube-vip/releases
 kube_vip_use: 1
 kube_vip_ver: v0.8.9
+#kube_vip_cloud_provider_ver: v0.0.10
 kube_vip_address: 192.168.100.50
 kube_vip_mode: ARP # ARP or BGP
 kube_vip_as_ha: 1
