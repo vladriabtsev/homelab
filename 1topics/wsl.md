@@ -24,6 +24,11 @@ Windows startup folder contains script executed at startup:
 
 [How do I run a PowerShell script when the computer starts?](https://stackoverflow.com/questions/20575257/how-do-i-run-a-powershell-script-when-the-computer-starts)
 
+## SSH to WSL
+
+[How to SSH into WSL2 on Windows 10 from an external machine](https://www.hanselman.com/blog/how-to-ssh-into-wsl2-on-windows-10-from-an-external-machine)
+[WSL 2 Setup for SSH Remote Access](https://medium.com/@wuzhenquan/windows-and-wsl-2-setup-for-ssh-remote-access-013955b2f421)
+[Configuring SSH access into WSL 1 and WSL 2](https://jmmv.dev/2022/02/wsl-ssh-access.html)
 
 ## Remmina
 

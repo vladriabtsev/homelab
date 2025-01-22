@@ -1,14 +1,21 @@
 #!/bin/bash
 # ./install-k3s.sh ./k3s.yaml 1
 
+source install-lib.sh
+
 # https://web.archive.org/web/20230401201759/https://wiki.bash-hackers.org/scripting/debuggingtips
 #export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
 
 # https://www.shell-tips.com/bash/debug-script/#gsc.tab=0
+# bash.pdf page: 73
 #set -v # Enabling verbose Mode (print every line before it's processed). +v for disable
 #set -n # Syntax Checking Using noexec Mode. +n for disable
 #set -x # Debugging Using xtrace Mode. +x for disable
 #set -u # Identifying Unset Variables. +u for disable
+#set -e # Same as -o errexit
+#set -u # Identifying Unset Variables. +u for disable
+#set -u # Identifying Unset Variables. +u for disable
+
 # trap 'echo "Line- ${LINENO}: five_val=${five_val}, two_val=${two_val}, total=${total}" ' DEBUG
 # apt install shellcheck # https://linuxsimply.com/bash-scripting-tutorial/error-handling-and-debugging/debugging/bash-shellcheck/#How_to_Install_ShellCheck_on_Ubuntu
 # shellcheck ./k3s.sh
@@ -17,30 +24,6 @@
 # sed -i -e 's/\r$//' scriptname.sh
 
 # Functions
-line()
-{
-  printf ""
-}
-err_and_exit()
-{
-  if [ -z "$1" ]; then
-    err "Function err_and_exit is expecting error message as a first parameter"
-  fi
-  #caller.stack
-  #exit
-  if [ -z "$2" ]; then
-    err "Function err_and_exit is expecting \$LINENO as a second parameter"
-    exit
-  fi
-  local call_lineno="$2"
-
-  if [ -z "$3" ]; then
-    err "$1 LINENO: $2"
-  else
-    err "$1 FUNCNAME: $3, LINENO: $2"
-  fi
-  exit
-}
 install_k3s_tools()
 {
     # For testing purposes - in case time is wrong due to VM snapshots
@@ -83,10 +66,11 @@ gen_kube_vip_manifest()
   
   inf "Generate a kube-vip DaemonSet Manifest. (Line:$LINENO)\n"
   # https://kube-vip.io/docs/installation/daemonset/#generating-a-manifest
+  # https://gist.github.com/dmancloud/3bdb3fdf2eaa3e2d42428f4a90de67a9
   #if [ "$node_id" -eq "1" ]; then
   #fi
   if [ -z $kube_vip_interface ]; then
-    err_and_exit "Error: Node kube_vip_interface is empty." ${LINENO}
+    err_and_exit "Error: Node kube_vip_interface is empty." ${LINENO} `basename $0`
   fi
 
   run "line '$LINENO';curl -o ~/tmp/rbac.yaml https://kube-vip.io/manifests/rbac.yaml"
@@ -190,6 +174,7 @@ install_first_node()
   else
     hl.blue "$install_step. Remove k3s node $node_name($node_ip4). (Line:$LINENO)"
   fi
+  # https://docs.dman.cloud/tutorial-documentation/k3sup-ha/  
   if ! test -e ~/.kube; then  mkdir ~/.kube;  fi
   p_exist=0
   if test -e "${HOME}/.kube/${cluster_name}"; then 
@@ -320,6 +305,8 @@ opt_install_upgrade=0
 
 NO_ARGS=0 
 E_OPTERROR=85
+
+ARCH="amd64"
 
 if [ $# -eq "$NO_ARGS" ] # Script invoked with no command-line args?
 then
@@ -522,6 +509,11 @@ run "line '$LINENO';kubectl create configmap -n kube-system kubevip --from-liter
 # https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
 install_step=$((install_step+1))
 hl.blue "$install_step. Install Longhorn. (Line:$LINENO)"
+
+./102-longhorn/install.sh -i $longhorn_ver
+
+
+
 longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
 if [ -z $longhorn_ver ]; then
   longhorn_ver=$longhorn_latest
@@ -530,8 +522,16 @@ if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
   warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
 fi
 run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
-
-exit
+# https://longhorn.io/docs/1.7.2/advanced-resources/longhornctl/install-longhornctl/
+if ! ($(longhornctl version > /dev/null ) || $(longhornctl version) != $longhorn_ver ); then
+  # Download the release binary.
+  run "line '$LINENO';curl -LO "https://github.com/longhorn/cli/releases/download/$longhorn_ver/longhornctl-linux-${ARCH}""
+  # Download the checksum for your architecture.
+  run line '$LINENO';curl -LO "https://github.com/longhorn/cli/releases/download/$longhorn_ver/longhornctl-linux-${ARCH}.sha256"
+  # Verify the downloaded binary matches the checksum.
+  run line '$LINENO';echo "$(cat longhornctl-linux-${ARCH}.sha256 | awk '{print $1}') longhornctl-linux-${ARCH}" | sha256sum --check
+  run line '$LINENO';sudo install longhornctl-linux-${ARCH} /usr/local/bin/longhornctl;longhornctl version
+fi
 
 # https://argo-cd.readthedocs.io/en/stable/
 install_step=$((install_step+1))
@@ -541,8 +541,9 @@ if [ -z $argo_cd_ver ]; then
   argo_cd_ver=$argo_cd_latest
 fi
 if ! ($(kubectl get namespace argocd > /dev/null )); then kubectl create namespace argocd; fi
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/$argo_cd_ver/manifests/install.yaml
-kubectl apply -f ./argocd/svc.yaml
+kubectl "line '$LINENO';kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/$argo_cd_ver/manifests/install.yaml"
+kubectl "line '$LINENO';kubectl apply -f ./argocd/svc.yaml"
+
 
 
 
