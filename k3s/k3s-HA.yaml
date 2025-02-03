@@ -14,6 +14,18 @@ kube_vip_mode: ARP # ARP or BGP
 kube_vip_as_ha: 1
 kube_vip_as_lb: 1
 kube_vip_lb_range: 192.168.100.101-192.168.100.200
+
+# https://github.com/kubernetes-sigs/external-dns/tree/master
+external_dns_ver: v0.15.0
+# https://github.com/kube-vip/kube-vip/releases
+pi_hole_use: 1
+pi_hole_ver: v5.18.3
+# https://github.com/cert-manager/cert-manager
+cert_manager_ver: v1.13.2
+# https://cert-manager.io/docs/configuration/issuers/
+cert_manager_issuer: ca # https://cert-manager.io/docs/configuration/ca/
+# https://github.com/rancher/rancher
+rancher_ver: v2.9.5
 # https://github.com/longhorn/longhorn
 longhorn_ver: v1.7.2
 # https://github.com/metallb/metallb

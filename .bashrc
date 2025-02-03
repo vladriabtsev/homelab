@@ -128,7 +128,10 @@ homelab() {
   cp ~/.bashrc .bashrc
   source ealias.sh
   source k8s.sh
+  #sudo cp k8s.sh /usr/local/bin/
 }
 complete -o default -F __start_kubectl k
 #[[ -f ~/.bashmatic/init.sh ]] && source ~/.bashmatic/init.sh
 #export PATH="${PATH}:${BASHMATIC_HOME}/bin"
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+export PATH=$HOME/.local/bin:$PATH

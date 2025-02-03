@@ -1,7 +1,9 @@
 #!/bin/bash
 # ./install-k3s.sh ./k3s.yaml 1
 
-source install-lib.sh
+source k8s.sh
+#source ./../bashlib/bash_lib.sh
+#VLADNET_BASH_SOURCED
 
 # https://web.archive.org/web/20230401201759/https://wiki.bash-hackers.org/scripting/debuggingtips
 #export PS4='+(${BASH_SOURCE}:${LINENO}): ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
@@ -24,7 +26,7 @@ source install-lib.sh
 # sed -i -e 's/\r$//' scriptname.sh
 
 # Functions
-install_k3s_tools()
+install_tools()
 {
     # For testing purposes - in case time is wrong due to VM snapshots
     sudo timedatectl set-ntp off
@@ -48,6 +50,25 @@ install_k3s_tools()
       echo -e " Kubectl not found, installing ..."
       run "line '$LINENO';curl -LO 'https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl'"
       run "line '$LINENO';sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl"
+    fi
+
+    # Install helm
+    if ! command -v helm version &> /dev/null; then
+      echo -e " Helm not found, installing ..."
+      run "line '$LINENO';curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
+      run "line '$LINENO';chmod 700 get_helm.sh"
+      run "line '$LINENO';./get_helm.sh"
+      run "line '$LINENO';rm ./get_helm.sh"
+    fi
+
+    # Install brew https://brew.sh/
+    if ! command -v brew help &> /dev/null; then
+      err_and_exit "Homebrew not found, please install ..."  ${LINENO} "$0"
+      #/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+      #run "line '$LINENO';curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+      #run "line '$LINENO';chmod 700 install.sh"
+      #run "line '$LINENO';./install.sh"
+      #run "line '$LINENO';rm ./install.sh"
     fi
 }
 
@@ -380,7 +401,7 @@ h2 "Install K3s cluster with $amount_nodes nodes. Cluster plan from '$k3s_settin
 # /usr/local/bin/k3s-uninstall.sh
 # /usr/local/bin/k3s-agent-uninstall.sh
 
-install_k3s_tools
+install_tools
 
 # Amount of nodes
 if [[ $amount_nodes =~ ^[0-9]{1,3}$ && $amount_nodes -gt 0 ]]; then
@@ -506,12 +527,23 @@ run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/kube-vip/
 #run kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provider/$kube_vip_cloud_provider_ver/deploy/kube-vip-cloud-controller.yaml
 run "line '$LINENO';kubectl create configmap -n kube-system kubevip --from-literal range-global=$kube_vip_lb_range"
 
+# pi-hole
+if [[ $pi_hole_use -eq 1 ]]; then
+  install_step=$((install_step+1))
+  hl.blue "$install_step. Install Pi-hole. (Line:$LINENO)"
+  ./101-pi-hole/install.sh -i $pi_hole_ver
+fi
+
+# Longhorn
 # https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
 install_step=$((install_step+1))
 hl.blue "$install_step. Install Longhorn. (Line:$LINENO)"
-
 ./102-longhorn/install.sh -i $longhorn_ver
 
+# Rancher
+install_step=$((install_step+1))
+hl.blue "$install_step. Install Rancher. (Line:$LINENO)"
+./105-rancher/install.sh -i $rancher_ver
 
 
 longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")

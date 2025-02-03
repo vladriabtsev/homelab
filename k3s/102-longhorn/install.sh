@@ -1,17 +1,32 @@
 #!/bin/bash
 # Longhorn install
-# ./install.sh version
+# ./102-longhorn/install.sh -i v1.7.2
 
-source install-lib.sh
+source ./../bash-lib.sh
 
 longhorn-check-version()
 {
-  longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+  #longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+  longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
   longhorn_ver="$1"
   if [ -z $longhorn_ver ]; then longhorn_ver=$longhorn_latest; fi
+  if ! [ -z $2 ]; then
+    if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
+      warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
+    fi
+  fi
 }
 longhorn-install-new()
 {
+  #wait-for-success -t 1 "ls ~/"
+  #wait-for-success
+  #wait-for-success "kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system"
+  #wait-for-success -t 1 "kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system"
+  #run wait-for-success -t 1 "kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system"
+  #run "wait-for-success -t 1 \"kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system\""
+  #run "wait-for-success -t 1 'kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system'"
+  #exit
+
   # https://longhorn.io/docs/1.7.2/advanced-resources/longhornctl/install-longhornctl/
   if ! ($(longhornctl version > /dev/null ) || $(longhornctl version) != $longhorn_ver ); then
     # Download the release binary.
@@ -28,6 +43,18 @@ longhorn-install-new()
     err_and_exit "Longhorn already installed."  ${LINENO} "$0"
   fi
   run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
+  #run "line "$LINENO";kubectl create -f ./102-longhorn/backup.yaml"
+
+  # https://fabianlee.org/2022/01/27/kubernetes-using-kubectl-to-wait-for-condition-of-pods-deployments-services/
+
+  # https://kubernetes.io/docs/reference/kubectl/generated/kubectl_wait/
+  # https://kubernetes.io/docs/reference/kubectl/jsonpath/
+  # https://stackoverflow.com/questions/53536907/kubectl-wait-for-condition-complete-timeout-30s
+  # OK run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=Ready pod -l app=csi-attacher -n longhorn-system'"
+  run "line '$LINENO';wait-for-success 'kubectl rollout status deployment csi-attacher -n longhorn-system'"
+
+  # Volumes ????
+
 }
 longhorn-uninstall()
 {
@@ -49,15 +76,65 @@ longhorn-uninstall()
   # longhorn deleting-confirmation-flag
   # kubectl get lhs -n longhorn-system
   # can be edit in k9s or apply deleting-confirmation-flag.yaml
-  run "line "$LINENO";kubectl apply -f ./102-longhorn/deleting-confirmation-flag.yaml -n longhorn-system"
+  local dir="$(dirname "$0")"
+  run "line $LINENO;kubectl -n longhorn-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
+  #run "line $LINENO;helm uninstall longhorn -n longhorn-system"
 
-  run "line "$LINENO";kubectl create -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/uninstall/uninstall.yaml"
+  run "line $LINENO;kubectl create -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/uninstall/uninstall.yaml"
   #kubectl get job/longhorn-uninstall -n longhorn-system -w
-  
-  until kubectl get job/longhorn-uninstall -n longhorn-system -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' | grep True ; do sleep 10 ; done
 
-  run "line '$LINENO';kubectl delete -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
+  # https://medium.com/@sirtcp/how-to-resolve-stuck-kubernetes-namespace-deletions-by-cleaning-finalizers-38190bf3165f
+  # Get all resorces
+  #kubectl api-resources
+  # Get all resorces for namespace
+  #kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n longhorn-system
+
+
+  run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=complete job/longhorn-uninstall -n longhorn-system'"
+  #run "line '$LINENO';wait-for-success \"kubectl get job/longhorn-uninstall -n longhorn-system -o jsonpath='{.status.conditions[?(@.type==\"Complete\")].status}' | grep True\""
+  run "line '$LINENO';kubectl delete namespace longhorn-system"
+
+exit
+
+  local wait_time=0
+  local wait_period=10
+  local wait_timeout=300
+  until kubectl get job/longhorn-uninstall -n longhorn-system -o jsonpath='{.status.conditions[?(@.type=="Complete")].status}' | grep True > /dev/null; 
+  do 
+    sleep $wait_period
+    ((wait_time+=wait_period))
+    if [[ $wait_time -gt $wait_timeout ]]; then
+      err_and_exit "Timeout. Wait time $wait_time sec"  ${LINENO} "$0"
+    fi
+  done
+  run "line '$LINENO';kubectl delete deployment longhorn-ui -n longhorn-system"
   run "line '$LINENO';kubectl delete -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/uninstall/uninstall.yaml"
+
+  local wait_time=0
+  local wait_period=30
+  local wait_timeout=600
+  until ! command -v kubectl get pod -o json -n longhorn-system | jq '.items | length' &> /dev/null;  
+  do 
+    sleep $wait_period
+    ((wait_time+=wait_period))
+    echo $wait_time
+    if [[ $wait_time -gt $wait_timeout ]]; then
+      err_and_exit "Timeout. Wait time $wait_time sec"  ${LINENO} "$0"
+    fi
+  done
+  run "line '$LINENO';kubectl delete namespace longhorn-system"
+}
+longhorn-backup()
+{
+  # https://longhorn.io/docs/archives/1.2.4/concepts/#31-how-backups-work
+  # https://longhorn.io/docs/archives/1.2.4/snapshots-and-backups/csi-snapshot-support/create-a-backup-via-csi/
+  echo kuku
+}
+longhorn-restore()
+{
+  # https://longhorn.io/docs/archives/1.2.4/concepts/#31-how-backups-work
+  # https://longhorn.io/docs/archives/1.2.4/snapshots-and-backups/csi-snapshot-support/restore-a-backup-via-csi/#restore-a-backup-that-has-no-associated-volumesnapshot
+  echo kuku
 }
 
 ################################
@@ -98,7 +175,7 @@ while getopts "i:r:u:ovdh" opt
 do
   case $opt in
     i )
-      longhorn-check-version "$OPTARG"
+      longhorn-check-version "$OPTARG" 1
       longhorn-install-new
     ;;
     u )
@@ -110,11 +187,15 @@ do
       longhorn-check-version "$OPTARG"
       longhorn-upgrade
     ;;
-    b )
+    b ) 
+      # https://github.com/longhorn/longhorn/blob/master/scripts/restore-backup-to-file.sh
+      # https://github.com/longhorn/longhorn/blob/master/enhancements/20220913-longhorn-system-backup-restore.md
       err_and_exit "Not implemented yet."  ${LINENO} "$0"
       longhorn-backup
     ;;
-    r )
+    r ) 
+      # https://github.com/longhorn/longhorn/blob/master/scripts/restore-backup-to-file.sh
+      # https://github.com/longhorn/longhorn/blob/master/enhancements/20220913-longhorn-system-backup-restore.md
       err_and_exit "Not implemented yet."  ${LINENO} "$0"
       longhorn-restore
     ;;
@@ -132,10 +213,6 @@ do
   esac
 done
 shift $((OPTIND-1))
-
-if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
-  warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
-fi
 
 exit
 
