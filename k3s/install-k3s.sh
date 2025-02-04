@@ -1,5 +1,5 @@
 #!/bin/bash
-# ./install-k3s.sh ./k3s.yaml 1
+# ./install-k3s.sh -i new ./k3s-HA.yaml
 
 source k8s.sh
 #source ./../bashlib/bash_lib.sh
@@ -160,7 +160,7 @@ install_kube_vip()
   run "line '$LINENO';ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo cp /etc/rancher/k3s/k3s.yaml ~/k3s.yaml'"
   run "line '$LINENO';ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo chmod 777 ~/k3s.yaml'"
   run "line '$LINENO';scp -i ~/.ssh/$cert_name $node_user@$node_ip4:./k3s.yaml ~/$cluster_name.yaml"
-  run line '$LINENO';yq -i ".clusters[0].cluster.server = \"https://${cluster_config_ip}:6443\"" ~/$cluster_name.yaml
+  run "line '$LINENO';yq -i '.clusters[0].cluster.server = \"https://${cluster_config_ip}:6443\"' ~/$cluster_name.yaml"
   run "line '$LINENO';cp ~/$cluster_name.yaml ~/.kube/$cluster_name"
   #check_result $LINENO
   #run cp --backup=t ~/$cluster_name.yaml ~/.kube/$cluster_name
@@ -392,7 +392,11 @@ k3s_settings=$1
 
 install_check_start
 
-h2 "Install K3s cluster with $amount_nodes nodes. Cluster plan from '$k3s_settings' file. (Line:$LINENO)"
+if [[ $opt_install_remove -eq 1 ]]; then
+  h2 "Remove K3s cluster with $amount_nodes nodes. Cluster plan from '$k3s_settings' file. (Line:$LINENO)"
+else
+  h2 "Install K3s cluster with $amount_nodes nodes. Cluster plan from '$k3s_settings' file. (Line:$LINENO)"
+fi
 
 # export KUBECONFIG=/mnt/d/dev/homelab/k3s/kubeconfig
 # kubectl config use-context local
@@ -527,6 +531,19 @@ run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/kube-vip/
 #run kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provider/$kube_vip_cloud_provider_ver/deploy/kube-vip-cloud-controller.yaml
 run "line '$LINENO';kubectl create configmap -n kube-system kubevip --from-literal range-global=$kube_vip_lb_range"
 
+# Longhorn
+# https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
+install_step=$((install_step+1))
+hl.blue "$install_step. Install Longhorn. (Line:$LINENO)"
+./102-longhorn/install.sh -i $longhorn_ver
+
+exit
+
+# Rancher
+install_step=$((install_step+1))
+hl.blue "$install_step. Install Rancher. (Line:$LINENO)"
+./105-rancher/install.sh -i $rancher_ver
+
 # pi-hole
 if [[ $pi_hole_use -eq 1 ]]; then
   install_step=$((install_step+1))
@@ -534,36 +551,25 @@ if [[ $pi_hole_use -eq 1 ]]; then
   ./101-pi-hole/install.sh -i $pi_hole_ver
 fi
 
-# Longhorn
-# https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
-install_step=$((install_step+1))
-hl.blue "$install_step. Install Longhorn. (Line:$LINENO)"
-./102-longhorn/install.sh -i $longhorn_ver
 
-# Rancher
-install_step=$((install_step+1))
-hl.blue "$install_step. Install Rancher. (Line:$LINENO)"
-./105-rancher/install.sh -i $rancher_ver
-
-
-longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-if [ -z $longhorn_ver ]; then
-  longhorn_ver=$longhorn_latest
-fi
-if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
-  warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
-fi
-run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
-# https://longhorn.io/docs/1.7.2/advanced-resources/longhornctl/install-longhornctl/
-if ! ($(longhornctl version > /dev/null ) || $(longhornctl version) != $longhorn_ver ); then
-  # Download the release binary.
-  run "line '$LINENO';curl -LO "https://github.com/longhorn/cli/releases/download/$longhorn_ver/longhornctl-linux-${ARCH}""
-  # Download the checksum for your architecture.
-  run line '$LINENO';curl -LO "https://github.com/longhorn/cli/releases/download/$longhorn_ver/longhornctl-linux-${ARCH}.sha256"
-  # Verify the downloaded binary matches the checksum.
-  run line '$LINENO';echo "$(cat longhornctl-linux-${ARCH}.sha256 | awk '{print $1}') longhornctl-linux-${ARCH}" | sha256sum --check
-  run line '$LINENO';sudo install longhornctl-linux-${ARCH} /usr/local/bin/longhornctl;longhornctl version
-fi
+# longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+# if [ -z $longhorn_ver ]; then
+#   longhorn_ver=$longhorn_latest
+# fi
+# if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
+#   warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
+# fi
+# run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
+# # https://longhorn.io/docs/1.7.2/advanced-resources/longhornctl/install-longhornctl/
+# if ! ($(longhornctl version > /dev/null ) || $(longhornctl version) != $longhorn_ver ); then
+#   # Download the release binary.
+#   run "line '$LINENO';curl -LO "https://github.com/longhorn/cli/releases/download/$longhorn_ver/longhornctl-linux-${ARCH}""
+#   # Download the checksum for your architecture.
+#   run line '$LINENO';curl -LO "https://github.com/longhorn/cli/releases/download/$longhorn_ver/longhornctl-linux-${ARCH}.sha256"
+#   # Verify the downloaded binary matches the checksum.
+#   run line '$LINENO';echo "$(cat longhornctl-linux-${ARCH}.sha256 | awk '{print $1}') longhornctl-linux-${ARCH}" | sha256sum --check
+#   run line '$LINENO';sudo install longhornctl-linux-${ARCH} /usr/local/bin/longhornctl;longhornctl version
+# fi
 
 # https://argo-cd.readthedocs.io/en/stable/
 install_step=$((install_step+1))

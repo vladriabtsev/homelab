@@ -50,8 +50,9 @@ longhorn-install-new()
   # https://kubernetes.io/docs/reference/kubectl/generated/kubectl_wait/
   # https://kubernetes.io/docs/reference/kubectl/jsonpath/
   # https://stackoverflow.com/questions/53536907/kubectl-wait-for-condition-complete-timeout-30s
-  # OK run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=Ready pod -l app=csi-attacher -n longhorn-system'"
-  run "line '$LINENO';wait-for-success 'kubectl rollout status deployment csi-attacher -n longhorn-system'"
+  run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=csi-attacher -n longhorn-system'"
+  # no need if cluster exist run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system'"
+  # not working sometime run "line '$LINENO';wait-for-success 'kubectl rollout status deployment csi-attacher -n longhorn-system'"
 
   # Volumes ????
 
@@ -89,8 +90,9 @@ longhorn-uninstall()
   # Get all resorces for namespace
   #kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n longhorn-system
 
-
-  run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=complete job/longhorn-uninstall -n longhorn-system'"
+  # kubectl wait --for jsonpath='{.status.state}'=AtLatestKnown sub mysub -n myns --timeout=3m
+  #run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=complete job/longhorn-uninstall -n longhorn-system'"
+  run "line '$LINENO';kubectl wait --for=condition=complete job/longhorn-uninstall -n longhorn-system --timeout=5m"
   #run "line '$LINENO';wait-for-success \"kubectl get job/longhorn-uninstall -n longhorn-system -o jsonpath='{.status.conditions[?(@.type==\"Complete\")].status}' | grep True\""
   run "line '$LINENO';kubectl delete namespace longhorn-system"
 
@@ -123,6 +125,17 @@ exit
     fi
   done
   run "line '$LINENO';kubectl delete namespace longhorn-system"
+}
+longhorn-upgrade()
+{
+  longhorn-backup
+
+  run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
+  run "line '$LINENO';wait-for-success 'kubectl rollout status deployment longhorn-driver-deployer -n longhorn-system'"
+  run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system --timeout=5m'"
+
+  # if timeout when upgrade
+  longhorn-restore
 }
 longhorn-backup()
 {
@@ -171,7 +184,7 @@ then
   # Note: dash (-) necessary
 fi
 
-while getopts "i:r:u:ovdh" opt
+while getopts "i:u:g:ovdh" opt
 do
   case $opt in
     i )
@@ -183,7 +196,6 @@ do
       longhorn-uninstall
     ;;
     g )
-      err_and_exit "Not implemented yet."  ${LINENO} "$0"
       longhorn-check-version "$OPTARG"
       longhorn-upgrade
     ;;
