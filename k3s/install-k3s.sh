@@ -1,7 +1,7 @@
 #!/bin/bash
 # ./install-k3s.sh -i new ./k3s-HA.yaml
 
-source k8s.sh
+source ./../k8s.sh
 #source ./../bashlib/bash_lib.sh
 #VLADNET_BASH_SOURCED
 
@@ -186,6 +186,62 @@ remove_kubernetes_first_node()
   run "line '$LINENO';ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo rm -rf /var/lib/rancher /etc/rancher ~/.kube/*'"
   run "line '$LINENO';ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo ip addr flush dev lo'"
   run "line '$LINENO';ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo ip addr add 127.0.0.1/8 dev lo'"
+}
+node_disks()
+{
+  declare -a -g node_storage_class_array
+  declare -a -g node_disk_uuid_array
+  declare -a -g node_mnt_path_array
+  # https://mikefarah.gitbook.io/yq/usage/tips-and-tricks
+  #echo $i_node
+  if [[ $i_node -gt 0 ]]; then exit; fi
+  readarray disks < <(yq -o=j -I=0 ".node[$i_node].node_storage[]" < $k3s_settings)
+  local i_disk=0
+  for disk in "${disks[@]}"; do
+    eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$disk)"
+    node_storage_class_array[i_disk]=$storage_class
+    node_disk_uuid_array[i_disk]=$disk_uuid
+    node_mnt_path_array[i_disk]=$mnt_path
+    ((i_disk++))
+  done
+
+  n_disks=$i_disk
+  # for i in "${node_storage_class_array[@]}"; do
+  #   echo $i
+  # done
+  # for i in "${node_disk_uuid_array[@]}"; do
+  #   echo $i
+  # done
+  # for i in "${node_mnt_path_array[@]}"; do
+  #   echo $i
+  # done
+  case $1 in
+    1 )
+      #cmd="# create mount dir and change /etc/fstab \
+#"
+      cmd="\""
+      for (( i=0; i < n_disks; i++ )); do
+        if [[ i -gt 0 ]]; then cmd+=" && "; fi
+        echo "${node_storage_class_array[i]} ${node_disk_uuid_array[i]} ${node_mnt_path_array[i]}"
+        # https://www.gnu.org/software/sed/
+        # https://www.gnu.org/software/sed/manual/sed.html
+        # https://www.howtogeek.com/666395/how-to-use-the-sed-command-on-linux/
+#sudo sed -i'.bak' -n -e '/^.*${node_disk_uuid_array[i]}.*$/d' -e 'i UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' /etc/fstab "
+        cmd+="if ! [[ -d ${node_mnt_path_array[i]} ]]; then sudo mkdir ${node_mnt_path_array[i]}; fi &&
+sudo sed -i -n -e '/^.*${node_disk_uuid_array[i]}.*$/d' /etc/fstab &&
+sudo sed -i -n -e 'i UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' /etc/fstab "
+      done
+      cmd+="\""
+      echo $cmd
+      # https://www.geeksforgeeks.org/sed-command-in-linux-unix-with-examples/
+      run "line '$LINENO';ssh -T $node_user@$node_ip4 -i ~/.ssh/$cert_name $cmd"
+    ;;
+    2 )
+    ;;
+    * )
+      err_and_exit "Expected parameters: 1 - mount, 2 - generate yaml" ${LINENO};
+  esac
+  #if [[ $1 -ne 1 && $1 -ne 2 ]]; then err_and_exit "Expected parameters: 1 - mount, 2 - generate yaml" ${LINENO}; fi
 }
 install_first_node()
 {
@@ -390,6 +446,16 @@ start_time=$(date +%s)
 install_step=0
 k3s_settings=$1
 
+#   readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
+#   i_node=0
+#   for node in "${nodes[@]}"; do
+#     eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
+#     node_disks 1
+#     ((i_node++))
+#   done
+# exit
+
+
 install_check_start
 
 if [[ $opt_install_remove -eq 1 ]]; then
@@ -484,8 +550,6 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
   readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
   i_node=0
   for node in "${nodes[@]}"; do
-    ((i_node++))
-    if [ $i_node -gt $amount_nodes ]; then break; fi
     eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
     #inf "          k3s_node: id='$node_id', ip4='$node_ip4', eth='$kube_vip_interface', control plane='$node_is_control_plane', worker='$node_is_worker', name='$node_name', user='$node_user'"
     # k3s installation
@@ -505,6 +569,9 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
     else # additional node join cluster
         install_join_node
     fi
+    node_disks 1
+    ((i_node++))
+    if [ $i_node -gt $amount_nodes ]; then break; fi
   done
   if [ $opt_install_remove -eq 1 ]; then
     unset KUBECONFIG

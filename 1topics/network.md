@@ -1,6 +1,17 @@
-## Interesting Network Hardware
+# Interesting Network Hardware
 
 [JetKVM](https://jetkvm.com/docs/getting-started/quick-start)
+
+[PiKVM - Open and inexpensive IP-KVM on Raspberry Pi](https://pikvm.org/)
+
+NanoKVM
+
+* [NanoKVM](https://github.com/sipeed/NanoKVM)
+* [NanoKVM doc](https://wiki.sipeed.com/hardware/en/kvm/NanoKVM/introduction.html)
+
+## Universal USB
+
+[Medicat](https://github.com/mon5termatt/medicat_installer)
 
 ## Network
 
