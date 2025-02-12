@@ -9,10 +9,6 @@ NanoKVM
 * [NanoKVM](https://github.com/sipeed/NanoKVM)
 * [NanoKVM doc](https://wiki.sipeed.com/hardware/en/kvm/NanoKVM/introduction.html)
 
-## Universal USB
-
-[Medicat](https://github.com/mon5termatt/medicat_installer)
-
 ## Network
 
 Acanac modem: 192.168.11.1, DHCP 21-49, 24h, admin Q123.
