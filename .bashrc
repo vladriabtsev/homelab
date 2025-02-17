@@ -116,6 +116,8 @@ if ! shopt -oq posix; then
   fi
 fi
 
+eval "$(ssh-agent -s)" # start ssh agent
+ssh-add ~/.ssh/id_rsa
 
 export GOROOT=/usr/local/go-1.23.4
 export GOPATH=$HOME/go

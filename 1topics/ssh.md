@@ -2,6 +2,7 @@
 
 TODO: NEED TURN OFF PASSWORD AUTHENTICATION
 
+[Run Arbitrarily Complex Commands Using sudo Over SSH](https://www.baeldung.com/linux/ssh-sudo-run-complex-commands)
 [](https://www.cyberciti.biz/faq/linux-unix-osx-bsd-ssh-run-command-on-remote-machine-server/)
 [Remotely Execute Multi-line Commands with SSH](https://thornelabs.net/posts/remotely-execute-multi-line-commands-with-ssh/)
 
@@ -9,6 +10,8 @@ TODO: NEED TURN OFF PASSWORD AUTHENTICATION
 [ssh-cheatsheet](https://grahamhelton.com/blog/ssh-cheatsheet/)
 [OpenSSH for Absolute Beginners](https://youtu.be/3FKsdbjzBcc)
 [Manuals](https://www.openssh.com/manual.html)
+[Man](https://www.sudo.ws/docs/man/sudo.man/)
+[SSH Agent Explained](https://smallstep.com/blog/ssh-agent-explained/)
 
 Test SSH is installed: `ssh -V`
 Check SSH server status: `sudo systemctl status ssh`
@@ -23,6 +26,17 @@ Test SSH port is open: `nc -vz host port`
 Debug: `ssh -vvv [youruser]@[yourLinode]`
 
 First SSH connection: `ssh user@host`, yes for fingerprint, password of the user on server
+
+[SSH Agent Explained](https://smallstep.com/blog/ssh-agent-explained/)
+[how-to-fix-could-not-open-a-connection-to-your-authentication-agent](https://www.geeksforgeeks.org/how-to-fix-could-not-open-a-connection-to-your-authentication-agent-in-git/)
+
+eval "$(ssh-agent -s)" # start ssh agent
+ssh-add ~/.ssh/id_rsa
+echo $SSH_AUTH_SOCK
+echo $SSH_AGENT_PID
+
+ssh-add -l # list added keys
+ssh-add -k # kill agent
 
 ## Use SSH Keys
 
@@ -59,7 +73,7 @@ Disable password authentication on server: `sudo nano /etc/ssh/sshd_config` chan
 
 [sshd_config](https://man.freebsd.org/cgi/man.cgi?sshd_config(5)), LogLevel DEBUG (VERBOSE)
 
-Reload ssh server settings: `sudo systemctl restart ssh`
+Reload ssh server settings: `sudo systemctl restart sshd`
 
 SSH connection debug: `ssh -v user@host`, `ssh -vv user@host`, `ssh -vvv user@host`
 
@@ -89,11 +103,3 @@ Consider to use [Fail2ban](https://github.com/fail2ban/fail2ban) to ban hosts th
 
 
 ssh-copy-id -i ~/.ssh/tatu-key-ecdsa user@host
-
-eval $(ssh-agent)
-ssh-add ~/.ssh/id_rsa
-
-eval `ssh-agent` # start ssh agent
-ssh-add # add keys in agent. Expect password for keys enter ones
-ssh-add -l # list added keys
-ssh-add -k # kill agent

@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# k8s bash tests: bats ./../bashlib/bash-lib-test.bats
+# k8s bash tests: bats ./../bashlib/bash-lib-test.bats --filter-status failed
 # https://bats-core.readthedocs.io/en/stable/installation.html#linux-distribution-package-manager
 # https://bats-core.readthedocs.io/en/stable/writing-tests.html#run-test-other-commands
 # https://github.com/ztombol/bats-docs?tab=readme-ov-file#installation
@@ -25,6 +25,44 @@ setup() {
   #rm -f /tmp/bats-tutorial-project-ran
 #}
 
+@test "text: count lines" {
+  local txt="first line
+second line
+third line"
+  #echo "$txt"
+  #local cnt=$(echo "$txt" | grep -c "\n")
+  local cnt=$(echo "$txt" | wc -l)
+  #echo "$cnt"
+  [ $cnt -eq 3 ]
+}
+@test "text: delete 'second line'" {
+  local txt="first line
+second line
+third line"
+  local txt2=$(echo "$txt" | sed '/second/d')
+  #echo "$txt2"
+  local cnt=$(echo "$txt2" | wc -l)
+  [ $cnt -eq 2 ]
+}
+@test "text: delete two 'second line'" {
+  local txt="first line
+second line
+second line
+third line"
+  local txt2=$(echo "$txt" | sed '/second/d')
+  echo "$txt2"
+  local cnt=$(echo "$txt2" | wc -l)
+  [ $cnt -eq 2 ]
+}
+@test "text: delete 'second 99bb8649-3ded-404d-ad68-ce454262dfbb'" {
+  local txt="first 2c30133e-3ab3-4171-bc9d-73bb9a50df3b
+second 99bb8649-3ded-404d-ad68-ce454262dfbb
+third ef31bf5a-97d4-4701-bc8d-12fc06ffc95d"
+  local txt2=$(echo "$txt" | sed '/99bb8649-3ded-404d-ad68-ce454262dfbb/d')
+  echo "$txt2"
+  local cnt=$(echo "$txt2" | wc -l)
+  [ $cnt -eq 2 ]
+}
 @test "wait-for-success: error if without parameters" {
   run wait-for-success
   #echo "echo always" >&3

@@ -8,6 +8,7 @@ NanoKVM
 
 * [NanoKVM](https://github.com/sipeed/NanoKVM)
 * [NanoKVM doc](https://wiki.sipeed.com/hardware/en/kvm/NanoKVM/introduction.html)
+* [Sipeed NanoKVM PCIE Version - ATX PC Remote Control, RISC-V Nano KVM Over IP, DDR3 RISC-V Development Board, Linux, 1TOPS NPU (with PoE)](https://www.amazon.ca/youyeetoo-Sipeed-NanoKVM-PCIE-Version/dp/B0DRCLQHJQ/ref=sr_1_8?crid=344LMITYEO7WL&dib=eyJ2IjoiMSJ9.1kaZXyv1O-GHWrLgOm1ayZA7eqIF0ms6GOW0Loyl1SKgR8kdagYmrzu1bW9e4o3pUByOoOAOvb8etN_85ANGov0YuZzXD_YUk9T8SR1e_H9SSwco7yqQ9zgWnyR3N6pJIvTM_D97Yzlyrq6SXQi6A0gZX1QT9sOT00JHt44P1TA.2NEJb53LGDQ0yGZpIYImV3GMP2NcadB3Vfg1eEV1_1U&dib_tag=se&keywords=nanokvm&qid=1739542238&sprefix=nanokvm%2Caps%2C177&sr=8-8&th=1)
 
 ## Network
 
