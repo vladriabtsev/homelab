@@ -192,9 +192,7 @@ remove_kubernetes_first_node()
 node_disks()
 {
   echo node_disks
-  ! [[ -f /etc/fstab.bak ]] || {
-    run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S cp /etc/fstab /etc/fstab.bak <<< \"$node_root_password\"'"
-  }
+  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'if sudo -S ! test -e /etc/fstab.bak; then cp /etc/fstab /etc/fstab.bak; fi <<< \"$node_root_password\"'"
   declare -a -g node_storage_class_array
   declare -a -g node_disk_uuid_array
   declare -a -g node_mnt_path_array
@@ -231,6 +229,11 @@ node_disks()
         # https://www.gnu.org/software/sed/
         # https://www.gnu.org/software/sed/manual/sed.html
         # https://www.howtogeek.com/666395/how-to-use-the-sed-command-on-linux/
+        #echo \"sudo -S \"sed -i -n -e \"/${node_disk_uuid_array[i]}/d\"\"\""
+        local sed_del="sed '/${node_disk_uuid_array[i]}/d' /etc/fstab"
+        local sed_append="sed 'a/UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' /etc/fstab"
+        run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S $sed_del <<< '$node_root_password'\""
+        run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S $sed_append <<< '$node_root_password'\""
 #sudo sed -i'.bak' -n -e '/^.*${node_disk_uuid_array[i]}.*$/d' -e 'i UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' /etc/fstab "
 
 #         cmd+="if ! [[ -d ${node_mnt_path_array[i]} ]]; then sudo mkdir ${node_mnt_path_array[i]}; fi &&
@@ -452,15 +455,6 @@ start_time=$(date +%s)
 install_step=0
 k3s_settings=$1
 
-#   readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
-#   i_node=0
-#   for node in "${nodes[@]}"; do
-#     eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
-#     node_disks 1
-#     ((i_node++))
-#   done
-# exit
-
 install_check_start
 
 if [[ $opt_install_remove -eq 1 ]]; then
@@ -575,6 +569,10 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
         inf "Config from file '~/.kube/local' is exported. Use 'ek local' to set local in KUBECONFIG env"
         inf "To uninstall: '/usr/local/bin/k3s-uninstall.sh' and may be restart computer"
       else
+  
+        node_disks 1
+        exit
+
         install_first_node
       fi
     else # additional node join cluster
