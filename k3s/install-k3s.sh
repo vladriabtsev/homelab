@@ -220,6 +220,11 @@ node_disks()
   # done
   case $1 in
     1 )
+      #run "line '$LINENO';scp -i ~/.ssh/$cert_name $node_user@$node_ip4:/etc/fstab ~/fstab"
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'cp /etc/fstab ~/fstab' <<< \"$node_root_password\"'"
+      run "line '$LINENO';scp -i ~/.ssh/$cert_name $node_user@$node_ip4:~/fstab ~/fstab"
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'rm ~/fstab' <<< \"$node_root_password\"'"
+
       #cmd="# create mount dir and change /etc/fstab \
 #"
       cmd="\""
@@ -229,11 +234,13 @@ node_disks()
         # https://www.gnu.org/software/sed/
         # https://www.gnu.org/software/sed/manual/sed.html
         # https://www.howtogeek.com/666395/how-to-use-the-sed-command-on-linux/
-        #echo \"sudo -S \"sed -i -n -e \"/${node_disk_uuid_array[i]}/d\"\"\""
-        local sed_del="sed '/${node_disk_uuid_array[i]}/d' /etc/fstab"
-        local sed_append="sed 'a/UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' /etc/fstab"
-        run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S $sed_del <<< '$node_root_password'\""
-        run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S $sed_append <<< '$node_root_password'\""
+        echo 1111
+        cat ~/fstab
+        run "line '$LINENO';sed -i \"/${node_disk_uuid_array[i]}/d\" ~/fstab"
+        cat ~/fstab
+        run "line '$LINENO';echo 'UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' >> ~/fstab"
+        cat ~/fstab
+        echo 2222
 #sudo sed -i'.bak' -n -e '/^.*${node_disk_uuid_array[i]}.*$/d' -e 'i UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' /etc/fstab "
 
 #         cmd+="if ! [[ -d ${node_mnt_path_array[i]} ]]; then sudo mkdir ${node_mnt_path_array[i]}; fi &&
@@ -244,6 +251,10 @@ node_disks()
 #       echo $cmd
 #       # https://www.geeksforgeeks.org/sed-command-in-linux-unix-with-examples/
 #       run "line '$LINENO';ssh -t $node_user@$node_ip4 -i ~/.ssh/$cert_name $cmd"
+      run "line '$LINENO';scp -i ~/.ssh/$cert_name.pub ~/fstab $node_user@$node_ip4:~/fstab"
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S mv ~/fstab /etc/fstab <<< '$node_root_password'\""
+      # vlad owner, 644
+      #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'cp ~/fstab /etc/fstab' <<< \"$node_root_password\"'"
     ;;
     2 )
     ;;
