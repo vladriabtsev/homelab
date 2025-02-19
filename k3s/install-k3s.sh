@@ -207,8 +207,7 @@ node_disks()
     node_mnt_path_array[i_disk]=$mnt_path
     ((i_disk++))
   done
-
-  n_disks=$i_disk
+  n_disks=$i_disk # Total disks
   # for i in "${node_storage_class_array[@]}"; do
   #   echo $i
   # done
@@ -220,48 +219,29 @@ node_disks()
   # done
   case $1 in
     1 )
-      #run "line '$LINENO';scp -i ~/.ssh/$cert_name $node_user@$node_ip4:/etc/fstab ~/fstab"
+      # Get local copy of node's fstab
       run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'cp /etc/fstab ~/fstab' <<< \"$node_root_password\"'"
       run "line '$LINENO';scp -i ~/.ssh/$cert_name $node_user@$node_ip4:~/fstab ~/fstab"
       run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'rm ~/fstab' <<< \"$node_root_password\"'"
 
-      #cmd="# create mount dir and change /etc/fstab \
-#"
-      cmd="\""
       for (( i=0; i < n_disks; i++ )); do
-        if [[ i -gt 0 ]]; then cmd+=" && "; fi
-        echo "${node_storage_class_array[i]} ${node_disk_uuid_array[i]} ${node_mnt_path_array[i]}"
-        # https://www.gnu.org/software/sed/
-        # https://www.gnu.org/software/sed/manual/sed.html
-        # https://www.howtogeek.com/666395/how-to-use-the-sed-command-on-linux/
-        echo 1111
-        cat ~/fstab
+        # Delete previous fstab record and append new one
         run "line '$LINENO';sed -i \"/${node_disk_uuid_array[i]}/d\" ~/fstab"
-        cat ~/fstab
         run "line '$LINENO';echo 'UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' >> ~/fstab"
-        cat ~/fstab
-        echo 2222
-#sudo sed -i'.bak' -n -e '/^.*${node_disk_uuid_array[i]}.*$/d' -e 'i UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' /etc/fstab "
-
-#         cmd+="if ! [[ -d ${node_mnt_path_array[i]} ]]; then sudo mkdir ${node_mnt_path_array[i]}; fi &&
-# sudo sed -i -n -e '/^.*${node_disk_uuid_array[i]}.*$/d' /etc/fstab &&
-# sudo sed -i -n -e 'i UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' /etc/fstab "
+        # Create mount directory if not exists
+        run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"if sudo -S ! [[ -e ${node_mnt_path_array[i]} ]]; then mkdir ${node_mnt_path_array[i]}; fi <<< '$node_root_password'\""
       done
-#       cmd+="\""
-#       echo $cmd
-#       # https://www.geeksforgeeks.org/sed-command-in-linux-unix-with-examples/
-#       run "line '$LINENO';ssh -t $node_user@$node_ip4 -i ~/.ssh/$cert_name $cmd"
+      # Copy updated fstab to node
       run "line '$LINENO';scp -i ~/.ssh/$cert_name.pub ~/fstab $node_user@$node_ip4:~/fstab"
       run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S mv ~/fstab /etc/fstab <<< '$node_root_password'\""
-      # vlad owner, 644
-      #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'cp ~/fstab /etc/fstab' <<< \"$node_root_password\"'"
+      # Remount all
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S mount -a <<< '$node_root_password'\""
     ;;
     2 )
     ;;
     * )
       err_and_exit "Expected parameters: 1 - mount, 2 - generate yaml" ${LINENO};
   esac
-  #if [[ $1 -ne 1 && $1 -ne 2 ]]; then err_and_exit "Expected parameters: 1 - mount, 2 - generate yaml" ${LINENO}; fi
 }
 install_first_node()
 {
