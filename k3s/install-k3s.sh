@@ -191,7 +191,14 @@ remove_kubernetes_first_node()
 }
 node_disks()
 {
-  echo node_disks
+  install_step=$((install_step+1))
+  if [ $1 -eq 1 ]; then
+    hl.blue "$install_step. Mount disks on node $node_name($node_ip4). (Line:$LINENO)"
+  fi
+  if [ $1 -eq 2 ]; then
+    hl.blue "$install_step. Longhorn node disks yaml settings for $node_name($node_ip4). (Line:$LINENO)"
+  fi
+  # Create initial .bak of current fstab file
   run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'if sudo -S ! test -e /etc/fstab.bak; then cp /etc/fstab /etc/fstab.bak; fi <<< \"$node_root_password\"'"
   declare -a -g node_storage_class_array
   declare -a -g node_disk_uuid_array
@@ -560,10 +567,6 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
         inf "Config from file '~/.kube/local' is exported. Use 'ek local' to set local in KUBECONFIG env"
         inf "To uninstall: '/usr/local/bin/k3s-uninstall.sh' and may be restart computer"
       else
-  
-        node_disks 1
-        exit
-
         install_first_node
       fi
     else # additional node join cluster

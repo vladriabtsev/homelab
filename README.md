@@ -1,5 +1,9 @@
 # Homelab
 
+## Windows
+
+https://www.microsoft.com/en-us/evalcenter/evaluate-windows-11-iot-enterprise-ltsc
+
 ## Hardware
 
 Reboot router

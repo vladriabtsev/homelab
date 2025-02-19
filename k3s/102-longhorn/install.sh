@@ -1,6 +1,10 @@
 #!/bin/bash
 # Longhorn install
 # ./102-longhorn/install.sh -i v1.7.2
+# Longhorn uninstall
+# ./102-longhorn/install.sh -u v1.7.2
+# Longhorn upgrade
+# ./102-longhorn/install.sh -g v1.7.3
 
 source ./../bash-lib.sh
 
