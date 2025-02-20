@@ -189,67 +189,6 @@ remove_kubernetes_first_node()
   run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S ip addr flush dev lo <<< \"$node_root_password\"'"
   run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S ip addr add 127.0.0.1/8 dev lo <<< \"$node_root_password\"'"
 }
-node_disks()
-{
-  install_step=$((install_step+1))
-  if [ $1 -eq 1 ]; then
-    hl.blue "$install_step. Mount disks on node $node_name($node_ip4). (Line:$LINENO)"
-  fi
-  if [ $1 -eq 2 ]; then
-    hl.blue "$install_step. Longhorn node disks yaml settings for $node_name($node_ip4). (Line:$LINENO)"
-  fi
-  # Create initial .bak of current fstab file
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'if sudo -S ! test -e /etc/fstab.bak; then cp /etc/fstab /etc/fstab.bak; fi <<< \"$node_root_password\"'"
-  declare -a -g node_storage_class_array
-  declare -a -g node_disk_uuid_array
-  declare -a -g node_mnt_path_array
-  # https://mikefarah.gitbook.io/yq/usage/tips-and-tricks
-  #echo $i_node
-  readarray disks < <(yq -o=j -I=0 ".node[$i_node].node_storage[]" < $k3s_settings)
-  local i_disk=0
-  for disk in "${disks[@]}"; do
-    eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$disk)"
-    node_storage_class_array[i_disk]=$storage_class
-    node_disk_uuid_array[i_disk]=$disk_uuid
-    node_mnt_path_array[i_disk]=$mnt_path
-    ((i_disk++))
-  done
-  n_disks=$i_disk # Total disks
-  # for i in "${node_storage_class_array[@]}"; do
-  #   echo $i
-  # done
-  # for i in "${node_disk_uuid_array[@]}"; do
-  #   echo $i
-  # done
-  # for i in "${node_mnt_path_array[@]}"; do
-  #   echo $i
-  # done
-  case $1 in
-    1 )
-      # Get local copy of node's fstab
-      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'cp /etc/fstab ~/fstab' <<< \"$node_root_password\"'"
-      run "line '$LINENO';scp -i ~/.ssh/$cert_name $node_user@$node_ip4:~/fstab ~/fstab"
-      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'rm ~/fstab' <<< \"$node_root_password\"'"
-
-      for (( i=0; i < n_disks; i++ )); do
-        # Delete previous fstab record and append new one
-        run "line '$LINENO';sed -i \"/${node_disk_uuid_array[i]}/d\" ~/fstab"
-        run "line '$LINENO';echo 'UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' >> ~/fstab"
-        # Create mount directory if not exists
-        run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"if sudo -S ! [[ -e ${node_mnt_path_array[i]} ]]; then mkdir ${node_mnt_path_array[i]}; fi <<< '$node_root_password'\""
-      done
-      # Copy updated fstab to node
-      run "line '$LINENO';scp -i ~/.ssh/$cert_name.pub ~/fstab $node_user@$node_ip4:~/fstab"
-      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S mv ~/fstab /etc/fstab <<< '$node_root_password'\""
-      # Remount all
-      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S mount -a <<< '$node_root_password'\""
-    ;;
-    2 )
-    ;;
-    * )
-      err_and_exit "Expected parameters: 1 - mount, 2 - generate yaml" ${LINENO};
-  esac
-}
 install_first_node()
 {
   install_step=$((install_step+1))
@@ -315,36 +254,6 @@ install_join_node()
     hl.blue "$install_step. Remove k3s node $node_name($node_ip4). (Line:$LINENO)"
   fi
   run remove_install_join_node_k3s
-}
-
-install_check_start()
-{
-  # YML,JSON,XML,LUA,TOML https://mikefarah.gitbook.io/yq/how-it-works
-  # https://www.baeldung.com/linux/yq-utility-processing-yaml
-
-  #source k3s-func.sh
-
-  if [[ $(yq --exit-status 'tag == "!!map" or tag== "!!seq"' $k3s_settings > /dev/null) ]]; then
-    err_and_exit "Error: Invalid format for YAML file: '$k3s_settings'." ${LINENO}
-  fi
-
-  # SSH agent to enter id_rsa password only one time
-  # https://rabexc.org/posts/pitfalls-of-ssh-agents
-  # https://github.com/ccontavalli/ssh-ident
-  ssh-add -l &>/dev/null
-  if [ "$?" == 2 ]; then
-    eval $(ssh-agent -s -t 2h) &>/dev/null
-    ssh-add ~/.ssh/id_rsa
-  fi
-
-  # All root scalar settings from yaml file to bash variables
-  # https://github.com/jasperes/bash-yaml
-  # https://suriyakrishna.github.io/shell-scripting/2021/03/28/shell-scripting-yaml-configuration
-  # https://www.baeldung.com/linux/yq-utility-processing-yaml
-  eval "$( yq '.[] |(( select(kind == "scalar") | key + "='\''" + . + "'\''"))'  < $k3s_settings)"
-
-  if ! test -e ~/tmp; then  mkdir ~/tmp;  fi
-
 }
 wait_kubectl_can_connect_cluster()
 {
@@ -453,7 +362,7 @@ start_time=$(date +%s)
 install_step=0
 k3s_settings=$1
 
-install_check_start
+cluster_plan_read
 
 if [[ $opt_install_remove -eq 1 ]]; then
   h2 "Remove K3s cluster with $amount_nodes nodes. Cluster plan from '$k3s_settings' file. (Line:$LINENO)"
@@ -572,7 +481,6 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
     else # additional node join cluster
         install_join_node
     fi
-    node_disks 1
     ((i_node++))
     if [ $i_node -eq $amount_nodes ]; then break; fi
   done

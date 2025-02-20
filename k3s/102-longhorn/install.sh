@@ -1,6 +1,6 @@
 #!/bin/bash
 # Longhorn install
-# ./102-longhorn/install.sh -i v1.7.2
+# ./102-longhorn/install.sh -s ./k3s-HA.yaml -i v1.7.2
 # Longhorn uninstall
 # ./102-longhorn/install.sh -u v1.7.2
 # Longhorn upgrade
@@ -20,8 +20,85 @@ longhorn-check-version()
     fi
   fi
 }
+node_disks()
+{
+  install_step=$((install_step+1))
+  if [ $1 -eq 1 ]; then
+    hl.blue "$install_step. Mount disks on node $node_name($node_ip4). (Line:$LINENO)"
+  fi
+  if [ $1 -eq 2 ]; then
+    hl.blue "$install_step. Longhorn node disks yaml settings for $node_name($node_ip4). (Line:$LINENO)"
+  fi
+  # Create initial .bak of current fstab file
+  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'if sudo -S ! test -e /etc/fstab.bak; then cp /etc/fstab /etc/fstab.bak; fi <<< \"$node_root_password\"'"
+  declare -a -g node_storage_class_array
+  declare -a -g node_disk_uuid_array
+  declare -a -g node_mnt_path_array
+  # https://mikefarah.gitbook.io/yq/usage/tips-and-tricks
+  #echo $i_node
+  readarray disks < <(yq -o=j -I=0 ".node[$i_node].node_storage[]" < $k3s_settings)
+  local i_disk=0
+  for disk in "${disks[@]}"; do
+    eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$disk)"
+    node_storage_class_array[i_disk]=$storage_class
+    node_disk_uuid_array[i_disk]=$disk_uuid
+    node_mnt_path_array[i_disk]=$mnt_path
+    ((i_disk++))
+  done
+  n_disks=$i_disk # Total disks
+  # for i in "${node_storage_class_array[@]}"; do
+  #   echo $i
+  # done
+  # for i in "${node_disk_uuid_array[@]}"; do
+  #   echo $i
+  # done
+  # for i in "${node_mnt_path_array[@]}"; do
+  #   echo $i
+  # done
+  case $1 in
+    1 )
+      # Get local copy of node's fstab
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'cp /etc/fstab ~/fstab' <<< \"$node_root_password\"'"
+      run "line '$LINENO';scp -i ~/.ssh/$cert_name $node_user@$node_ip4:~/fstab ~/fstab"
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'rm ~/fstab' <<< \"$node_root_password\"'"
+
+      for (( i=0; i < n_disks; i++ )); do
+        # Delete previous fstab record and append new one
+        run "line '$LINENO';sed -i \"/${node_disk_uuid_array[i]}/d\" ~/fstab"
+        run "line '$LINENO';echo 'UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' >> ~/fstab"
+        # Create mount directory if not exists
+        run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"if sudo -S ! [[ -e ${node_mnt_path_array[i]} ]]; then mkdir ${node_mnt_path_array[i]}; fi <<< '$node_root_password'\""
+      done
+      # Copy updated fstab to node
+      run "line '$LINENO';scp -i ~/.ssh/$cert_name.pub ~/fstab $node_user@$node_ip4:~/fstab"
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S mv ~/fstab /etc/fstab <<< '$node_root_password'\""
+      # Remount all
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S mount -a <<< '$node_root_password'\""
+    ;;
+    2 )
+    ;;
+    * )
+      err_and_exit "Expected parameters: 1 - mount, 2 - generate yaml" ${LINENO};
+  esac
+}
 longhorn-install-new()
 {
+  if ! [[ -e ${k3s_settings} ]]; then
+    err_and_exit "Cluster plan file '${k3s_settings}' is not found" ${LINENO};
+  fi
+  if [[ -z $node_root_password ]]; then
+    node_root_password=""
+    read-password node_root_password "Please enter root password for cluster nodes:"
+    echo
+  fi
+  readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
+  i_node=0
+  for node in "${nodes[@]}"; do
+    eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
+    node_disks 1
+    ((i_node++))
+    if [ $i_node -eq $amount_nodes ]; then break; fi
+  done
   #wait-for-success -t 1 "ls ~/"
   #wait-for-success
   #wait-for-success "kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system"
@@ -153,6 +230,12 @@ longhorn-restore()
   # https://longhorn.io/docs/archives/1.2.4/snapshots-and-backups/csi-snapshot-support/restore-a-backup-via-csi/#restore-a-backup-that-has-no-associated-volumesnapshot
   echo kuku
 }
+check-longhorn-exclusive-params()
+{
+  if [[ longhorn_number_exclusive_params -gt 0 ]]; then
+    err_and_exit "Only one exclusive operation is allowed"  ${LINENO} "$0"
+  fi
+}
 
 ################################
 ##         M A I N            ##
@@ -170,14 +253,17 @@ usage="Usage: `basename $0` [OPTION]...
 Longhorn installation script.
 
 Options:
+  -o # show output of executed commands, not show is default
+  -v # bashmatic verbose
+  -d # bashmatic debug
+  -s cluster_plan.yaml # cluster plan for new installation
+Exclusive operation options:
   -i version # Install Longhorn version on current default cluster
   -u version # Uninstall Longhorn version on current default cluster
   -g version # Upgrade Longhorn to version on current default cluster
   -b # backup Longhorn
   -r # restore Longhorn
-  -o # show output of executed commands, not show is default
-  -v # bashmatic verbose
-  -d # bashmatic debug
+  cluster_plan.yaml # cluster plan settings
 "
 if [ $# -eq "$NO_ARGS" ] # Script invoked with no command-line args?
 then
@@ -187,40 +273,64 @@ then
   # Usage: scriptname -options
   # Note: dash (-) necessary
 fi
-
-while getopts "i:u:g:ovdh" opt
+longhorn_number_exclusive_params=0
+plan_is_provided=0
+if ! [[ -z $k3s_settings ]]; then 
+  $plan_is_provided=1; 
+fi
+while getopts "ovdhs:i:u:g:" opt
 do
   case $opt in
+    s )
+      if [[ $plan_is_provided -eq 1 ]]; then err_and_exit "Cluster plan is provided already" ${LINENO} "$0"; fi
+      k3s_settings="$OPTARG"
+      plan_is_provided=1
+      cluster_plan_read
+    ;;
     i )
+      if [[ $plan_is_provided -eq 0 ]]; then err_and_exit "Cluster plan is not provided" ${LINENO} "$0"; fi
+      if [[ $longhorn_number_exclusive_params -gt 0 ]]; then err_and_exit "Only one exclusive operation is allowed" ${LINENO} "$0"; fi
+      ((longhorn_number_exclusive_params++))
       longhorn-check-version "$OPTARG" 1
       longhorn-install-new
     ;;
     u )
+      if [[ $longhorn_number_exclusive_params -gt 0 ]]; then err_and_exit "Only one exclusive operation is allowed" ${LINENO} "$0"; fi
+      ((longhorn_number_exclusive_params++))
       longhorn-check-version "$OPTARG"
       longhorn-uninstall
     ;;
     g )
+      if [[ $longhorn_number_exclusive_params -gt 0 ]]; then err_and_exit "Only one exclusive operation is allowed" ${LINENO} "$0"; fi
+      ((longhorn_number_exclusive_params++))
       longhorn-check-version "$OPTARG"
       longhorn-upgrade
     ;;
     b ) 
+      if [[ $longhorn_number_exclusive_params -gt 0 ]]; then err_and_exit "Only one exclusive operation is allowed" ${LINENO} "$0"; fi
+      ((longhorn_number_exclusive_params++))
       # https://github.com/longhorn/longhorn/blob/master/scripts/restore-backup-to-file.sh
       # https://github.com/longhorn/longhorn/blob/master/enhancements/20220913-longhorn-system-backup-restore.md
       err_and_exit "Not implemented yet."  ${LINENO} "$0"
       longhorn-backup
     ;;
     r ) 
+      if [[ $longhorn_number_exclusive_params -gt 0 ]]; then err_and_exit "Only one exclusive operation is allowed" ${LINENO} "$0"; fi
+      ((longhorn_number_exclusive_params++))
       # https://github.com/longhorn/longhorn/blob/master/scripts/restore-backup-to-file.sh
       # https://github.com/longhorn/longhorn/blob/master/enhancements/20220913-longhorn-system-backup-restore.md
       err_and_exit "Not implemented yet."  ${LINENO} "$0"
       longhorn-restore
     ;;
     o ) opt_show_output='show-output-on'
+      if [[ $longhorn_number_exclusive_params -gt 0 ]]; then err_and_exit "-o has to be provided before exclusive operation parameter" ${LINENO} "$0"; fi
     ;;
-    v ) verbose-on
-    ;;
-    d ) debug-on
-    ;;
+    #v ) verbose-on
+    #  if [[ $longhorn_number_exclusive_params -gt 0 ]]; then err_and_exit "-v has to be provided before exclusive operation parameter" ${LINENO} "$0"; fi
+    #;;
+    #d ) debug-on
+    #  if [[ $longhorn_number_exclusive_params -gt 0 ]]; then err_and_exit "-d has to be provided before exclusive operation parameter" ${LINENO} "$0"; fi
+    #;;
     h ) echo $usage
     exit 1
     ;;
@@ -229,6 +339,15 @@ do
   esac
 done
 shift $((OPTIND-1))
+
+is_longhorn_install_direct=0
+#if [[ $is_longhorn_install_direct -eq 1 ]]; then
+run.set-all abort-on-error show-command-on $opt_show_output
+#fi
+
+# Check number parameters
+if ! [[ $# -eq 1 ]]; then err_and_exit $usage ${LINENO}; fi
+
 
 exit
 
