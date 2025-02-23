@@ -1,5 +1,6 @@
 #!/usr/bin/env bats
 # k8s bash tests: bats ./../bashlib/bash-lib-test.bats --filter-status failed
+# k8s bash tests: bats ./../bashlib/bash-lib-test.bats --filter-tags tag:yaml
 # https://bats-core.readthedocs.io/en/stable/installation.html#linux-distribution-package-manager
 # https://bats-core.readthedocs.io/en/stable/writing-tests.html#run-test-other-commands
 # https://github.com/ztombol/bats-docs?tab=readme-ov-file#installation
@@ -25,6 +26,18 @@ setup() {
   #rm -f /tmp/bats-tutorial-project-ran
 #}
 
+# bats test_tags=tag:patch
+@test "json: node patch" {
+  local node_patch='{"metadata":{"annotations":{"node.longhorn.io":{"default-disks-config":[]}}}}'
+  echo $node_patch
+  echo $node_patch | jq --compact-output
+  echo $node_patch | jq --compact-output '
+    .metadata.annotations.["node.longhorn.io"].default-disks-config += ["kuku0"]
+  '
+  storageClass="$(curl https://raw.githubusercontent.com/longhorn/longhorn/v1.7.3/examples/storageclass.yaml)"
+  [ ${#storageClass} -eq 0 ]
+  [ ${#storageClass} -gt 10 ]
+}
 @test "text: count lines" {
   local txt="first line
 second line

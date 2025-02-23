@@ -22,15 +22,12 @@ longhorn-check-version()
 }
 node_disks()
 {
-  install_step=$((install_step+1))
   if [ $1 -eq 1 ]; then
-    hl.blue "$install_step. Mount disks on node $node_name($node_ip4). (Line:$LINENO)"
+    hl.blue "$((++install_step)). Mount disks on node $node_name($node_ip4). (Line:$LINENO)"
   fi
   if [ $1 -eq 2 ]; then
-    hl.blue "$install_step. Longhorn node disks yaml settings for $node_name($node_ip4). (Line:$LINENO)"
+    hl.blue "$((++install_step)). Longhorn node disks config settings for $node_name($node_ip4). (Line:$LINENO)"
   fi
-  # Create initial .bak of current fstab file
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'if sudo -S ! test -e /etc/fstab.bak; then cp /etc/fstab /etc/fstab.bak; fi <<< \"$node_root_password\"'"
   declare -a -g node_storage_class_array
   declare -a -g node_disk_uuid_array
   declare -a -g node_mnt_path_array
@@ -57,15 +54,17 @@ node_disks()
   # done
   case $1 in
     1 )
+      # Create initial .bak of current fstab file
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'if sudo -S ! test -e /etc/fstab.bak; then cp /etc/fstab /etc/fstab.bak; fi <<< \"$node_root_password\"'"
       # Get local copy of node's fstab
       run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'cp /etc/fstab ~/fstab' <<< \"$node_root_password\"'"
       run "line '$LINENO';scp -i ~/.ssh/$cert_name $node_user@$node_ip4:~/fstab ~/fstab"
       run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'rm ~/fstab' <<< \"$node_root_password\"'"
-
+      # fstab and mount directories
       for (( i=0; i < n_disks; i++ )); do
         # Delete previous fstab record and append new one
         run "line '$LINENO';sed -i \"/${node_disk_uuid_array[i]}/d\" ~/fstab"
-        run "line '$LINENO';echo 'UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[i]} ext4  defaults  0  0' >> ~/fstab"
+        run "line '$LINENO';echo 'UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[$i]} ext4  defaults  0  0' >> ~/fstab"
         # Create mount directory if not exists
         run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"if sudo -S ! [[ -e ${node_mnt_path_array[i]} ]]; then mkdir ${node_mnt_path_array[i]}; fi <<< '$node_root_password'\""
       done
@@ -76,6 +75,45 @@ node_disks()
       run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S mount -a <<< '$node_root_password'\""
     ;;
     2 )
+      # https://stackoverflow.com/questions/73370812/how-to-add-annotations-to-kubernetes-node-using-patch-file
+      # https://kubernetes.io/docs/reference/kubectl/generated/kubectl_patch/
+      # patch for node disk settings
+      # https://longhorn.io/docs/archives/1.3.1/advanced-resources/default-disk-and-node-config/#launch-longhorn-with-multiple-disks
+
+      # https://documentation.suse.com/cloudnative/storage/1.9.0/en/nodes/default-disk-and-node-config.html
+
+      # https://longhorn.io/kb/tip-only-use-storage-on-a-set-of-nodes/
+      run "line '$LINENO';kubectl label --overwrite nodes $node_name node.longhorn.io/create-default-disk='config'"
+
+      # node longhorn storage tags
+      run "line '$LINENO';kubectl annotate --overwrite nodes $node_name node.longhorn.io/default-node-tags=[\"storage\"]"
+
+      local first=1
+      local tmp=""
+      local tmp2=""
+      for (( i=0; i < n_disks; i++ )); do
+        if [[ $first -eq 0 ]]; then
+          tmp2="${tmp2}, "
+        fi
+        tmp="${node_mnt_path_array[$i]}"
+        tmp2="${tmp2}{\"path\": \"${tmp}\", \"allowSheduling\": true}"
+        first=0
+      done
+
+      # node longhorn disk config
+      run "line '$LINENO';kubectl annotate --overwrite nodes $node_name node.longhorn.io/default-disks-config='[$tmp2]'"
+
+# metadata:
+#   annotations:
+#     node.longhorn.io:
+#       default-disks-config:
+#       - path: /mnt/lh01
+#         allowSheduling: 'true'
+#       - path: /mnt/lh02
+#         allowSheduling: 'true'
+
+# kubectl patch node k8s-worker-1 --type merge --patch-file /home/bino/k0s-sriwijaya/longhorn/lhpatch.yaml
+
     ;;
     * )
       err_and_exit "Expected parameters: 1 - mount, 2 - generate yaml" ${LINENO};
@@ -96,6 +134,7 @@ longhorn-install-new()
   for node in "${nodes[@]}"; do
     eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
     node_disks 1
+    node_disks 2
     ((i_node++))
     if [ $i_node -eq $amount_nodes ]; then break; fi
   done
@@ -108,6 +147,7 @@ longhorn-install-new()
   #run "wait-for-success -t 1 'kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system'"
   #exit
 
+  hl.blue "$((++install_step)). Longhorn installation. (Line:$LINENO)"
   # https://longhorn.io/docs/1.7.2/advanced-resources/longhornctl/install-longhornctl/
   if ! ($(longhornctl version > /dev/null ) || $(longhornctl version) != $longhorn_ver ); then
     # Download the release binary.
@@ -135,11 +175,40 @@ longhorn-install-new()
   # no need if cluster exist run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system'"
   # not working sometime run "line '$LINENO';wait-for-success 'kubectl rollout status deployment csi-attacher -n longhorn-system'"
 
+  if ! test -e ~/downloads; then mkdir ~/downloads; fi
+  run "line '$LINENO';curl https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/examples/storageclass.yaml -o ~/downloads/storageclass.yaml"
+  # ssd storage class
+  run "line '$LINENO';yq -i '
+    .metadata.name = \"longhorn-ssd\" |
+    .parameters.numberOfReplicas = \"3\" |
+    .parameters.staleReplicaTimeout = \"2880\" |
+    .parameters.fsType = \"ext4\" |
+    .parameters.mkfsParams = \"-I 256 -b 4096 -O ^metadata_csum,^64bit\" |
+    .parameters.diskSelector = \"ssd\" |
+    .parameters.nodeSelector = \"storage\"
+  ' ~/downloads/storageclass.yaml"
+  run "line '$LINENO';kubectl create -f ~/downloads/storageclass.yaml"
+  # nvme storage class
+  run "line '$LINENO';yq -i '
+    .metadata.name = \"longhorn-nvme\" |
+    .parameters.numberOfReplicas = \"3\" |
+    .parameters.staleReplicaTimeout = \"2880\" |
+    .parameters.fsType = \"ext4\" |
+    .parameters.mkfsParams = \"-I 256 -b 4096 -O ^metadata_csum,^64bit\" |
+    .parameters.diskSelector = \"nvme\" |
+    .parameters.nodeSelector = \"storage\"
+  ' ~/downloads/storageclass.yaml"
+  run "line '$LINENO';kubectl create -f ~/downloads/storageclass.yaml"
+
+  run "line '$LINENO';kubectl -n longhorn-system get svc"
+
   # Volumes ????
 
 }
 longhorn-uninstall()
 {
+  hl.blue "$((++install_step)). Uninstalling Longhorn. (Line:$LINENO)"
+
   if ! command kubectl get deploy longhorn-ui -n longhorn-system &> /dev/null; then
     err_and_exit "Longhorn not installed yet."  ${LINENO} "$0"
   fi
@@ -176,6 +245,8 @@ longhorn-uninstall()
   run "line '$LINENO';kubectl wait --for=condition=complete job/longhorn-uninstall -n longhorn-system --timeout=5m"
   #run "line '$LINENO';wait-for-success \"kubectl get job/longhorn-uninstall -n longhorn-system -o jsonpath='{.status.conditions[?(@.type==\"Complete\")].status}' | grep True\""
   run "line '$LINENO';kubectl delete namespace longhorn-system"
+  run "line '$LINENO';kubectl delete storageclass longhorn-ssd"
+  run "line '$LINENO';kubectl delete storageclass longhorn-nvme"
 
 exit
 
@@ -324,6 +395,7 @@ do
     ;;
     o ) opt_show_output='show-output-on'
       if [[ $longhorn_number_exclusive_params -gt 0 ]]; then err_and_exit "-o has to be provided before exclusive operation parameter" ${LINENO} "$0"; fi
+      run.set-all abort-on-error show-command-on $opt_show_output
     ;;
     #v ) verbose-on
     #  if [[ $longhorn_number_exclusive_params -gt 0 ]]; then err_and_exit "-v has to be provided before exclusive operation parameter" ${LINENO} "$0"; fi
@@ -338,23 +410,13 @@ do
     exit 1
   esac
 done
-shift $((OPTIND-1))
-
-is_longhorn_install_direct=0
-#if [[ $is_longhorn_install_direct -eq 1 ]]; then
-run.set-all abort-on-error show-command-on $opt_show_output
-#fi
-
-# Check number parameters
-if ! [[ $# -eq 1 ]]; then err_and_exit $usage ${LINENO}; fi
-
+#shift $((OPTIND-1))
 
 exit
 
 
 # https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
-install_step=$((install_step+1))
-hl.blue "$install_step. Install Longhorn. (Line:$LINENO)"
+hl.blue "$((++install_step)). Install Longhorn. (Line:$LINENO)"
 longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
 if [ -z $longhorn_ver ]; then
   longhorn_ver=$longhorn_latest
