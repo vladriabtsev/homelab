@@ -124,6 +124,7 @@ longhorn-install-new()
   if ! [[ -e ${k3s_settings} ]]; then
     err_and_exit "Cluster plan file '${k3s_settings}' is not found" ${LINENO};
   fi
+  #echo $node_root_password
   if [[ -z $node_root_password ]]; then
     node_root_password=""
     read-password node_root_password "Please enter root password for cluster nodes:"
@@ -199,8 +200,7 @@ longhorn-install-new()
     .parameters.nodeSelector = \"storage\"
   ' ~/downloads/storageclass.yaml"
   run "line '$LINENO';kubectl create -f ~/downloads/storageclass.yaml"
-
-  run "line '$LINENO';kubectl -n longhorn-system get svc"
+  # kubectl -n longhorn-system get svc
 
   # Volumes ????
 
@@ -327,6 +327,7 @@ Options:
   -o # show output of executed commands, not show is default
   -v # bashmatic verbose
   -d # bashmatic debug
+  -w nodeRootPassword # if omitted user will be asked to enter
   -s cluster_plan.yaml # cluster plan for new installation
 Exclusive operation options:
   -i version # Install Longhorn version on current default cluster
@@ -349,7 +350,7 @@ plan_is_provided=0
 if ! [[ -z $k3s_settings ]]; then 
   $plan_is_provided=1; 
 fi
-while getopts "ovdhs:i:u:g:" opt
+while getopts "ovdhs:w:i:u:g:" opt
 do
   case $opt in
     s )
@@ -357,6 +358,9 @@ do
       k3s_settings="$OPTARG"
       plan_is_provided=1
       cluster_plan_read
+    ;;
+    w )
+      node_root_password="$OPTARG"
     ;;
     i )
       if [[ $plan_is_provided -eq 0 ]]; then err_and_exit "Cluster plan is not provided" ${LINENO} "$0"; fi

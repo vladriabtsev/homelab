@@ -1,7 +1,10 @@
 #!/bin/bash
 # ./install-k3s.sh -i new ./k3s-HA.yaml
+# ./install-k3s.sh -i remove ./k3s-HA.yaml
 
 source ./../k8s.sh
+source ./../bash-lib.sh
+
 #source ./../bashlib/bash_lib.sh
 #VLADNET_BASH_SOURCED
 
@@ -179,6 +182,7 @@ install_kube_vip()
 }
 remove_kubernetes_first_node()
 {
+  inf "Uninstalling k3s first node. (Line:$LINENO)\n"
   if [[ $2 -eq 1 ]]; then
     run "line '$LINENO';kubectl --kubeconfig ~/.kube/${cluster_name} delete daemonset kube-vip-ds -n kube-system"
     run "line '$LINENO';rm ~/.kube/${cluster_name}"
@@ -191,11 +195,10 @@ remove_kubernetes_first_node()
 }
 install_first_node()
 {
-  install_step=$((install_step+1))
   if [ $opt_install_new -eq 1 ]; then
-    hl.blue "$install_step. Bootstrap First k3s node $node_name($node_ip4). (Line:$LINENO)"
+    hl.blue "$((++install_step)). Bootstrap First k3s node $node_name($node_ip4). (Line:$LINENO)"
   else
-    hl.blue "$install_step. Remove k3s node $node_name($node_ip4). (Line:$LINENO)"
+    hl.blue "$((++install_step)). Remove k3s node $node_name($node_ip4). (Line:$LINENO)"
   fi
   # https://docs.dman.cloud/tutorial-documentation/k3sup-ha/  
   if ! test -e ~/.kube; then  mkdir ~/.kube;  fi
@@ -247,11 +250,10 @@ remove_install_join_node_k3s()
 }
 install_join_node()
 {
-  install_step=$((install_step+1))
   if [ $opt_install_new -eq 1 ]; then
-    hl.blue "$install_step. Join k3s node $node_name($node_ip4). (Line:$LINENO)"
+    hl.blue "$((++install_step)). Join k3s node $node_name($node_ip4). (Line:$LINENO)"
   else
-    hl.blue "$install_step. Remove k3s node $node_name($node_ip4). (Line:$LINENO)"
+    hl.blue "$((++install_step)). Remove k3s node $node_name($node_ip4). (Line:$LINENO)"
   fi
   run remove_install_join_node_k3s
 }
@@ -466,7 +468,7 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
       node_root_password=""
       read-password node_root_password "Please enter root password for cluster nodes:"
       echo
-      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S rm -rfd /var/lib/kuku                                  <<< \"$node_root_password\"\""
+      #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S rm -rfd /var/lib/kuku                                  <<< \"$node_root_password\"\""
       if [[ $first_node_address = "localhost" ]]; then
         err_and_exit "Not implemented yet" ${LINENO}
         k3sup install --local --local-path ~/.kube/local \
@@ -503,29 +505,25 @@ fi
 
 # https://kube-vip.io/docs/usage/cloud-provider/
 # https://kube-vip.io/docs/usage/cloud-provider/#install-the-kube-vip-cloud-provider
-install_step=$((install_step+1))
-hl.blue "$install_step. Install the kube-vip Cloud Provider. (Line:$LINENO)"
+hl.blue "$((++install_step)). Install the kube-vip Cloud Provider. (Line:$LINENO)"
 run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provider/main/manifest/kube-vip-cloud-controller.yaml"
 #run kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provider/$kube_vip_cloud_provider_ver/deploy/kube-vip-cloud-controller.yaml
 run "line '$LINENO';kubectl create configmap -n kube-system kubevip --from-literal range-global=$kube_vip_lb_range"
 
 # Longhorn
 # https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
-install_step=$((install_step+1))
-hl.blue "$install_step. Install Longhorn. (Line:$LINENO)"
-./102-longhorn/install.sh -i $longhorn_ver
+hl.blue "$((++install_step)). Install Longhorn. (Line:$LINENO)"
+./102-longhorn/install.sh -s "${k3s_settings}" -w "${node_root_password}" -i $longhorn_ver
 
 exit
 
 # Rancher
-install_step=$((install_step+1))
-hl.blue "$install_step. Install Rancher. (Line:$LINENO)"
+hl.blue "$((++install_step)). Install Rancher. (Line:$LINENO)"
 ./105-rancher/install.sh -i $rancher_ver
 
 # pi-hole
 if [[ $pi_hole_use -eq 1 ]]; then
-  install_step=$((install_step+1))
-  hl.blue "$install_step. Install Pi-hole. (Line:$LINENO)"
+  hl.blue "$((++install_step)). Install Pi-hole. (Line:$LINENO)"
   ./101-pi-hole/install.sh -i $pi_hole_ver
 fi
 
@@ -550,8 +548,7 @@ fi
 # fi
 
 # https://argo-cd.readthedocs.io/en/stable/
-install_step=$((install_step+1))
-hl.blue "$install_step. Install Argo CD. (Line:$LINENO)"
+hl.blue "$((++install_step)). Install Argo CD. (Line:$LINENO)"
 argo_cd_latest=$(curl -sL https://api.github.com/repos/argoproj/argo-cd/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
 if [ -z $argo_cd_ver ]; then
   argo_cd_ver=$argo_cd_latest
@@ -568,8 +565,7 @@ echo "Elapsed Time: $(($end_time-$start_time)) seconds"
 exit
 
 # https://ranchermanager.docs.rancher.com/getting-started/installation-and-upgrade/install-upgrade-on-a-kubernetes-cluster
-install_step=$((install_step+1))
-hl.blue "$install_step. Install Rancher. (Line:$LINENO)"
+hl.blue "$((++install_step)). Install Rancher. (Line:$LINENO)"
 rancher_latest=$(curl -sL https://api.github.com/repos/rancher/rancher/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
 if [ -z $rancher_ver ]; then
   rancher_ver=$rancher_latest
@@ -582,8 +578,7 @@ if ! ($(kubectl get namespace cattle-system > /dev/null )); then kubectl create 
 # helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
 #run kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml
 
-install_step=$((install_step+1))
-hl.blue "$install_step. Install Metallb. (Line:$LINENO)"
+hl.blue "$((++install_step)). Install Metallb. (Line:$LINENO)"
 run kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.12.1/manifests/namespace.yaml
 run kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/$metal_lb_ver/config/manifests/metallb-native.yaml
 run kubectl wait --namespace metallb-system \
