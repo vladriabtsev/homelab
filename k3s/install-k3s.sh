@@ -513,7 +513,7 @@ run "line '$LINENO';kubectl create configmap -n kube-system kubevip --from-liter
 # Longhorn
 # https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
 hl.blue "$((++install_step)). Install Longhorn. (Line:$LINENO)"
-./102-longhorn/install.sh -s "${k3s_settings}" -w "${node_root_password}" -i $longhorn_ver
+./102-longhorn/install.sh -s "${k3s_settings}" -w "${node_root_password}" -t "${install_step}" -i $longhorn_ver
 
 exit
 

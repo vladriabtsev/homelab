@@ -23,10 +23,10 @@ longhorn-check-version()
 node_disks()
 {
   if [ $1 -eq 1 ]; then
-    hl.blue "$((++install_step)). Mount disks on node $node_name($node_ip4). (Line:$LINENO)"
+    hl.blue "$parent_step$((++install_step)). Mount disks on node $node_name($node_ip4). (Line:$LINENO)"
   fi
   if [ $1 -eq 2 ]; then
-    hl.blue "$((++install_step)). Longhorn node disks config settings for $node_name($node_ip4). (Line:$LINENO)"
+    hl.blue "$parent_step$((++install_step)). Longhorn node disks config settings for $node_name($node_ip4). (Line:$LINENO)"
   fi
   declare -a -g node_storage_class_array
   declare -a -g node_disk_uuid_array
@@ -86,7 +86,7 @@ node_disks()
       run "line '$LINENO';kubectl label --overwrite nodes $node_name node.longhorn.io/create-default-disk='config'"
 
       # node longhorn storage tags
-      run "line '$LINENO';kubectl annotate --overwrite nodes $node_name node.longhorn.io/default-node-tags=[\"storage\"]"
+      run "line '$LINENO';kubectl annotate --overwrite nodes $node_name node.longhorn.io/default-node-tags='[\"fast\",\"storage\"]'"
 
       local first=1
       local tmp=""
@@ -148,7 +148,7 @@ longhorn-install-new()
   #run "wait-for-success -t 1 'kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system'"
   #exit
 
-  hl.blue "$((++install_step)). Longhorn installation. (Line:$LINENO)"
+  hl.blue "$parent_step$((++install_step)). Longhorn installation. (Line:$LINENO)"
   # https://longhorn.io/docs/1.7.2/advanced-resources/longhornctl/install-longhornctl/
   if ! ($(longhornctl version > /dev/null ) || $(longhornctl version) != $longhorn_ver ); then
     # Download the release binary.
@@ -164,7 +164,16 @@ longhorn-install-new()
   if command kubectl get deploy longhorn-ui -n longhorn-system &> /dev/null; then
     err_and_exit "Longhorn already installed."  ${LINENO} "$0"
   fi
-  run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
+
+  # https://longhorn.io/docs/1.7.2/advanced-resources/deploy/customizing-default-settings/#using-the-longhorn-deployment-yaml-file
+
+  run "line '$LINENO';wget -O ~/tmp/longhorn.yaml https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
+  #run "line '$LINENO';cat ~/tmp/longhorn.yaml | yq   "
+  # https://longhorn.io/docs/1.7.2/advanced-resources/deploy/customizing-default-settings/#using-kubectl
+  run "line '$LINENO';sed -i 's/default-setting.yaml: |-/default-setting.yaml: |-\n    create-default-disk-labeled-nodes: true/' ~/tmp/longhorn.yaml"
+  run "line '$LINENO';kubectl apply -f ~/tmp/longhorn.yaml"
+  #run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
+
   #run "line "$LINENO";kubectl create -f ./102-longhorn/backup.yaml"
 
   # https://fabianlee.org/2022/01/27/kubernetes-using-kubectl-to-wait-for-condition-of-pods-deployments-services/
@@ -175,6 +184,15 @@ longhorn-install-new()
   run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=csi-attacher -n longhorn-system'"
   # no need if cluster exist run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system'"
   # not working sometime run "line '$LINENO';wait-for-success 'kubectl rollout status deployment csi-attacher -n longhorn-system'"
+
+  #helm repo add longhorn https://charts.longhorn.io
+  #helm repo update
+  #helm install longhorn longhorn/longhorn --version 1.7.2 \
+  #  --namespace longhorn-system \
+  #  --create-namespace \
+  #  --set defaultSettings.createDefaultDiskLabeledNodes=true
+  #  --values values.yaml
+  #run "helm upgrade longhorn longhorn/longhorn --namespace longhorn-system --values ./values.yaml --version $longhorn_ver"
 
   if ! test -e ~/downloads; then mkdir ~/downloads; fi
   run "line '$LINENO';curl https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/examples/storageclass.yaml -o ~/downloads/storageclass.yaml"
@@ -207,7 +225,7 @@ longhorn-install-new()
 }
 longhorn-uninstall()
 {
-  hl.blue "$((++install_step)). Uninstalling Longhorn. (Line:$LINENO)"
+  hl.blue "$parent_step$((++install_step)). Uninstalling Longhorn. (Line:$LINENO)"
 
   if ! command kubectl get deploy longhorn-ui -n longhorn-system &> /dev/null; then
     err_and_exit "Longhorn not installed yet."  ${LINENO} "$0"
@@ -314,6 +332,8 @@ check-longhorn-exclusive-params()
 NO_ARGS=0 
 E_OPTERROR=85
 
+parent_step=""
+
 [[ -f ~/.bashmatic/init.sh ]] || {
   echo "Can't find or install Bashmatic. Exiting."
   exit 1
@@ -327,7 +347,8 @@ Options:
   -o # show output of executed commands, not show is default
   -v # bashmatic verbose
   -d # bashmatic debug
-  -w nodeRootPassword # if omitted user will be asked to enter
+  -w nodeRootPassword # need if called from parent script
+  -t parentScriptStep # need if called from parent script
   -s cluster_plan.yaml # cluster plan for new installation
 Exclusive operation options:
   -i version # Install Longhorn version on current default cluster
@@ -350,7 +371,7 @@ plan_is_provided=0
 if ! [[ -z $k3s_settings ]]; then 
   $plan_is_provided=1; 
 fi
-while getopts "ovdhs:w:i:u:g:" opt
+while getopts "ovdhs:w:t:i:u:g:" opt
 do
   case $opt in
     s )
@@ -361,6 +382,9 @@ do
     ;;
     w )
       node_root_password="$OPTARG"
+    ;;
+    t )
+      parent_step="$OPTARG."
     ;;
     i )
       if [[ $plan_is_provided -eq 0 ]]; then err_and_exit "Cluster plan is not provided" ${LINENO} "$0"; fi
@@ -420,7 +444,7 @@ exit
 
 
 # https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
-hl.blue "$((++install_step)). Install Longhorn. (Line:$LINENO)"
+hl.blue "$parent_step$((++install_step)). Install Longhorn. (Line:$LINENO)"
 longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
 if [ -z $longhorn_ver ]; then
   longhorn_ver=$longhorn_latest
