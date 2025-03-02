@@ -1,9 +1,11 @@
 cluster_name: k3s-HA
-amount_nodes: 1 #3
+#cluster_token: kuku
+#cluster_token_file: ~/cluster_token_file
+amount_nodes: 3 #3
 # can be overridden by node settings
 node_user: vlad
 # https://github.com/k3s-io/k3s/releases
-k3s_ver: v1.32.1+k3s1
+k3s_ver: v1.32.2+k3s1 # v1.30.10+k3s1 # v1.31.6+k3s1 # v1.32.2+k3s1
 cert_name: id_rsa
 # https://github.com/kube-vip/kube-vip/releases
 kube_vip_use: 1
@@ -27,7 +29,7 @@ cert_manager_issuer: ca # https://cert-manager.io/docs/configuration/ca/
 # https://github.com/rancher/rancher
 rancher_ver: v2.9.5
 # https://github.com/longhorn/longhorn
-longhorn_ver: v1.7.2
+longhorn_ver: v1.7.3
 # https://github.com/metallb/metallb
 metal_lb_ver: v0.14.9
 # https://github.com/argoproj/argo-cd
@@ -48,6 +50,9 @@ node:
   - storage_class: nvme
     disk_uuid: 392ecee2-89cd-4866-b78f-d73e64305de3
     mnt_path: /mnt/nvme1 # 465.8G
+  - storage_class: ssd
+    disk_uuid: 5387f615-80ab-4565-b6f4-152a099517b2
+    mnt_path: /mnt/ssd0 # 476.94G
 - node_id: 2
   node_name: k3s2
   node_ip4: 192.168.100.52
@@ -61,6 +66,9 @@ node:
   - storage_class: nvme
     disk_uuid: 99bb8649-3ded-404d-ad68-ce454262dfbb
     mnt_path: /mnt/nvme1 # 465.8G
+  - storage_class: ssd
+    disk_uuid: fa1e39a4-9573-464a-abf4-c64b9e28e809
+    mnt_path: /mnt/ssd0 # 476.94G
 - node_id: 3
   node_name: k3s3
   node_ip4: 192.168.100.53
@@ -72,5 +80,8 @@ node:
     disk_uuid: ef31bf5a-97d4-4701-bc8d-12fc06ffc95d
     mnt_path: /mnt/nvme0 # 953.9G
   - storage_class: ssd
-    disk_uuid: 4bfecf05-6a3a-4d3d-97dd-a801b2834e0b
-    mnt_path: /mnt/ssd0 # 465.8G
+    disk_uuid: 080f3d00-581e-4081-99b2-44c31c9f8941
+    mnt_path: /mnt/ssd0 # 476.9G
+  - storage_class: ssd
+    disk_uuid: 080f3d00-581e-4081-99b2-44c31c9f8941
+    mnt_path: /mnt/ssd0 # 476.94G

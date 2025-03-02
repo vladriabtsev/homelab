@@ -60,13 +60,14 @@ node_disks()
       run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'cp /etc/fstab ~/fstab' <<< \"$node_root_password\"'"
       run "line '$LINENO';scp -i ~/.ssh/$cert_name $node_user@$node_ip4:~/fstab ~/fstab"
       run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'sudo -S 'rm ~/fstab' <<< \"$node_root_password\"'"
+      run "line '$LINENO';sed -i \"/UUID= /d\" ~/fstab"
       # fstab and mount directories
       for (( i=0; i < n_disks; i++ )); do
         # Delete previous fstab record and append new one
         run "line '$LINENO';sed -i \"/${node_disk_uuid_array[i]}/d\" ~/fstab"
         run "line '$LINENO';echo 'UUID=${node_disk_uuid_array[i]}  ${node_mnt_path_array[$i]} ext4  defaults  0  0' >> ~/fstab"
         # Create mount directory if not exists
-        run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"if sudo -S ! [[ -e ${node_mnt_path_array[i]} ]]; then mkdir ${node_mnt_path_array[i]}; fi <<< '$node_root_password'\""
+        run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S sh -c 'if [ ! -e ${node_mnt_path_array[i]} ]; then mkdir ${node_mnt_path_array[i]}; fi' <<< '$node_root_password'\""
       done
       # Copy updated fstab to node
       run "line '$LINENO';scp -i ~/.ssh/$cert_name.pub ~/fstab $node_user@$node_ip4:~/fstab"
@@ -80,25 +81,37 @@ node_disks()
       # patch for node disk settings
       # https://longhorn.io/docs/archives/1.3.1/advanced-resources/default-disk-and-node-config/#launch-longhorn-with-multiple-disks
 
-      # https://documentation.suse.com/cloudnative/storage/1.9.0/en/nodes/default-disk-and-node-config.html
-
       # https://longhorn.io/kb/tip-only-use-storage-on-a-set-of-nodes/
       run "line '$LINENO';kubectl label --overwrite nodes $node_name node.longhorn.io/create-default-disk='config'"
-
-      # node longhorn storage tags
-      run "line '$LINENO';kubectl annotate --overwrite nodes $node_name node.longhorn.io/default-node-tags='[\"fast\",\"storage\"]'"
 
       local first=1
       local tmp=""
       local tmp2=""
+      declare -A storage_classes
       for (( i=0; i < n_disks; i++ )); do
         if [[ $first -eq 0 ]]; then
           tmp2="${tmp2}, "
         fi
         tmp="${node_mnt_path_array[$i]}"
-        tmp2="${tmp2}{\"path\": \"${tmp}\", \"allowSheduling\": true}"
+        # https://documentation.suse.com/cloudnative/storage/1.9.0/en/nodes/default-disk-and-node-config.html
+        storage_classes["${storage_class}"]="${storage_class}"
+        tmp2="${tmp2}{\"path\": \"${tmp}\", \"allowSheduling\": true, \"tags\":[\"${storage_class}\"]}" # \"storage\",
         first=0
       done
+      # https://stackoverflow.com/questions/1494178/how-to-define-hash-tables-in-bash
+      tmp=""
+      first=1
+      for _storage_class in "${!storage_classes[@]}"; do 
+        #echo "$_storage_class - ${storage_classes[$_storage_class]}"
+        if [[ $first -eq 0 ]]; then
+          tmp="${tmp},"
+        fi
+        tmp="${tmp}\"${storage_class}\""
+        first=0
+      done
+
+      # node longhorn storage tags
+      run "line '$LINENO';kubectl annotate --overwrite nodes $node_name node.longhorn.io/default-node-tags='[\"storage\",$tmp]'"
 
       # node longhorn disk config
       run "line '$LINENO';kubectl annotate --overwrite nodes $node_name node.longhorn.io/default-disks-config='[$tmp2]'"
@@ -170,6 +183,7 @@ longhorn-install-new()
   run "line '$LINENO';wget -O ~/tmp/longhorn.yaml https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
   #run "line '$LINENO';cat ~/tmp/longhorn.yaml | yq   "
   # https://longhorn.io/docs/1.7.2/advanced-resources/deploy/customizing-default-settings/#using-kubectl
+  # https://github.com/longhorn/longhorn/blob/master/chart/templates/default-setting.yaml
   run "line '$LINENO';sed -i 's/default-setting.yaml: |-/default-setting.yaml: |-\n    create-default-disk-labeled-nodes: true/' ~/tmp/longhorn.yaml"
   run "line '$LINENO';kubectl apply -f ~/tmp/longhorn.yaml"
   #run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
@@ -204,7 +218,7 @@ longhorn-install-new()
     .parameters.fsType = \"ext4\" |
     .parameters.mkfsParams = \"-I 256 -b 4096 -O ^metadata_csum,^64bit\" |
     .parameters.diskSelector = \"ssd\" |
-    .parameters.nodeSelector = \"storage\"
+    .parameters.nodeSelector = \"storage,ssd\"
   ' ~/downloads/storageclass.yaml"
   run "line '$LINENO';kubectl create -f ~/downloads/storageclass.yaml"
   # nvme storage class
@@ -215,10 +229,34 @@ longhorn-install-new()
     .parameters.fsType = \"ext4\" |
     .parameters.mkfsParams = \"-I 256 -b 4096 -O ^metadata_csum,^64bit\" |
     .parameters.diskSelector = \"nvme\" |
-    .parameters.nodeSelector = \"storage\"
+    .parameters.nodeSelector = \"storage,nvme\"
   ' ~/downloads/storageclass.yaml"
   run "line '$LINENO';kubectl create -f ~/downloads/storageclass.yaml"
+
+  # Longhorn UI
+  # https://github.com/longhorn/website/blob/master/content/docs/1.8.1/deploy/accessing-the-ui/longhorn-ingress.md
+  if [[ -z $longhorn_ui_admin_name ]]; then
+    longhorn_ui_admin_name=""
+    read-password longhorn_ui_admin_name "Please enter Longhorn UI admin name:"
+    echo
+  fi
+  if [[ -z $longhorn_ui_admin_password ]]; then
+    longhorn_ui_admin_password=""
+    read-password longhorn_ui_admin_password "Please enter Longhorn UI admin password:"
+    echo
+  fi
+  run "line '$LINENO';echo \"${longhorn_ui_admin_name}:$(openssl passwd -stdin -apr1 <<< ${longhorn_ui_admin_password})\" > ${HOME}/tmp/auth"
+  run "line '$LINENO';kubectl -n longhorn-system create secret generic basic-auth --from-file=${HOME}/tmp/auth"
+  run "line '$LINENO';rm ${HOME}/tmp/auth"
+  run "line '$LINENO';kubectl -n longhorn-system apply -f ./102-longhorn/longhorn-ingress.yaml"
+
+  run "line '$LINENO';kubectl expose deployment longhorn-ui --port=80 --type=LoadBalancer --name=longhorn-ui -n longhorn-system --target-port=http --load-balancer-ip=192.168.100.102"
+  # kubectl expose deployment longhorn-ui --port=80 --type=LoadBalancer --name=longhorn-ui -n longhorn-system --target-port=http --load-balancer-ip=192.168.100.102
   # kubectl -n longhorn-system get svc
+  # kubectl  -n longhorn-system describe svc longhorn-ui
+  # kubectl delete service longhorn-ui -n longhorn-system
+
+
 
   # Volumes ????
 
