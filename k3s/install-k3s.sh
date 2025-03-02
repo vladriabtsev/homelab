@@ -181,11 +181,9 @@ install_first_node()
     # https://github.com/k3s-io/k3s/blob/master/contrib/util/generate-custom-ca-certs.sh
     # https://blog.chkpwd.com/posts/k3s-ha-installation-kube-vip-and-metallb/
     if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$k3s_settings'." ${LINENO}; fi
+    cluster_node_ip=$node_ip4
     if [ $kube_vip_use -eq 1 ]; then
       gen_kube_vip_manifest
-      cluster_node_ip=$kube_vip_address
-    else
-      cluster_node_ip=$node_ip4
     fi
     install_k3s_cmd_parm="server \
 --token kuku \

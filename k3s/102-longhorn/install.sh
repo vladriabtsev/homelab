@@ -93,9 +93,10 @@ node_disks()
           tmp2="${tmp2}, "
         fi
         tmp="${node_mnt_path_array[$i]}"
+        tmpsc="${node_storage_class_array[$i]}"
         # https://documentation.suse.com/cloudnative/storage/1.9.0/en/nodes/default-disk-and-node-config.html
-        storage_classes["${storage_class}"]="${storage_class}"
-        tmp2="${tmp2}{\"path\": \"${tmp}\", \"allowSheduling\": true, \"tags\":[\"${storage_class}\"]}" # \"storage\",
+        storage_classes["${tmpsc}"]="${tmpsc}"
+        tmp2="${tmp2}{\"path\": \"${tmp}\", \"allowSheduling\": true, \"tags\":[\"${tmpsc}\"]}" # \"storage\",
         first=0
       done
       # https://stackoverflow.com/questions/1494178/how-to-define-hash-tables-in-bash
@@ -106,7 +107,7 @@ node_disks()
         if [[ $first -eq 0 ]]; then
           tmp="${tmp},"
         fi
-        tmp="${tmp}\"${storage_class}\""
+        tmp="${tmp}\"${_storage_class}\""
         first=0
       done
 
