@@ -1,10 +1,10 @@
 #!/bin/bash
 # Longhorn install
-# ./102-longhorn/install.sh -s ./k3s-HA.yaml -i v1.7.2
+# ./101-longhorn/install.sh -s ./k3s-HA.yaml -i v1.7.2
 # Longhorn uninstall
-# ./102-longhorn/install.sh -u v1.7.2
+# ./101-longhorn/install.sh -u v1.7.2
 # Longhorn upgrade
-# ./102-longhorn/install.sh -g v1.7.3
+# ./101-longhorn/install.sh -g v1.7.3
 
 source ./../bash-lib.sh
 
@@ -22,12 +22,6 @@ longhorn-check-version()
 }
 node_disks()
 {
-  if [ $1 -eq 1 ]; then
-    hl.blue "$parent_step$((++install_step)). Mount disks on node $node_name($node_ip4). (Line:$LINENO)"
-  fi
-  if [ $1 -eq 2 ]; then
-    hl.blue "$parent_step$((++install_step)). Longhorn node disks config settings for $node_name($node_ip4). (Line:$LINENO)"
-  fi
   declare -a -g node_storage_class_array
   declare -a -g node_disk_uuid_array
   declare -a -g node_mnt_path_array
@@ -54,6 +48,8 @@ node_disks()
   # done
   case $1 in
     1 )
+      hl.blue "$parent_step$((++install_step)). Mount disks on node $node_name($node_ip4). (Line:$LINENO)"
+
       # Create initial .bak of current fstab file
       run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'if sudo -S ! test -e /etc/fstab.bak; then cp /etc/fstab /etc/fstab.bak; fi <<< \"$node_root_password\"'"
       # Get local copy of node's fstab
@@ -74,8 +70,24 @@ node_disks()
       run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S mv ~/fstab /etc/fstab <<< '$node_root_password'\""
       # Remount all
       run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S mount -a <<< '$node_root_password'\""
+
+      hl.blue "$parent_step$((++install_step)). Load dm_crypt module on node $node_name($node_ip4). (Line:$LINENO)"
+      # https://linovox.com/use-modprobe-command-in-linux/
+      # https://www.cyberciti.biz/faq/linux-how-to-load-a-kernel-module-automatically-at-boot-time/
+      # https://www.baeldung.com/linux/kernel-module-load-boot
+      # sudo systemctl start dm_crypt_load.service
+      # sudo systemctl status dm_crypt_load.service
+      # sudo systemctl enable dm_crypt_load.service
+      # lsmod | grep dm_crypt
+      # sudo modprobe dm_crypt
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"if [ ! -e ~/tmp ]; then mkdir ~/tmp; fi\""
+      run "line '$LINENO';scp -i ~/.ssh/$cert_name ./101-longhorn/dm_crypt_load.sh $node_user@$node_ip4:~/tmp/dm_crypt_load.sh"
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'chmod 777 ~/tmp/dm_crypt_load.sh'"
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name sudo -S sh -c '~/tmp/dm_crypt_load.sh' <<< \"$node_root_password\""
+      run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'rm ~/tmp/dm_crypt_load.sh'"
     ;;
     2 )
+      hl.blue "$parent_step$((++install_step)). Longhorn node disks config settings for $node_name($node_ip4). (Line:$LINENO)"
       # https://stackoverflow.com/questions/73370812/how-to-add-annotations-to-kubernetes-node-using-patch-file
       # https://kubernetes.io/docs/reference/kubectl/generated/kubectl_patch/
       # patch for node disk settings
@@ -163,6 +175,9 @@ longhorn-install-new()
   #exit
 
   hl.blue "$parent_step$((++install_step)). Longhorn installation. (Line:$LINENO)"
+  if command kubectl get deploy longhorn-ui -n longhorn-system &> /dev/null; then
+    err_and_exit "Longhorn already installed."  ${LINENO} "$0"
+  fi
   # https://longhorn.io/docs/1.7.2/advanced-resources/longhornctl/install-longhornctl/
   if ! ($(longhornctl version > /dev/null ) || $(longhornctl version) != $longhorn_ver ); then
     # Download the release binary.
@@ -173,11 +188,9 @@ longhorn-install-new()
     run line "$LINENO";echo "$(cat longhornctl-linux-${ARCH}.sha256 | awk '{print $1}') longhornctl-linux-${ARCH}" | sha256sum --check
     run "line '$LINENO';sudo install longhornctl-linux-${ARCH} /usr/local/bin/longhornctl;longhornctl version"
   fi
+
   longhornctl check preflight
   run.ui.ask "Preflight errors check is finished. Proceed new installation?" || exit 1
-  if command kubectl get deploy longhorn-ui -n longhorn-system &> /dev/null; then
-    err_and_exit "Longhorn already installed."  ${LINENO} "$0"
-  fi
 
   # https://longhorn.io/docs/1.7.2/advanced-resources/deploy/customizing-default-settings/#using-the-longhorn-deployment-yaml-file
 
@@ -189,7 +202,7 @@ longhorn-install-new()
   run "line '$LINENO';kubectl apply -f ~/tmp/longhorn.yaml"
   #run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
 
-  #run "line "$LINENO";kubectl create -f ./102-longhorn/backup.yaml"
+  #run "line "$LINENO";kubectl create -f ./101-longhorn/backup.yaml"
 
   # https://fabianlee.org/2022/01/27/kubernetes-using-kubectl-to-wait-for-condition-of-pods-deployments-services/
 
@@ -234,6 +247,7 @@ longhorn-install-new()
   ' ~/downloads/storageclass.yaml"
   run "line '$LINENO';kubectl create -f ~/downloads/storageclass.yaml"
 
+  hl.blue "$parent_step$((++install_step)). Longhorn UI. (Line:$LINENO)"
   # Longhorn UI
   # https://github.com/longhorn/website/blob/master/content/docs/1.8.1/deploy/accessing-the-ui/longhorn-ingress.md
   if [[ -z $longhorn_ui_admin_name ]]; then
@@ -241,18 +255,27 @@ longhorn-install-new()
     read-password longhorn_ui_admin_name "Please enter Longhorn UI admin name:"
     echo
   fi
+  # # https://kubernetes.github.io/ingress-nginx/examples/auth/basic/
+  # htpasswd -c ${HOME}/tmp/auth $longhorn_ui_admin_name
+  # run "line '$LINENO';echo \"${longhorn_ui_admin_name}:$(openssl passwd -stdin -apr1 <<< ${longhorn_ui_admin_password})\" > ${HOME}/tmp/auth"
+  # run "line '$LINENO';kubectl -n longhorn-system create secret generic basic-auth --from-file=${HOME}/tmp/auth"
+  # run "line '$LINENO';rm ${HOME}/tmp/auth"
+  # run "line '$LINENO';kubectl -n longhorn-system apply -f ./101-longhorn/longhorn-ui-auth-basic.yaml"
+
   if [[ -z $longhorn_ui_admin_password ]]; then
     longhorn_ui_admin_password=""
     read-password longhorn_ui_admin_password "Please enter Longhorn UI admin password:"
     echo
   fi
-  run "line '$LINENO';echo \"${longhorn_ui_admin_name}:$(openssl passwd -stdin -apr1 <<< ${longhorn_ui_admin_password})\" > ${HOME}/tmp/auth"
-  run "line '$LINENO';kubectl -n longhorn-system create secret generic basic-auth --from-file=${HOME}/tmp/auth"
-  run "line '$LINENO';rm ${HOME}/tmp/auth"
-  run "line '$LINENO';kubectl -n longhorn-system apply -f ./102-longhorn/longhorn-ingress.yaml"
 
-  run "line '$LINENO';kubectl expose deployment longhorn-ui --port=80 --type=LoadBalancer --name=longhorn-ui -n longhorn-system --target-port=http --load-balancer-ip=192.168.100.102"
-  # kubectl expose deployment longhorn-ui --port=80 --type=LoadBalancer --name=longhorn-ui -n longhorn-system --target-port=http --load-balancer-ip=192.168.100.102
+  https://longhorn.io/docs/1.7.3/deploy/accessing-the-ui/longhorn-ingress/
+  run "line '$LINENO';echo \"${longhorn_ui_admin_name}:$(openssl passwd -stdin -apr1 <<< ${longhorn_ui_admin_password})\" > ${HOME}/tmp/auth"
+  run "line '$LINENO';kubectl -n longhorn-system create secret generic longhorn-ui-auth-basic --from-file=${HOME}/tmp/auth"
+  run "line '$LINENO';rm ${HOME}/tmp/auth"
+  run "line '$LINENO';kubectl -n longhorn-system apply -f ./101-longhorn/longhorn-ui-auth-basic.yaml"
+
+  run "line '$LINENO';kubectl expose deployment longhorn-ui --port=80 --type=LoadBalancer --name=longhorn-ui -n longhorn-system --target-port=http --load-balancer-ip=192.168.100.101"
+  # kubectl expose deployment longhorn-ui --port=80 --type=LoadBalancer --name=longhorn-ui -n longhorn-system --target-port=http --load-balancer-ip=192.168.100.101
   # kubectl -n longhorn-system get svc
   # kubectl  -n longhorn-system describe svc longhorn-ui
   # kubectl delete service longhorn-ui -n longhorn-system
@@ -270,10 +293,14 @@ longhorn-uninstall()
     err_and_exit "Longhorn not installed yet."  ${LINENO} "$0"
   fi
 
-  longhorn_installed_ver=$( longhornctl version )
-  if ! [ $longhorn_installed_ver == $longhorn_ver ]; then
-    err_and_exit "Trying uninstall Longhorn version '$longhorn_ver', but expected '$longhorn_installed_ver'."  ${LINENO} "$0"
+  if ! command kubectl get deploy -l app.kubernetes.io/version=$longhorn_ver -n longhorn-system &> /dev/null; then
+    err_and_exit "Trying uninstall Longhorn version '$longhorn_ver', but this version is not installed."  ${LINENO} "$0"
   fi
+
+  # longhorn_installed_ver=$( longhornctl version )
+  # if ! [ $longhorn_installed_ver == $longhorn_ver ]; then
+  #   err_and_exit "Trying uninstall Longhorn version '$longhorn_ver', but expected '$longhorn_installed_ver'."  ${LINENO} "$0"
+  # fi
 
   # manually deleting stucked-namespace
   #kubectl get namespace "longhorn-system" -o json | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/" | kubectl replace --raw /api/v1/namespaces/longhorn-system/finalize -f -
