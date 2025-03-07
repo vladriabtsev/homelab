@@ -82,6 +82,3 @@ node:
   - storage_class: ssd
     disk_uuid: 080f3d00-581e-4081-99b2-44c31c9f8941
     mnt_path: /mnt/ssd0 # 476.9G
-  - storage_class: ssd
-    disk_uuid: 080f3d00-581e-4081-99b2-44c31c9f8941
-    mnt_path: /mnt/ssd0 # 476.94G

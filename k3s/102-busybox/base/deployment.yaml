@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox
+  labels:
+    app: busybox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: busybox  
+  template:
+    metadata:
+      labels:
+        app: busybox
+    spec:
+      #securityContext: user for commands???
+      #  runAsUser: 1030  # Use UID of nsf_user on Synology
+      #  runAsGroup: 100  # Use GID user group on Synology
+      initContainers:
+      # https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#differences-from-regular-containers
+      - name: init
+        image: busybox:musl
+        # https://www.busybox.net/downloads/BusyBox.html
+        # https://boxmatrix.info/wiki/BusyBox-Commands
+        command: [ "sh", "-c" ]
+        args:
+        - |
+          #create archive directory
+          mkdir -p /home/mfs && chown -R 999:999 /home/nfs
+          mkdir -p /home/smb && chown -R 999:999 /home/smb
+      containers:
+        - name: busybox
+          image: busybox:musl
+          imagePullPolicy: "IfNotPresent"
+          #command: [ "sh", "-c" ]
+          #args: ["while true; do sleep 30; done;"]
+          #args:
+          #- |
+            #create directory for NFS volume
+            #mkdir -p /home/nfs && chown -R 999:999 /home/nfs
+          command:
+            - "sh"
+            - "-c"
+            - "while true; do sleep 6000; done"
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+          volumeMounts:
+          - name: nfs-vol
+            mountPath: /home/nfs # The mountpoint inside the container
+          - name: smb-vol
+            mountPath: /home/smb # The mountpoint inside the container
+      volumes:
+      - name: nfs-vol
+        persistentVolumeClaim:
+          claimName: busybox-pvc-nfs
+      - name: smb-vol
+        persistentVolumeClaim:
+          claimName: busybox-pvc-smb
