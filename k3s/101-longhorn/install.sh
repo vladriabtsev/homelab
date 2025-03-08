@@ -97,7 +97,7 @@ node_disks()
       if [[ $n_disks -eq 0 ]]; then
         run "line '$LINENO';kubectl label --overwrite nodes $node_name node.longhorn.io/create-default-disk=true" # mounted disks are not included
       else
-        run "line '$LINENO';kubectl label --overwrite nodes $node_name node.longhorn.io/create-default-disk='config'"
+        run "line '$LINENO';kubectl label --overwrite nodes $node_name node.longhorn.io/create-default-disk='config'" # mounted disks are not included
         local first=1
         local tmp=""
         local tmp2="" # only mounted disks
@@ -126,12 +126,12 @@ node_disks()
           first=0
         done
       fi
-
       # node longhorn storage tags
       run "line '$LINENO';kubectl annotate --overwrite nodes $node_name node.longhorn.io/default-node-tags='[\"storage\",$tmp]'"
 
       # node longhorn disk config
       run "line '$LINENO';kubectl annotate --overwrite nodes $node_name node.longhorn.io/default-disks-config='[$tmp2]'"
+      node_disk_config["${node_name}"]="${tmp2}"
 
 # metadata:
 #   annotations:
@@ -170,6 +170,8 @@ longhorn-install-new()
     read-password longhorn_ui_admin_password "Please enter Longhorn UI admin password:"
     echo
   fi
+
+  declare -A node_disk_config
 
   readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
   i_node=0
@@ -286,9 +288,16 @@ longhorn-install-new()
   # kubectl  -n longhorn-system describe svc longhorn-ui
   # kubectl delete service longhorn-ui -n longhorn-system
 
+  # for node_name in "${!node_disk_config[@]}"; do
+  #   echo "${node_name} - '{\"metadata\":{\"annotations\":{\"node.longhorn.io/default-disks-config\":[${node_disk_config[$node_name]}]}}}'"
+  #   run "line '$LINENO';kubectl -n longhorn-system patch nodes $node_name -p '{\"metadata\":{\"annotations\":{\"node.longhorn.io/default-disks-config\":[${node_disk_config[$node_name]}]}}}'"
+  #   #kubectl -n longhorn-system patch nodes node-1 -p '{"metadata":{"annotations":{"node.longhorn.io/default-disks-config":"[{\"path\":\"/var/lib/longhorn\",\"allowScheduling\":true}]"}}}'
+  #   #longhorn-system patch nodes k3s2 -p '{\"metadata\":{\"annotations\":{\"node.longhorn.io/default-disks-config\":[${node_disk_config[$node_name]}]}}}'
+  # done
+
   echo "Longhorn UI: check all disks on all nodes are available and schedulable !!!"
 
-  kubectl apply -f ./101-longhorn/test-pod-with-pvc.yaml
+  #kubectl apply -f ./101-longhorn/test-pod-with-pvc.yaml
 
   # Tests
   # kubectl -n longhorn-system get replicas --output=jsonpath="{.items[?(@.status.volumeName==\"<THE VOLUME NAME YOU ARE CHECKING>\")].metadata.name}"
