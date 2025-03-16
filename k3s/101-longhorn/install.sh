@@ -229,6 +229,7 @@ longhorn-install-new()
   # https://kubernetes.io/docs/reference/kubectl/jsonpath/
   # https://stackoverflow.com/questions/53536907/kubectl-wait-for-condition-complete-timeout-30s
   run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=csi-attacher -n longhorn-system'"
+  run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system'"
   # no need if cluster exist run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system'"
   # not working sometime run "line '$LINENO';wait-for-success 'kubectl rollout status deployment csi-attacher -n longhorn-system'"
 

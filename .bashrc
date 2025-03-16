@@ -124,6 +124,9 @@ export GOPATH=$HOME/go
 export PATH=$GOPATH/bin:$GOROOT/bin:"$PATH:/snap/bin":$PATH
 
 source <(kubectl completion bash)
+source <(velero completion bash)
+alias v=velero
+complete -F __start_velero v
 
 homelab() {
   cd /mnt/d//dev/homelab

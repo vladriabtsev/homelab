@@ -511,6 +511,38 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
   kubectl get nodes
 fi
 
+if [ $csi_driver_smb_use -eq 1 ]; then
+  check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
+  #echo $csi_driver_smb_ver
+  if ! command kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$csi_driver_smb_ver -n kube-system &> /dev/null; then
+    run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
+    run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb --namespace kube-system --version $csi_driver_smb_ver"
+    # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
+  fi
+fi
+if [ $csi_driver_nfs_use -eq 1 ]; then
+  check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
+  #echo $csi_driver_nfs_ver
+  if ! command kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=$csi_driver_nfs_ver -n kube-system &> /dev/null; then
+    run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
+    run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs --namespace kube-system --version $csi_driver_nfs_ver"
+    # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
+  fi
+fi
+if [ $nfs_subdir_external_provisioner_use -eq 1 ]; then
+  check-github-release-version 'nfs_subdir_external_provisioner' https://api.github.com/repos/kubernetes-sigs/nfs-subdir-external-provisioner/releases 'nfs_subdir_external_provisioner_ver'
+  #echo $nfs_subdir_external_provisioner_ver
+  if ! command kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$nfs_subdir_external_provisioner_ver -n kube-system &> /dev/null; then
+    run "line '$LINENO';helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/"
+    run "line '$LINENO';helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace kube-system \
+      --set image.tag=$nfs_subdir_external_provisioner_ver \
+      --set nfs.server=$nfs_subdir_external_provisioner_server \
+      --set nfs.path=$nfs_subdir_external_provisioner_server_path"
+    # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=nfs-subdir-external-provisioner" --watch
+  fi
+fi
+run "line '$LINENO';kubectl apply -f ./storage-classes.yaml"
+
 # https://kube-vip.io/docs/usage/cloud-provider/
 # https://kube-vip.io/docs/usage/cloud-provider/#install-the-kube-vip-cloud-provider
 hl.blue "$((++install_step)). Install the kube-vip Cloud Provider. (Line:$LINENO)"
@@ -522,6 +554,11 @@ run "line '$LINENO';kubectl create configmap -n kube-system kubevip --from-liter
 # https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
 hl.blue "$((++install_step)). Install Longhorn. (Line:$LINENO)"
 ./101-longhorn/install.sh -s "${k3s_settings}" -w "${node_root_password}" -t "${install_step}" -i $longhorn_ver
+
+# Velero backup/restore
+hl.blue "$((++install_step)). Install Velero backup/restore. (Line:$LINENO)"
+#./velero/install.sh -s "${k3s_settings}" -w "${node_root_password}" -t "${install_step}" -i $longhorn_ver
+./velero/install.sh -t "${install_step}" -i $velero_ver
 
 exit
 

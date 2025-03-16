@@ -4,5 +4,6 @@ kind: Kustomization
 resources:
   #- pod.yaml
   - deployment.yaml
-  - pvc-nfs.yaml
-  - pvc-smb.yaml
+  - pvc-nfs-csi.yaml
+  - pvc-nfs-ext.yaml
+  - pvc-smb-csi.yaml

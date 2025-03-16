@@ -27,8 +27,9 @@ spec:
         args:
         - |
           #create archive directory
-          mkdir -p /home/mfs && chown -R 999:999 /home/nfs
-          mkdir -p /home/smb && chown -R 999:999 /home/smb
+          mkdir -p /home/mfs-csi && chown -R 999:999 /home/nfs-csi
+          mkdir -p /home/mfs-ext && chown -R 999:999 /home/nfs-ext
+          mkdir -p /home/smb-csi && chown -R 999:999 /home/smb-csi
       containers:
         - name: busybox
           image: busybox:musl
@@ -48,14 +49,24 @@ spec:
               memory: "128Mi"
               cpu: "100m"
           volumeMounts:
-          - name: nfs-vol
-            mountPath: /home/nfs # The mountpoint inside the container
-          - name: smb-vol
-            mountPath: /home/smb # The mountpoint inside the container
+          #  - name: nvme-vol
+          #    mountPath: /home/nvme # The mountpoint inside the container
+          - name: nfs-csi-vol
+            mountPath: /home/nfs-csi # The mountpoint inside the container
+          - name: nfs-ext-vol
+            mountPath: /home/nfs-ext # The mountpoint inside the container
+          - name: smb-csi-vol
+            mountPath: /home/smb-csi # The mountpoint inside the container
       volumes:
-      - name: nfs-vol
+      # - name: nvme-vol
+      #   persistentVolumeClaim:
+      #     claimName: longhorn-nvme
+      - name: nfs-csi-vol
         persistentVolumeClaim:
-          claimName: busybox-pvc-nfs
-      - name: smb-vol
+          claimName: busybox-pvc-nfs-csi
+      - name: nfs-ext-vol
         persistentVolumeClaim:
-          claimName: busybox-pvc-smb
+          claimName: busybox-pvc-nfs-ext
+      - name: smb-csi-vol
+        persistentVolumeClaim:
+          claimName: busybox-pvc-smb-csi

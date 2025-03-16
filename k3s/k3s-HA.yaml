@@ -17,6 +17,22 @@ kube_vip_as_ha: 1
 kube_vip_as_lb: 1
 kube_vip_lb_range: 192.168.100.101-192.168.100.200
 
+# https://github.com/kubernetes-csi/csi-driver-smb
+csi_driver_smb_use: 1
+csi_driver_smb_ver:
+
+# https://github.com/kubernetes-csi/csi-driver-nfs
+csi_driver_nfs_use: 1
+csi_driver_nfs_ver:
+
+# https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner
+# https://hbayraktar.medium.com/how-to-setup-dynamic-nfs-provisioning-in-a-kubernetes-cluster-cbf433b7de29
+# synology https://forum.huawei.com/enterprise/intl/en/thread/blog/729566720127025152?blogId=729566720127025152
+nfs_subdir_external_provisioner_use: 1
+nfs_subdir_external_provisioner_ver:
+nfs_subdir_external_provisioner_server: 192.168.100.227
+nfs_subdir_external_provisioner_server_path: /volume1/k8s-nfs-ext
+
 # https://github.com/kubernetes-sigs/external-dns/tree/master
 external_dns_ver: v0.15.0
 # https://github.com/kube-vip/kube-vip/releases
@@ -29,7 +45,9 @@ cert_manager_issuer: ca # https://cert-manager.io/docs/configuration/ca/
 # https://github.com/rancher/rancher
 rancher_ver: v2.9.5
 # https://github.com/longhorn/longhorn
-longhorn_ver: v1.7.3
+longhorn_ver: v1.8.1
+# https://velero.io/docs/v1.15/basic-install/
+velero_ver: v1.15.2
 # https://github.com/metallb/metallb
 metal_lb_ver: v0.14.9
 # https://github.com/argoproj/argo-cd
