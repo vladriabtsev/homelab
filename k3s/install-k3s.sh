@@ -511,19 +511,41 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
   kubectl get nodes
 fi
 
+hl.blue "$((++install_step)). Install the storage drivers and classes. (Line:$LINENO)"
+# if [ $csi_driver_iscsi_use -eq 1 ]; then
+#   # https://www.talos.dev/v1.9/kubernetes-guides/configuration/synology-csi/
+#   check-github-release-version 'csi_driver_iscsi' https://api.github.com/repos/kubernetes-csi/csi-driver-iscsi/releases 'csi_driver_iscsi_ver'
+#   #echo $csi_driver_smb_ver
+#   if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$csi_driver_smb_ver -n kube-system | wc -l) -eq 0 ]]; then
+#     run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
+#     run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb --namespace kube-system --version $csi_driver_smb_ver"
+#     # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
+#   fi
+# fi
 if [ $csi_driver_smb_use -eq 1 ]; then
+  # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/deploy/example/e2e_usage.md
+  # https://rguske.github.io/post/using-windows-smb-shares-in-kubernetes/
+  # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
   check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
   #echo $csi_driver_smb_ver
-  if ! command kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$csi_driver_smb_ver -n kube-system &> /dev/null; then
+  if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$csi_driver_smb_ver -n kube-system | wc -l) -eq 0 ]]; then
     run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
     run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb --namespace kube-system --version $csi_driver_smb_ver"
     # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
   fi
+  # https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+  # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
+  run "line '$LINENO';kubectl create secret generic smb-csi-creds -n kube-system --from-file=$csi_driver_smb_secret_folder"
+  # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data}'
+  # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.username}' | base64 --decode
+  # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.password}' | base64 --decode
+  # kubectl -n kube-system edit secrets smb-csi-creds
+  # kubectl delete secret smb-csi-creds -n kube-system
 fi
 if [ $csi_driver_nfs_use -eq 1 ]; then
   check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
   #echo $csi_driver_nfs_ver
-  if ! command kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=$csi_driver_nfs_ver -n kube-system &> /dev/null; then
+  if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=$csi_driver_nfs_ver -n kube-system | wc -l) -eq 0 ]]; then
     run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
     run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs --namespace kube-system --version $csi_driver_nfs_ver"
     # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
@@ -532,12 +554,13 @@ fi
 if [ $nfs_subdir_external_provisioner_use -eq 1 ]; then
   check-github-release-version 'nfs_subdir_external_provisioner' https://api.github.com/repos/kubernetes-sigs/nfs-subdir-external-provisioner/releases 'nfs_subdir_external_provisioner_ver'
   #echo $nfs_subdir_external_provisioner_ver
-  if ! command kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$nfs_subdir_external_provisioner_ver -n kube-system &> /dev/null; then
+  if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$nfs_subdir_external_provisioner_ver -n kube-system | wc -l) -eq 0 ]]; then
     run "line '$LINENO';helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/"
+    # helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace kube-system --set image.tag=4.0.18 --set nfs.server=192.168.100.227 --set nfs.path=/volume1/k8s-nfs-ext
     run "line '$LINENO';helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace kube-system \
-      --set image.tag=$nfs_subdir_external_provisioner_ver \
       --set nfs.server=$nfs_subdir_external_provisioner_server \
       --set nfs.path=$nfs_subdir_external_provisioner_server_path"
+    #  --set image.tag=$nfs_subdir_external_provisioner_ver \
     # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=nfs-subdir-external-provisioner" --watch
   fi
 fi
@@ -554,6 +577,10 @@ run "line '$LINENO';kubectl create configmap -n kube-system kubevip --from-liter
 # https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
 hl.blue "$((++install_step)). Install Longhorn. (Line:$LINENO)"
 ./101-longhorn/install.sh -s "${k3s_settings}" -w "${node_root_password}" -t "${install_step}" -i $longhorn_ver
+
+# https://wiki.musl-libc.org/building-busybox
+# https://github.com/docker-library/repo-info/blob/master/repos/busybox/remote/musl.md
+./102-busybox/install.sh -s "${k3s_settings}" -w "${node_root_password}" -t "${install_step}" -i $busybox_ver
 
 # Velero backup/restore
 hl.blue "$((++install_step)). Install Velero backup/restore. (Line:$LINENO)"

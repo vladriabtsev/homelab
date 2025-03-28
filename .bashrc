@@ -128,6 +128,8 @@ source <(velero completion bash)
 alias v=velero
 complete -F __start_velero v
 
+#alias bashly='docker run --rm -it --user $(id -u):$(id -g) --volume "$PWD:/app" dannyben/bashly'
+
 homelab() {
   cd /mnt/d//dev/homelab
   cp ~/.bashrc .bashrc
@@ -140,3 +142,5 @@ complete -o default -F __start_kubectl k
 #export PATH="${PATH}:${BASHMATIC_HOME}/bin"
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 export PATH=$HOME/.local/bin:$PATH
+export BASHLY_SETTINGS_PATH=/mnt/d/dev/homelab/k3s/bashly-settings.yml
+

@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD004 -->
 # Kubernetes
 
 <!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
@@ -8,6 +9,7 @@
   - [kubectl](#kubectl)
   - [Disaster recovery plan](#disaster-recovery-plan)
   - [Minikube](#minikube)
+  - [Secrets](#secrets)
   - [Storage](#storage)
   - [Gateways](#gateways)
   - [dashboard](#dashboard)
@@ -61,6 +63,12 @@ https://thenewstack.io/how-to-make-up-for-kubernetes-disaster-recovery-shortfall
 ## Minikube
 
 https://github.com/kubernetes/minikube
+
+## Secrets
+
+* [Kubernetes Secrets – How to Create, Use, and Manage](https://spacelift.io/blog/kubernetes-secrets)
+* [Kubernetes Secrets: How to Create, Use, and Manage Secrets in Kubernetes](https://medium.com/@subhampradhan966/kubernetes-secrets-how-to-create-use-and-manage-secrets-in-kubernetes-a23663a81d26)
+* [](https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b)
 
 ## Storage
 

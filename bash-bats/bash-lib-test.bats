@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
-# k8s bash tests: bats ./../bashlib/bash-lib-test.bats --filter-status failed
-# k8s bash tests: bats ./../bashlib/bash-lib-test.bats --filter-tags tag:yaml
+# k8s bash tests: bats ./../bash-bats/bash-lib-test.bats --filter-status failed
+# k8s bash tests: bats ./../bash-bats/bash-lib-test.bats --filter-tags tag:yaml
 # https://bats-core.readthedocs.io/en/stable/installation.html#linux-distribution-package-manager
 # https://bats-core.readthedocs.io/en/stable/writing-tests.html#run-test-other-commands
 # https://github.com/ztombol/bats-docs?tab=readme-ov-file#installation
@@ -11,7 +11,7 @@ setup() {
   #load '~/bats-core/test_helper' # this is required by bats-assert!
   
   set -e
-  source ./../bash-lib.sh
+  source /mnt/d/dev/homelab/bash-lib.sh
 
   # get the containing directory of this file
   # use $BATS_TEST_FILENAME instead of ${BASH_SOURCE[0]} or $0,

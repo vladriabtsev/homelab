@@ -17,9 +17,12 @@ kube_vip_as_ha: 1
 kube_vip_as_lb: 1
 kube_vip_lb_range: 192.168.100.101-192.168.100.200
 
+# https://github.com/kubernetes/examples/blob/master/volumes/iscsi/iscsi.yaml
+
 # https://github.com/kubernetes-csi/csi-driver-smb
 csi_driver_smb_use: 1
 csi_driver_smb_ver:
+csi_driver_smb_secret_folder: ${HOME}/.ssh/k3s-HA-csi-driver-smb_secrets/ # folder with username.txt and password.txt files
 
 # https://github.com/kubernetes-csi/csi-driver-nfs
 csi_driver_nfs_use: 1
@@ -32,6 +35,10 @@ nfs_subdir_external_provisioner_use: 1
 nfs_subdir_external_provisioner_ver:
 nfs_subdir_external_provisioner_server: 192.168.100.227
 nfs_subdir_external_provisioner_server_path: /volume1/k8s-nfs-ext
+
+# Busybox
+busybox_use: 1
+busybox_ver:
 
 # https://github.com/kubernetes-sigs/external-dns/tree/master
 external_dns_ver: v0.15.0

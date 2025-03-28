@@ -1,5 +1,24 @@
 # Homelab
 
+Git configuration:
+`git config --global core.symlinks true` - no need
+
+## TODO
+
+[Learn GO and kubernetes](https://github.com/derailed/k9s)
+
+[client-go](https://github.com/kubernetes/client-go)
+
+[Officially-supported Kubernetes client libraries](https://kubernetes.io/docs/reference/using-api/client-libraries/)
+
+[Kubernetes C# Client](https://github.com/kubernetes-client/csharp)
+
+[Csharp terminal](https://github.com/gui-cs/Terminal.Gui)
+
+## Tools
+
+[Text-based desktop environment](https://github.com/directvt/vtm)
+
 ## Windows
 
 https://www.microsoft.com/en-us/evalcenter/evaluate-windows-11-iot-enterprise-ltsc

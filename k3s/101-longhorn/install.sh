@@ -37,15 +37,6 @@ node_disks()
     ((i_disk++))
   done
   n_disks=$i_disk # Total disks
-  # for i in "${node_storage_class_array[@]}"; do
-  #   echo $i
-  # done
-  # for i in "${node_disk_uuid_array[@]}"; do
-  #   echo $i
-  # done
-  # for i in "${node_mnt_path_array[@]}"; do
-  #   echo $i
-  # done
   case $1 in
     1 )
       hl.blue "$parent_step$((++install_step)). Mount disks on node $node_name($node_ip4). (Line:$LINENO)"
@@ -132,18 +123,7 @@ node_disks()
       # node longhorn disk config
       run "line '$LINENO';kubectl annotate --overwrite nodes $node_name node.longhorn.io/default-disks-config='[$tmp2]'"
       node_disk_config["${node_name}"]="${tmp2}"
-
-# metadata:
-#   annotations:
-#     node.longhorn.io:
-#       default-disks-config:
-#       - path: /mnt/lh01
-#         allowSheduling: 'true'
-#       - path: /mnt/lh02
-#         allowSheduling: 'true'
-
-# kubectl patch node k8s-worker-1 --type merge --patch-file /home/bino/k0s-sriwijaya/longhorn/lhpatch.yaml
-
+      # kubectl patch node k8s-worker-1 --type merge --patch-file /home/bino/k0s-sriwijaya/longhorn/lhpatch.yaml
     ;;
     * )
       err_and_exit "Expected parameters: 1 - mount, 2 - generate yaml" ${LINENO};
@@ -213,13 +193,11 @@ longhorn-install-new()
   # https://longhorn.io/docs/1.7.2/advanced-resources/deploy/customizing-default-settings/#using-the-longhorn-deployment-yaml-file
 
   run "line '$LINENO';wget -O ~/tmp/longhorn.yaml https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
-  #run "line '$LINENO';cat ~/tmp/longhorn.yaml | yq   "
   # https://longhorn.io/docs/1.7.2/advanced-resources/deploy/customizing-default-settings/#using-kubectl
   # https://github.com/longhorn/longhorn/blob/master/chart/templates/default-setting.yaml
   run "line '$LINENO';sed -i 's/default-setting.yaml: |-/default-setting.yaml: |-\n    create-default-disk-labeled-nodes: true/' ~/tmp/longhorn.yaml"
   run "line '$LINENO';sed -i 's/default-setting.yaml: |-/default-setting.yaml: |-\n    deleting-confirmation-flag: true/' ~/tmp/longhorn.yaml"
   run "line '$LINENO';kubectl apply -f ~/tmp/longhorn.yaml"
-  #run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
 
   #run "line "$LINENO";kubectl create -f ./101-longhorn/backup.yaml"
 
@@ -233,13 +211,6 @@ longhorn-install-new()
   # no need if cluster exist run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system'"
   # not working sometime run "line '$LINENO';wait-for-success 'kubectl rollout status deployment csi-attacher -n longhorn-system'"
 
-  #helm repo add longhorn https://charts.longhorn.io
-  #helm repo update
-  #helm install longhorn longhorn/longhorn --version 1.7.2 \
-  #  --namespace longhorn-system \
-  #  --create-namespace \
-  #  --set defaultSettings.createDefaultDiskLabeledNodes=true
-  #  --values values.yaml
   #run "helm upgrade longhorn longhorn/longhorn --namespace longhorn-system --values ./values.yaml --version $longhorn_ver"
 
   if ! test -e ~/downloads; then mkdir ~/downloads; fi
@@ -277,7 +248,7 @@ longhorn-install-new()
   # run "line '$LINENO';rm ${HOME}/tmp/auth"
   # run "line '$LINENO';kubectl -n longhorn-system apply -f ./101-longhorn/longhorn-ui-auth-basic.yaml"
 
-  https://longhorn.io/docs/1.7.3/deploy/accessing-the-ui/longhorn-ingress/
+  # https://longhorn.io/docs/1.7.3/deploy/accessing-the-ui/longhorn-ingress/
   run "line '$LINENO';echo \"${longhorn_ui_admin_name}:$(openssl passwd -stdin -apr1 <<< ${longhorn_ui_admin_password})\" > ${HOME}/tmp/auth"
   run "line '$LINENO';kubectl -n longhorn-system create secret generic longhorn-ui-auth-basic --from-file=${HOME}/tmp/auth"
   run "line '$LINENO';rm ${HOME}/tmp/auth"
@@ -289,13 +260,8 @@ longhorn-install-new()
   # kubectl  -n longhorn-system describe svc longhorn-ui
   # kubectl delete service longhorn-ui -n longhorn-system
 
-  # for node_name in "${!node_disk_config[@]}"; do
-  #   echo "${node_name} - '{\"metadata\":{\"annotations\":{\"node.longhorn.io/default-disks-config\":[${node_disk_config[$node_name]}]}}}'"
-  #   run "line '$LINENO';kubectl -n longhorn-system patch nodes $node_name -p '{\"metadata\":{\"annotations\":{\"node.longhorn.io/default-disks-config\":[${node_disk_config[$node_name]}]}}}'"
-  #   #kubectl -n longhorn-system patch nodes node-1 -p '{"metadata":{"annotations":{"node.longhorn.io/default-disks-config":"[{\"path\":\"/var/lib/longhorn\",\"allowScheduling\":true}]"}}}'
-  #   #longhorn-system patch nodes k3s2 -p '{\"metadata\":{\"annotations\":{\"node.longhorn.io/default-disks-config\":[${node_disk_config[$node_name]}]}}}'
-  # done
-
+  kubectl get nodes
+  kubectl get svc -n longhorn-system
   echo "Longhorn UI: check all disks on all nodes are available and schedulable !!!"
 
   #kubectl apply -f ./101-longhorn/test-pod-with-pvc.yaml
@@ -322,11 +288,6 @@ longhorn-uninstall()
   if ! command kubectl get deploy -l app.kubernetes.io/version=$longhorn_ver -n longhorn-system &> /dev/null; then
     err_and_exit "Trying uninstall Longhorn version '$longhorn_ver', but this version is not installed."  ${LINENO} "$0"
   fi
-
-  # longhorn_installed_ver=$( longhornctl version )
-  # if ! [ $longhorn_installed_ver == $longhorn_ver ]; then
-  #   err_and_exit "Trying uninstall Longhorn version '$longhorn_ver', but expected '$longhorn_installed_ver'."  ${LINENO} "$0"
-  # fi
 
   # manually deleting stucked-namespace
   #kubectl get namespace "longhorn-system" -o json | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/" | kubectl replace --raw /api/v1/namespaces/longhorn-system/finalize -f -
@@ -355,15 +316,6 @@ longhorn-uninstall()
   #run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=complete job/longhorn-uninstall -n longhorn-system'"
   run "line '$LINENO';kubectl wait --for=condition=complete job/longhorn-uninstall -n longhorn-system --timeout=5m"
   #run "line '$LINENO';wait-for-success \"kubectl get job/longhorn-uninstall -n longhorn-system -o jsonpath='{.status.conditions[?(@.type==\"Complete\")].status}' | grep True\""
-
-  # crd_array=(backingimagedatasources backingimagemanagers backingimages backupbackingimages backups backuptargets /
-  #   backupvolumes engineimages engines instancemanagers nodes orphans recurringjobs replicas settings sharemanagers /
-  #   snapshots supportbundles systembackups systemrestores volumeattachments volumes)
-  # for crd in "${crd_array[@]}"; do
-  #   run "line '$LINENO';kubectl patch crd $crd -n longhorn-system -p '{"metadata":{"finalizers":[]}}' --type=merge"
-  #   run "line '$LINENO';kubectl delete crd $crd -n longhorn-system"
-  #   #run "line '$LINENO';kubectl delete crd $crd"
-  # done
 
   run "line '$LINENO';kubectl delete namespace longhorn-system"
   run "line '$LINENO';kubectl delete storageclass longhorn-ssd"
@@ -548,77 +500,3 @@ do
   esac
 done
 #shift $((OPTIND-1))
-
-exit
-
-
-# https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
-hl.blue "$parent_step$((++install_step)). Install Longhorn. (Line:$LINENO)"
-longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-if [ -z $longhorn_ver ]; then
-  longhorn_ver=$longhorn_latest
-fi
-if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
-  warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
-fi
-run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
-# https://longhorn.io/docs/1.7.2/advanced-resources/longhornctl/install-longhornctl/
-if ! ($(longhornctl version > /dev/null ) || $(longhornctl version) != $longhorn_ver ); then
-  # Download the release binary.
-  run "line '$LINENO';curl -LO "https://github.com/longhorn/cli/releases/download/$longhorn_ver/longhornctl-linux-${ARCH}""
-  # Download the checksum for your architecture.
-  run line '$LINENO';curl -LO "https://github.com/longhorn/cli/releases/download/$longhorn_ver/longhornctl-linux-${ARCH}.sha256"
-  # Verify the downloaded binary matches the checksum.
-  run line '$LINENO';echo "$(cat longhornctl-linux-${ARCH}.sha256 | awk '{print $1}') longhornctl-linux-${ARCH}" | sha256sum --check
-  run line '$LINENO';sudo install longhornctl-linux-${ARCH} /usr/local/bin/longhornctl;longhornctl version
-fi
-
-# Step 11: Install helm
-curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-chmod 700 get_helm.sh
-./get_helm.sh
-
-# Step 12: Add Rancher Helm Repository
-helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
-kubectl create namespace cattle-system
-
-# Step 13: Install Cert-Manager
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.2/cert-manager.crds.yaml
-helm repo add jetstack https://charts.jetstack.io
-helm repo update
-helm install cert-manager jetstack/cert-manager \
---namespace cert-manager \
---create-namespace \
---version v1.13.2
-kubectl get pods --namespace cert-manager
-
-# Step 14: Install Rancher
-helm install rancher rancher-latest/rancher \
- --namespace cattle-system \
- --set hostname=rancher.my.org \
- --set bootstrapPassword=admin
-kubectl -n cattle-system rollout status deploy/rancher
-kubectl -n cattle-system get deploy rancher
-
-# Step 15: Expose Rancher via Loadbalancer
-kubectl get svc -n cattle-system
-kubectl expose deployment rancher --name=rancher-lb --port=443 --type=LoadBalancer -n cattle-system
-kubectl get svc -n cattle-system
-
-# Profit: Go to Rancher GUI
-echo -e " \033[32;5mHit the url… and create your account\033[0m"
-echo -e " \033[32;5mBe patient as it downloads and configures a number of pods in the background to support the UI (can be 5-10mins)\033[0m"
-
-# Step 16: Install Longhorn (using modified Official to pin to Longhorn Nodes)
-echo -e " \033[32;5mInstalling Longhorn - It can take a while for all pods to deploy...\033[0m"
-kubectl apply -f https://raw.githubusercontent.com/JamesTurland/JimsGarage/main/Kubernetes/Longhorn/longhorn.yaml
-kubectl get pods \
---namespace longhorn-system \
---watch
-
-# Step 17: Print out confirmation
-
-kubectl get nodes
-kubectl get svc -n longhorn-system
-
-echo -e " \033[32;5mHappy Kubing! Access Longhorn through Rancher UI\033[0m"
