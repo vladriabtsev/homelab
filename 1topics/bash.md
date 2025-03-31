@@ -1,5 +1,9 @@
 # Bash
 
+[Bash Guide for Beginners](https://tldp.org/LDP/Bash-Beginners-Guide/html/)
+
+* [Chapter 7. Conditional statements](https://tldp.org/LDP/Bash-Beginners-Guide/html/chap_07.html)
+
 Bash Tips:
 
 * [Bash Tips #1 – Logging in Shell Scripts](https://blog.tratif.com/2023/01/09/bash-tips-1-logging-in-shell-scripts/)

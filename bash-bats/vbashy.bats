@@ -22,13 +22,8 @@ setup() {
   #rm -f /tmp/bats-tutorial-project-ran
 #}
 
-@test "text: count lines" {
-  local txt="first line
-second line
-third line"
-  #echo "$txt"
-  #local cnt=$(echo "$txt" | grep -c "\n")
-  local cnt=$(echo "$txt" | wc -l)
-  #echo "$cnt"
-  [ $cnt -eq 3 ]
+@test "vbashly ls" {
+  run wait-for-success -p 2
+  [ "$status" -ne 0 ]
+  [ "${lines[0]}" = "Function 'wait-for-success' is expecting <bash command> parameter" ]
 }

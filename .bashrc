@@ -143,4 +143,4 @@ complete -o default -F __start_kubectl k
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 export PATH=$HOME/.local/bin:$PATH
 export BASHLY_SETTINGS_PATH=/mnt/d/dev/homelab/k3s/bashly-settings.yml
-
+export MY_LOG_DIR=/mnt/d/dev/homelab/logs/
