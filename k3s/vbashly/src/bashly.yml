@@ -1,0 +1,69 @@
+name: vbashly
+help: Generate bashly for all first level subdirectories with src subdirectory
+version: 0.1.0
+
+environment_variables:
+- name: MY_LOG_DIR
+  help: Set your default directory for bashly script log files 
+
+flags:
+- long: --verbose
+  help: Enabling verbose Mode (set -v, print every line before it's processed)
+
+- long: --xtrace
+  help: Using xtrace Mode
+
+- long: --unset
+  help: Identifying Unset Variables
+
+- long: --noerrexit
+  help: No exit on error
+
+- long: --noexec
+  help: No exec mode. Check syntax without execution
+
+- long: --debug
+  conflicts: [--xtrace, --verbose, --unset]
+  help: Debugging using xtrace, verbose and unset variables modes (set -xvu)
+
+- long: --log
+  conflicts: [--verbose]
+  help: |-
+    Turn ON logging to file. Log file is stored in MY_LOG_DIR or in directory provided in LOG_FILE_PATH argument.
+
+    Log file name will be generated in format './script_name-command_name.log' if is not provided explicitly in LOG_FILE_PATH argument.
+
+    By default verbose output will be used.
+
+  arg: LOG_FILE_PATH
+
+commands:
+- name: generate
+  alias: g
+  help: Run 'bashly generate' for each found bashly project
+  default: force
+
+  args:
+  - name: bashly_prj_dir
+    required: false
+    help: Directory name with bashly project
+    default: "*"
+
+  examples:
+  - vbashly 102-busybox
+  - vbashly
+  - vbashly *longhorn
+
+- name: exec
+  help: Run 'vbashly exec "command"'. For test traps of vbashly script
+  private: true
+
+  args:
+  - name: command
+    required: false
+    help: Bash command to execute
+    default: "ls"
+
+  examples:
+  - vbashly exec
+  - vbashly exec "ls"
