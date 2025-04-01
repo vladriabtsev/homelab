@@ -73,8 +73,13 @@ vbashly_usage() {
     echo
 
     # :flag.usage
-    printf "  %s\n" "$(magenta "--log LOG_FILE_PATH")"
-    printf "    Turn ON logging to file. Log file is stored in MY_LOG_DIR or in directory\n    provided in LOG_FILE_PATH argument.\n    \n    Log file name will be generated in format './script_name-command_name.log'\n    if is not provided explicitly in LOG_FILE_PATH argument.\n    \n    By default verbose output will be used.\n"
+    printf "  %s\n" "$(magenta "--log")"
+    printf "    Turn ON logging to file. \n    \n    Log file is stored in MY_LOG_DIR or in directory provided in LOG_FILE_PATH\n    argument. Log file name will be generated in format\n    './script_name-command_name.log'.\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--log-file LOG_FILE_PATH")"
+    printf "    Turn ON logging to file. \n    \n    Log file is stored in directory provided in LOG_FILE_PATH argument or in\n    directory from environment variable MY_LOG_DIR.\n    \n    Log file name is provided explicitly in LOG_FILE_PATH argument.\n"
     echo
 
     # :command.usage_fixed_flags
@@ -417,18 +422,31 @@ parse_requirements() {
       # :flag.case
       --log)
         # :flag.conflicts
-        if [[ -n "${args['--verbose']:-}" ]]; then
-          printf "conflicting options: %s cannot be used with %s\n" "$key" "--verbose" >&2
+        if [[ -n "${args['--log-file']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--log-file" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--log']=1
+        shift
+        ;;
+
+      # :flag.case
+      --log-file)
+        # :flag.conflicts
+        if [[ -n "${args['--log']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--log" >&2
           exit 1
         fi
 
         # :flag.case_arg
         if [[ -n ${2+x} ]]; then
-          args['--log']="$2"
+          args['--log-file']="$2"
           shift
           shift
         else
-          printf "%s\n" "--log requires an argument: --log LOG_FILE_PATH" >&2
+          printf "%s\n" "--log-file requires an argument: --log-file LOG_FILE_PATH" >&2
           exit 1
         fi
         ;;

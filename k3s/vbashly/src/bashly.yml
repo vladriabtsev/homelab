@@ -3,7 +3,7 @@ help: Generate bashly for all first level subdirectories with src subdirectory
 version: 0.1.0
 
 environment_variables:
-- name: MY_LOG_DIR
+- name: my_log_dir
   help: Set your default directory for bashly script log files 
 
 flags:
@@ -27,15 +27,22 @@ flags:
   help: Debugging using xtrace, verbose and unset variables modes (set -xvu)
 
 - long: --log
-  conflicts: [--verbose]
+  conflicts: [--log-file]
   help: |-
-    Turn ON logging to file. Log file is stored in MY_LOG_DIR or in directory provided in LOG_FILE_PATH argument.
+    Turn ON logging to file. 
+    
+    Log file is stored in MY_LOG_DIR or in directory provided in LOG_FILE_PATH argument. Log file name will be generated in format './script_name-command_name.log'.
 
-    Log file name will be generated in format './script_name-command_name.log' if is not provided explicitly in LOG_FILE_PATH argument.
+- long: --log-file
+  conflicts: [--log]
+  help: |-
+    Turn ON logging to file. 
+    
+    Log file is stored in directory provided in LOG_FILE_PATH argument or in directory from environment variable MY_LOG_DIR.
 
-    By default verbose output will be used.
+    Log file name is provided explicitly in LOG_FILE_PATH argument.
 
-  arg: LOG_FILE_PATH
+  arg: log_file_path
 
 commands:
 - name: generate
