@@ -351,13 +351,13 @@ do
     d ) debug-on
     ;;
     k ) process option -b
-    $OPTARG #is the option's argument
+      $OPTARG #is the option's argument
     ;;
     h ) echo $usage
-    exit 1
+      exit 1
     ;;
     \? ) echo 'For help: ./install-k3s.sh -h'
-    exit 1
+      exit 1
   esac
 done
 shift $((OPTIND-1))
