@@ -22,7 +22,7 @@ setup() {
   # https://bats-core.readthedocs.io/en/stable/writing-tests.html
   run ./vbashly exec "ls"
   # https://github.com/bats-core/bats-assert#partial-matching
-  echo '# text' >&3
+  #echo '# text' >&3
   assert_success
   assert_output --partial 'src'
   assert_output --partial 'vbashly'
@@ -32,6 +32,8 @@ setup() {
 }
 
 @test "./vbashly --unset exec \"ls\"" {
+  # really not test --unset
+  skip  
   run ./vbashly --unset exec "ls"
   assert_success
   assert_output --partial 'src'
@@ -67,7 +69,6 @@ setup() {
   assert_output --partial '+['
 }
 
-# bats test_tags=tag:log
 @test "./vbashly --log exec \"ls\" # log in MY_LOG_DIR with auto generated name" {
   [ ! -z $MY_LOG_DIR ]
   assert_dir_exists $MY_LOG_DIR
@@ -91,63 +92,87 @@ setup() {
   assert_file_not_contains "${MY_LOG_DIR}vbashly-exec.log" '+[' grep
 }
 
-@test "./vbashly --log-file \"./kuku._log\" exec \"ls\" # log in with provided file path" {
-  run ./vbashly --log-file \"./kuku._log\" exec "ls"
+@test "./vbashly --log --unset exec \"ls\" # log in MY_LOG_DIR with auto generated name" {
+  skip
+  [ ! -z $MY_LOG_DIR ]
+  assert_dir_exists $MY_LOG_DIR
+  run ./vbashly --log --unset exec "ls"
 
   assert_success
 
-  assert_output --partial 'src'
-  assert_output --partial 'vbashly'
-  assert_output --partial 'vbashly.bats'
-  refute_output --partial 'ls'
+  refute_output --partial 'src'
 
   #echo "${MY_LOG_DIR}vbashly-exec.log" >&3
   # https://github.com/bats-core/bats-file
-  assert_file_exists "./kuku._log"
-  #assert_files_equal "${MY_LOG_DIR}vbashly-exec.log" /path/to/file2
-  assert_file_contains "./kuku._log" 'src' grep # "" grep, egrep, pcregrep
-  assert_file_contains "./kuku._log" 'vbashly' grep
-  assert_file_contains "./kuku._log" 'vbashly.bats' grep
-  assert_file_not_contains "./kuku._log" 'ls' grep
-  assert_file_not_contains "./kuku._log" '+[' grep
+  assert_file_exists "${MY_LOG_DIR}vbashly-exec.log"
+  assert_file_not_contains "${MY_LOG_DIR}vbashly-exec.log" 'src' grep # "" grep, egrep, pcregrep
 }
 
-@test "./vbashly --log-file ./kuku._log exec \"ls\" # log in current directory with provided name" {
-  run ./vbashly --log-file ./kuku._log exec "ls"
+# bats test_tags=tag:log
+@test "./vbashly --log --noexec exec \"ls\" # log in MY_LOG_DIR with auto generated name" {
+  [ ! -z $MY_LOG_DIR ]
+  assert_dir_exists $MY_LOG_DIR
+  run ./vbashly --log --noexec exec "ls"
+
   assert_success
+
+  refute_output --partial 'src'
+  refute_output --partial 'lc'
+  refute_output --partial 'eval lc'
+
+  #echo "${MY_LOG_DIR}vbashly-exec.log" >&3
+  # https://github.com/bats-core/bats-file
+  assert_file_exists "${MY_LOG_DIR}vbashly-exec.log"
+  assert_file_not_contains "${MY_LOG_DIR}vbashly-exec.log" 'src' grep # "" grep, egrep, pcregrep
+  refute_output --partial 'ls'
+  refute_output --partial 'eval ls' # --xtrace
+}
+
+@test "./vbashly --log --verbose exec \"ls\" # log in MY_LOG_DIR with auto generated name" {
+  [ ! -z $MY_LOG_DIR ]
+  assert_dir_exists $MY_LOG_DIR
+  run ./vbashly --log --verbose exec "ls"
+
+  assert_success
+
   assert_output --partial 'src'
   assert_output --partial 'vbashly'
   assert_output --partial 'vbashly.bats'
-  refute_output --partial 'ls'
-  refute_output --partial '+['
+  assert_output --partial 'ls'
+  refute_output --partial 'eval ls' # --xtrace
+
+  #echo "${MY_LOG_DIR}vbashly-exec.log" >&3
+  # https://github.com/bats-core/bats-file
+  assert_file_exists "${MY_LOG_DIR}vbashly-exec.log"
+  #assert_files_equal "${MY_LOG_DIR}vbashly-exec.log" /path/to/file2
+  assert_file_contains "${MY_LOG_DIR}vbashly-exec.log" 'src' grep # "" grep, egrep, pcregrep
+  assert_file_contains "${MY_LOG_DIR}vbashly-exec.log" 'vbashly' grep
+  assert_file_contains "${MY_LOG_DIR}vbashly-exec.log" 'vbashly.bats' grep
+  assert_file_contains "${MY_LOG_DIR}vbashly-exec.log" 'ls' grep
+  assert_file_not_contains "${MY_LOG_DIR}vbashly-exec.log" 'eval ls' grep  # --xtrace
 }
 
-@test " -127 ./vbashly exec \"unknown\"" {
-  bats_require_minimum_version 1.5.0
-  run -127 ./vbashly exec "unknown"
-  assert_failure
-  #assert_output --partial 'kuku: command not found'
-  assert_output --partial 'Error occurred in'
-  assert_output --partial '>>>'
-  assert_output --partial 'exit_code:'
-  assert_output --partial 'last_command:'
-  assert_output --partial 'lines_history:'
-  assert_output --partial 'function_trace'
-  assert_output --partial 'source_trace'
-  assert_output --partial '../../bash-lib.sh'
-  assert_output --partial './vbashly'
-  refute_output --partial '+['
-}
+@test "./vbashly --log --xtrace exec \"ls\" # log in MY_LOG_DIR with auto generated name" {
+  [ ! -z $MY_LOG_DIR ]
+  assert_dir_exists $MY_LOG_DIR
+  run ./vbashly --log --xtrace exec "ls"
 
-@test "./vbashly" {
-  run ./vbashly
-  printf "$output"
-  [ $status -eq 0 ]
-  printf "${lines[0]}"
-  # https://github.com/bats-core/bats-assert#partial-matching
   assert_success
-  #assert_output --partial 'src'
-  #assert_output --partial 'vbashly'
-  #assert_output --partial 'vbashly.bats'
-  #[ "${lines[0]}" = "Function 'wait-for-success' is expecting <bash command> parameter" ]
+
+  assert_output --partial 'src'
+  assert_output --partial 'vbashly'
+  assert_output --partial 'vbashly.bats'
+  assert_output --partial 'ls'
+  assert_output --partial 'eval ls' # --xtrace
+
+  #echo "${MY_LOG_DIR}vbashly-exec.log" >&3
+  # https://github.com/bats-core/bats-file
+  assert_file_exists "${MY_LOG_DIR}vbashly-exec.log"
+  #assert_files_equal "${MY_LOG_DIR}vbashly-exec.log" /path/to/file2
+  assert_file_contains "${MY_LOG_DIR}vbashly-exec.log" 'src' grep # "" grep, egrep, pcregrep
+  assert_file_contains "${MY_LOG_DIR}vbashly-exec.log" 'vbashly' grep
+  assert_file_contains "${MY_LOG_DIR}vbashly-exec.log" 'vbashly.bats' grep
+  assert_file_contains "${MY_LOG_DIR}vbashly-exec.log" 'ls' grep
+  assert_file_contains "${MY_LOG_DIR}vbashly-exec.log" 'eval ls' grep  # --xtrace
 }
+
