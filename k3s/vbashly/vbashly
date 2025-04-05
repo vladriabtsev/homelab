@@ -78,7 +78,7 @@ vbashly_usage() {
     echo
 
     # :flag.usage
-    printf "  %s\n" "$(magenta "--log-file LOG_FILE_PATH")"
+    printf "  %s\n" "$(magenta "--log-file LOG-FILE-PATH")"
     printf "    Turn ON logging to file. \n    \n    Log file is stored in directory provided in LOG_FILE_PATH argument or in\n    directory from environment variable MY_LOG_DIR.\n    \n    Log file name is provided explicitly in LOG_FILE_PATH argument.\n"
     echo
 
@@ -446,7 +446,7 @@ parse_requirements() {
           shift
           shift
         else
-          printf "%s\n" "--log-file requires an argument: --log-file LOG_FILE_PATH" >&2
+          printf "%s\n" "--log-file requires an argument: --log-file LOG-FILE-PATH" >&2
           exit 1
         fi
         ;;

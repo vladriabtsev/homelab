@@ -42,7 +42,7 @@ flags:
 
     Log file name is provided explicitly in LOG_FILE_PATH argument.
 
-  arg: log_file_path
+  arg: log-file-path
 
 commands:
 - name: generate
