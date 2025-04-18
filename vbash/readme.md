@@ -15,6 +15,8 @@ Start script: `$VBASH/my-bash-script`
 
 ## My bashly gem
 
+[Bashly](https://bashly.dev/)
+
 [How To Package And Distribute Ruby Applications As a Gem Using RubyGems](https://www.digitalocean.com/community/tutorials/how-to-package-and-distribute-ruby-applications-as-a-gem-using-rubygems)
 
 [A step-by-step guide to building a Ruby gem from scratch](https://www.honeybadger.io/blog/create-ruby-gem/)
