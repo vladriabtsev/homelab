@@ -116,9 +116,6 @@ if ! shopt -oq posix; then
   fi
 fi
 
-#eval "$(ssh-agent -s)" # start ssh agent
-#ssh-add ~/.ssh/id_rsa
-
 export GOROOT=/usr/local/go-1.23.4
 export GOPATH=$HOME/go
 export PATH=$GOPATH/bin:$GOROOT/bin:"$PATH:/snap/bin":$PATH
@@ -136,11 +133,16 @@ homelab() {
   source ealias.sh
   source k8s.sh
   #sudo cp k8s.sh /usr/local/bin/
+  if [ -z "$SSH_AUTH_SOCK" ]; then
+    eval "$(ssh-agent -s)" # start ssh agent
+    ssh-add ~/.ssh/id_rsa
+  fi
 }
 complete -o default -F __start_kubectl k
 #[[ -f ~/.bashmatic/init.sh ]] && source ~/.bashmatic/init.sh
 #export PATH="${PATH}:${BASHMATIC_HOME}/bin"
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-export PATH=$HOME/.local/bin:$PATH
-export BASHLY_SETTINGS_PATH=/mnt/d/dev/homelab/k3s/bashly-settings.yml
-export MY_LOG_DIR=/mnt/d/dev/homelab/logs/
+export PATH=$HOME/.local/bin:$HOME/.rubies/ruby-3.4.3/bin:$PATH
+export VBASH=/mnt/d/dev/homelab/vbash
+export BASHLY_SETTINGS_PATH=$VBASH/bashly-settings.yml
+export MY_LOG_DIR=$VBASH/logs/

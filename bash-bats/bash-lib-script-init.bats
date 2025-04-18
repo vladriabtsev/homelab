@@ -5,7 +5,7 @@ setup() {
   load '../test/test_helper/bats-file/load'  
   
   set -e
-  source /mnt/d/dev/homelab/bash-lib.sh
+  source /mnt/d/dev/homelab/vlib.bash
 
 #   # get the containing directory of this file
 #   # use $BATS_TEST_FILENAME instead of ${BASH_SOURCE[0]} or $0,

@@ -6,7 +6,7 @@
 # https://emmer.dev/blog/resetting-the-working-directory-on-shell-script-exit/
 # shellcheck disable=SC2064
 
-bashly-init-command
+vlib.bashly-init-command
 
 # https://www.linuxbash.sh/post/logging-and-monitoring-from-bash-scripts
 # https://man7.org/linux/man-pages/man1/logger.1.html

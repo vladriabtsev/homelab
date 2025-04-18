@@ -5,6 +5,6 @@
 ##
 ## You can safely delete this file if you do not need it.
 set -e
-source ../../bash-lib.sh
+source ../../vlib.bash
 
-bashly-init-script
+vlib.bashly-init-script

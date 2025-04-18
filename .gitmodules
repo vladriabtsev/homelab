@@ -10,3 +10,6 @@
 [submodule "test/test_helper/bats-file"]
 	path = test/test_helper/bats-file
 	url = https://github.com/bats-core/bats-file.git
+[submodule "vbash/bashly"]
+	path = vbash/bashly
+	url = https://github.com/vladriabtsev/bashly.git

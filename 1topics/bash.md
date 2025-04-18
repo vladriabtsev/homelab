@@ -36,3 +36,8 @@ Bash Tips:
 [shellcheck, script validation](https://github.com/koalaman/shellcheck)
 
 [bashly.dev, script generation](https://bashly.dev/examples/)
+
+## Small functions
+
+* [Message with border](https://www.youtube.com/watch?v=GuPmqAXy6TI)
+* [Message with border](https://gitlab.com/edmitry2010/obsidian-open-git/-/tree/main/bash/%D0%9E%D1%84%D0%BE%D1%80%D0%BC%D0%BB%D0%B5%D0%BD%D0%B8%D0%B5)

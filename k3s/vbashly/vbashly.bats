@@ -11,7 +11,7 @@ setup() {
   #load '~/bats-core/test_helper' # this is required by bats-assert!
   
   set -e # exit on error
-  source /mnt/d/dev/homelab/bash-lib.sh
+  source /mnt/d/dev/homelab/vlib.bash
 }
 #teardown() {
   #echo "teardown"

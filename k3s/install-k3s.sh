@@ -3,7 +3,7 @@
 # ./install-k3s.sh -i remove ./k3s-HA.yaml
 
 source ./../k8s.sh
-source ./../bash-lib.sh
+source ./../vlib.bash
 
 #source ./../bashlib/bash_lib.sh
 #VLADNET_BASH_SOURCED
@@ -371,7 +371,7 @@ start_time=$(date +%s)
 install_step=0
 k3s_settings=$1
 
-cluster_plan_read
+vlib.cluster_plan_read
 
 if [[ $opt_install_remove -eq 1 ]]; then
   h2 "Remove K3s cluster with $amount_nodes nodes. Cluster plan from '$k3s_settings' file. (Line:$LINENO)"
@@ -473,7 +473,7 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
       first_node_address=$node_ip4
 
       node_root_password=""
-      read-password node_root_password "Please enter root password for cluster nodes:"
+      vlib.read-password node_root_password "Please enter root password for cluster nodes:"
       echo
       #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S rm -rfd /var/lib/kuku                                  <<< \"$node_root_password\"\""
       if [[ $first_node_address = "localhost" ]]; then
@@ -526,7 +526,7 @@ if [ $csi_driver_smb_use -eq 1 ]; then
   # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/deploy/example/e2e_usage.md
   # https://rguske.github.io/post/using-windows-smb-shares-in-kubernetes/
   # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
-  check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
+  vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
   #echo $csi_driver_smb_ver
   if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$csi_driver_smb_ver -n kube-system | wc -l) -eq 0 ]]; then
     run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
@@ -543,7 +543,7 @@ if [ $csi_driver_smb_use -eq 1 ]; then
   # kubectl delete secret smb-csi-creds -n kube-system
 fi
 if [ $csi_driver_nfs_use -eq 1 ]; then
-  check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
+  vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
   #echo $csi_driver_nfs_ver
   if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=$csi_driver_nfs_ver -n kube-system | wc -l) -eq 0 ]]; then
     run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
@@ -552,7 +552,7 @@ if [ $csi_driver_nfs_use -eq 1 ]; then
   fi
 fi
 if [ $nfs_subdir_external_provisioner_use -eq 1 ]; then
-  check-github-release-version 'nfs_subdir_external_provisioner' https://api.github.com/repos/kubernetes-sigs/nfs-subdir-external-provisioner/releases 'nfs_subdir_external_provisioner_ver'
+  vlib.check-github-release-version 'nfs_subdir_external_provisioner' https://api.github.com/repos/kubernetes-sigs/nfs-subdir-external-provisioner/releases 'nfs_subdir_external_provisioner_ver'
   #echo $nfs_subdir_external_provisioner_ver
   if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$nfs_subdir_external_provisioner_ver -n kube-system | wc -l) -eq 0 ]]; then
     run "line '$LINENO';helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/"

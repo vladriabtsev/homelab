@@ -6,7 +6,7 @@
 # Longhorn upgrade
 # ./101-longhorn/install.sh -g v1.7.3
 
-source ./../bash-lib.sh
+source ./../vlib.bash
 
 longhorn-check-version()
 {
@@ -137,17 +137,17 @@ longhorn-install-new()
   #echo $node_root_password
   if [[ -z $node_root_password ]]; then
     node_root_password=""
-    read-password node_root_password "Please enter root password for cluster nodes:"
+    vlib.read-password node_root_password "Please enter root password for cluster nodes:"
     echo
   fi
   if [[ -z $longhorn_ui_admin_name ]]; then
     longhorn_ui_admin_name=""
-    read-password longhorn_ui_admin_name "Please enter Longhorn UI admin name:"
+    vlib.read-password longhorn_ui_admin_name "Please enter Longhorn UI admin name:"
     echo
   fi
   if [[ -z $longhorn_ui_admin_password ]]; then
     longhorn_ui_admin_password=""
-    read-password longhorn_ui_admin_password "Please enter Longhorn UI admin password:"
+    vlib.read-password longhorn_ui_admin_password "Please enter Longhorn UI admin password:"
     echo
   fi
 
@@ -206,8 +206,8 @@ longhorn-install-new()
   # https://kubernetes.io/docs/reference/kubectl/generated/kubectl_wait/
   # https://kubernetes.io/docs/reference/kubectl/jsonpath/
   # https://stackoverflow.com/questions/53536907/kubectl-wait-for-condition-complete-timeout-30s
-  run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=csi-attacher -n longhorn-system'"
-  run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system'"
+  run "line '$LINENO';vlib.wait-for-success 'kubectl wait --for=condition=ready pod -l app=csi-attacher -n longhorn-system'"
+  run "line '$LINENO';vlib.wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system'"
   # no need if cluster exist run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system'"
   # not working sometime run "line '$LINENO';wait-for-success 'kubectl rollout status deployment csi-attacher -n longhorn-system'"
 
@@ -361,8 +361,8 @@ longhorn-upgrade()
   longhorn-backup
 
   run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
-  run "line '$LINENO';wait-for-success 'kubectl rollout status deployment longhorn-driver-deployer -n longhorn-system'"
-  run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system --timeout=5m'"
+  run "line '$LINENO';vlib.wait-for-success 'kubectl rollout status deployment longhorn-driver-deployer -n longhorn-system'"
+  run "line '$LINENO';vlib.wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system --timeout=5m'"
 
   # if timeout when upgrade
   longhorn-restore
@@ -438,7 +438,7 @@ do
       if [[ $plan_is_provided -eq 1 ]]; then err_and_exit "Cluster plan is provided already" ${LINENO} "$0"; fi
       k3s_settings="$OPTARG"
       plan_is_provided=1
-      cluster_plan_read
+      vlib.cluster_plan_read
     ;;
     w )
       node_root_password="$OPTARG"

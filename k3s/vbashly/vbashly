@@ -303,7 +303,7 @@ vbashly_generate_command() {
   # https://emmer.dev/blog/resetting-the-working-directory-on-shell-script-exit/
   # shellcheck disable=SC2064
 
-  bashly-init-command
+  vlib.bashly-init-command
 
   # https://www.linuxbash.sh/post/logging-and-monitoring-from-bash-scripts
   # https://man7.org/linux/man-pages/man1/logger.1.html
@@ -341,7 +341,7 @@ vbashly_exec_command() {
   # src/exec_command.sh
   #!/usr/bin/env bash
   #inspect_args
-  bashly-init-command
+  vlib.bashly-init-command
 
   # shellcheck disable=SC2154
   eval "${args[command]}"
@@ -628,9 +628,9 @@ initialize() {
 
   # src/initialize.sh
   set -e
-  source ../../bash-lib.sh
+  source ../../vlib.bash
 
-  bashly-init-script
+  vlib.bashly-init-script
 
 }
 

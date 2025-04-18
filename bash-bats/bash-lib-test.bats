@@ -11,7 +11,7 @@ setup() {
   #load '~/bats-core/test_helper' # this is required by bats-assert!
   
   set -e
-  source /mnt/d/dev/homelab/bash-lib.sh
+  source /mnt/d/dev/homelab/vlib.bash
 
   # get the containing directory of this file
   # use $BATS_TEST_FILENAME instead of ${BASH_SOURCE[0]} or $0,
@@ -77,7 +77,7 @@ third ef31bf5a-97d4-4701-bc8d-12fc06ffc95d"
   [ $cnt -eq 2 ]
 }
 @test "wait-for-success: error if without parameters" {
-  run wait-for-success
+  run vlib.wait-for-success
   #echo "echo always" >&3
   #echo "echo on error"
   #echo "output=$output"
@@ -88,42 +88,42 @@ third ef31bf5a-97d4-4701-bc8d-12fc06ffc95d"
   [ "${lines[0]}" = "Error: Call 'wait-for-success' without parameters" ]
 }
 @test "wait-for-success: with <bash command> parameter only" {
-  run wait-for-success "ls ~"
+  run vlib.wait-for-success "ls ~"
   [ "$status" -eq 0 ]
 }
 @test "wait-for-success: error if without <bash command> parameter" {
-  run wait-for-success -p 2
+  run vlib.wait-for-success -p 2
   [ "$status" -ne 0 ]
   [ "${lines[0]}" = "Function 'wait-for-success' is expecting <bash command> parameter" ]
 }
 @test "wait-for-success: waiting for success" {
-  run wait-for-success -p 2 -t 3 "ls ~"
+  run vlib.wait-for-success -p 2 -t 3 "ls ~"
   [ "$status" -eq 0 ]
 }
 @test "wait-for-success: waiting for success timeout" {
-  run wait-for-success -p 2 -t 3 "not-existing-command123"
+  run vlib.wait-for-success -p 2 -t 3 "not-existing-command123"
   [ "$status" -ne 0 ]
 }
 @test "wait-for-error: error if without parameters" {
-  run wait-for-error
+  run vlib.wait-for-error
   [ "$status" -ne 0 ]
   [ "${lines[0]}" = "Error: Call 'wait-for-error' without parameters" ]
 }
 @test "wait-for-error: with <bash command> parameter only" {
-  run wait-for-error "ls /kuku/kuku"
+  run vlib.wait-for-error "ls /kuku/kuku"
   echo "status=$status"
   [ "$status" -eq 0 ]
 }
 @test "wait-for-error: error if without <bash command> parameter" {
-  run wait-for-error -p 2
+  run vlib.wait-for-error -p 2
   [ "$status" -ne 0 ]
   [ "${lines[0]}" = "Function 'wait-for-error' is expecting <bash command> parameter" ]
 }
 @test "wait-for-error: waiting for error" {
-  run wait-for-error -p 2 -t 3 "not-existing-command123"
+  run vlib.wait-for-error -p 2 -t 3 "not-existing-command123"
   [ "$status" -eq 0 ]
 }
 @test "wait-for-error: waiting for error timeout" {
-  run wait-for-error -p 2 -t 3 "ls ~"
+  run vlib.wait-for-error -p 2 -t 3 "ls ~"
   [ "$status" -ne 0 ]
 }

@@ -4,8 +4,8 @@
 #set -e #x
 
 source ./script-lib-0.bash
-source ../bash-lib.sh
-bashly-init-script
+source ../vlib.bash
+vlib.bashly-init-script
 
 echo "script-1"
 [[ "$1" == "1" ]] && unknown-command
