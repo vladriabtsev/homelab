@@ -3,17 +3,12 @@
 Export path to bash scripts:
 
 * `export VBASH=<your bash script path>`
-* `export BASHLY_SETTINGS_PATH=$VBASH/bashly-settings.yaml`
+* `export BASHLY_SETTINGS_PATH=$VBASH/bashly-settings.yml`
 * `export MY_LOG_DIR=$VBASH/logs/`
-
-Generate bashly script:
-
-* `cd $VBASH/vkube.prj`
-* `bashly generate`
 
 Start script: `$VBASH/my-bash-script`
 
-## My bashly gem
+## bashly - modified version
 
 [Bashly](https://bashly.dev/)
 
@@ -26,7 +21,17 @@ Install
 * [Install Ruby and RubyGems](https://www.ruby-lang.org/en/documentation/installation/)
   * `brew install ruby-install`
   * `ruby-install ruby`
-* Get my copy of bashly gem. Modify it.
+* [Get copy of bashly gem. Modify it.](https://github.com/vladriabtsev/bashly)
 * `cd homelab/vbash/bashly`
 * `gem build bashly.gemspec`
 * `gem install bashly-1.2.11.gem`
+
+## vkube.prj
+
+Generate updated bashly script:
+
+* `cd $VBASH/vkube.prj`
+* [Edit files](https://bashly.dev/)
+* `bashly generate`
+
+Run `../vkube k3s install ../../k3s//k3s-HA.yaml`

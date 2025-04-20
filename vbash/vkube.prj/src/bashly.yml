@@ -44,6 +44,11 @@ flags:
 
   arg: log-file-path
 
+- long: --framework
+  help: Framework for commands (bashmatic, bsfl).
+  arg: framework-type
+  default: bashmatic
+
 commands:
 - name: exec
   help: Run 'vkube exec "command"'. For test traps of vkube script

@@ -115,9 +115,7 @@ function _trap_failure() {
   fi
   exit ${ERR_CODE}
 }
-function vlib.bashly-init-script() {
-  #[[ -z $args ]] || bashly_err "Expecting bashly script when call bashly-init-script()"
-
+function vlib.bashly-init-error-handler() {
   # https://www.baeldung.com/linux/debug-bash-script
   # https://phoenixnap.com/kb/bash-redirect-stderr-to-stdout
 
@@ -205,25 +203,60 @@ function vlib.bashly-init-command() {
   # trap '{ set +x; } 2>/dev/null; echo -n "[$(date) ${BASH_SOURCE[0]} ${BASH_LINENO[0]}] "; set -x' DEBUG
   # trap 'echo -n "[${BASH_SOURCE[0]} ${BASH_LINENO[0]}] "' DEBUG
 
-  [[ -z $args ]] || ( echo_err "Expecting bashly script when call bashly-init-script()"; exit 1 ) 
+  [[ -z $args ]] || ( echo_err "Expecting bashly script when call bashly-init-command()"; exit 1 ) 
   #[[ $# -eq 1 ]] || err_and_exit "Only one parameter is expected" ${LINENO}
+
+  case ${args[--framework]} in
+    bashmatic )
+      [[ -f ~/.bashmatic/init.sh ]] || {
+        echo "Can't find or install Bashmatic. Exiting."
+        exit 1
+      }
+      # shellcheck disable=SC1090
+      source ~/.bashmatic/init.sh
+    ;;
+    bsfl )
+      err_and_exit "Not implemented yet." ${LINENO} "$0"
+    ;;
+    \? ) err_and_exit "Wrong --framework argument ${args[framework-type]}. Expecting bashmatic or bsfl." ${LINENO} "$0"
+    ;;
+  esac
+
+  vlib.bashly-init-error-handler
 
   # https://www.gnu.org/software/bash/manual/bash.html#The-Set-Builtin-1
   # https://tldp.org/LDP/abs/html/internal.html#EXECREF
+  # https://github.com/kigster/bashmatic
   set +u
   __bashly_init_command_set=""
-  if [[ ${args[--noerrexit]} ]]; then set +e; fi
+  __bashmatic_init_set=""
+  if [[ ${args[--noerrexit]} ]]; then 
+    set +e
+  else
+    __bashmatic_init_set="${__bashmatic_init_set} abort-on-error"
+  fi
   if [[ ${args[--noexec]} ]]; then 
     __bashly_init_command_set="${__bashly_init_command_set}n"
+    __bashmatic_init_set="${__bashmatic_init_set} dry-run-on"
+  else
+    __bashmatic_init_set="${__bashmatic_init_set} dry-run-off"
   fi
   if [[ ${args[--debug]} ]]; then 
     __bashly_init_command_set="${__bashly_init_command_set}vx"
+    __bashmatic_init_set="${__bashmatic_init_set} show-command-on"
+    __bashmatic_init_set="${__bashmatic_init_set} show-output-on"
+    if [[ ${args[--noerrexit]} ]]; then 
+      __bashmatic_init_set="${__bashmatic_init_set} ask-on-error"
+    fi
   else
     if [[ ${args[--verbose]} ]]; then 
       __bashly_init_command_set="${__bashly_init_command_set}v"
+      __bashmatic_init_set="${__bashmatic_init_set} show-command-on"
+      __bashmatic_init_set="${__bashmatic_init_set} show-output-on"
     fi
     if [[ ${args[--xtrace]} ]]; then 
       __bashly_init_command_set="${__bashly_init_command_set}x"
+      __bashmatic_init_set="${__bashmatic_init_set} show-command-on"
     fi
     if [[ ${args[--unset]} ]]; then 
       __bashly_init_command_set="${__bashly_init_command_set}u"
@@ -265,6 +298,17 @@ function vlib.bashly-init-command() {
     #echo "-$__bashly_init_command_set"
     set "-${__bashly_init_command_set}"; 
   fi
+
+  case "${args[framework-type]}" in
+    bashmatic )
+      run.set-all "$__bashmatic_init_set"
+    ;;
+    bsfl )
+      err_and_exit "Not implemented yet." ${LINENO} "$0"
+    ;;
+    \? ) err_and_exit "Wrong --framework argument ${args[framework-type]}. Expecting bashmatic or bsfl." ${LINENO} "$0"
+    ;;
+  esac
 }
 function vlib.check-github-release-version() {
   usage="Usage: $(basename $0) name github_releases_url name_of_version_variable"
@@ -291,25 +335,6 @@ function vlib.check-github-release-version() {
     fi
   fi
   eval "$3=$ver"
-}
-function vlib.cluster_plan_read() {
-  # YML,JSON,XML,LUA,TOML https://mikefarah.gitbook.io/yq/how-it-works
-  # https://www.baeldung.com/linux/yq-utility-processing-yaml
-
-  #source k3s-func.sh
-
-  if [[ $(yq --exit-status 'tag == "!!map" or tag== "!!seq"' $k3s_settings > /dev/null) ]]; then
-    err_and_exit "Error: Invalid format for YAML file: '$k3s_settings'." ${LINENO}
-  fi
-
-  # All root scalar settings from yaml file to bash variables
-  # https://github.com/jasperes/bash-yaml
-  # https://suriyakrishna.github.io/shell-scripting/2021/03/28/shell-scripting-yaml-configuration
-  # https://www.baeldung.com/linux/yq-utility-processing-yaml
-  eval "$( yq '.[] |(( select(kind == "scalar") | key + "='\''" + . + "'\''"))'  < $k3s_settings)"
-
-  if ! test -e ~/tmp; then  mkdir ~/tmp;  fi
-
 }
 # Waits until the user presses any key to continue.
 function vlib.press-any-key() {

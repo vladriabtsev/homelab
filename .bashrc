@@ -137,6 +137,8 @@ homelab() {
     eval "$(ssh-agent -s)" # start ssh agent
     ssh-add ~/.ssh/id_rsa
   fi
+  cd vbash
+  cd vkube.prj
 }
 complete -o default -F __start_kubectl k
 #[[ -f ~/.bashmatic/init.sh ]] && source ~/.bashmatic/init.sh
