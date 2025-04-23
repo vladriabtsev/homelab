@@ -1,6 +1,15 @@
 [submodule "vbash/bashly"]
 	path = vbash/bashly
 	url = https://github.com/vladriabtsev/bashly.git
-[submodule "vbash/v-tests/bats"]
-	path = vbash/v-tests/bats
-	url = https://github.com/bats-core/bats-core.git
+[submodule "vbash/v-tests/test_helper/bats-support"]
+	path = vbash/v-tests/test_helper/bats-support
+	url = https://github.com/bats-core/bats-support.git
+[submodule "vbash/v-tests/test_helper/bats-assert"]
+	path = vbash/v-tests/test_helper/bats-assert
+	url = https://github.com/bats-core/bats-assert.git
+[submodule "vbash/v-tests/test_helper/bats-file"]
+	path = vbash/v-tests/test_helper/bats-file
+	url = https://github.com/bats-core/bats-file.git
+[submodule "vbash/v-tests/test_helper/bats-detik"]
+	path = vbash/v-tests/test_helper/bats-detik
+	url = https://github.com/bats-core/bats-detik.git
