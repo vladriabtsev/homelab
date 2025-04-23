@@ -14,9 +14,9 @@ Install bats:
 Install into folder with my bash projects:
 
 * `git submodule add https://github.com/bats-core/bats-core.git ./bats`
-* `git submodule add https://github.com/bats-core/bats-support.git ./bats-support`
-* `git submodule add https://github.com/bats-core/bats-assert.git ./bats-assert`
-* `git submodule add https://github.com/bats-core/bats-file.git ./bats-file`
-* `git submodule add https://github.com/bats-core/bats-detik.git ./bats-detik`
+* `git submodule add https://github.com/bats-core/bats-support.git ./test_helper/bats-support`
+* `git submodule add https://github.com/bats-core/bats-assert.git ./test_helper/bats-assert`
+* `git submodule add https://github.com/bats-core/bats-file.git ./test_helper/bats-file`
+* `git submodule add https://github.com/bats-core/bats-detik.git ./test_helper/bats-detik`
 
 Create `.bats/` subfolder in this folder for logs. Add `.bats/` in .gitignore file.
