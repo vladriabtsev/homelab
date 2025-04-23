@@ -1,8 +1,8 @@
 # bats ./bash-lib-script-init.bats
 setup() {
-  load 'bats-support/load' # this is required by bats-assert!
-  load 'bats-assert/load'  
-  load 'bats-file/load'  
+  load 'test_helper/bats-support/load' # this is required by bats-assert!
+  load 'test_helper/bats-assert/load'  
+  load 'test_helper/bats-file/load'  
   
   set -e
   source ../vlib.bash

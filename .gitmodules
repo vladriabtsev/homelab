@@ -1,3 +1,6 @@
 [submodule "vbash/bashly"]
 	path = vbash/bashly
 	url = https://github.com/vladriabtsev/bashly.git
+[submodule "vbash/v-tests/bats"]
+	path = vbash/v-tests/bats
+	url = https://github.com/bats-core/bats-core.git
