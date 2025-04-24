@@ -5,14 +5,15 @@
 * [BATS (Bash Automated Testing System) for VSCode](https://github.com/bats-core/bats-vscode)
 * [BATS Test Runner](https://github.com/kenherring/bats-test-runner)
 
-Install bats:
+<!-- Install bats:
 
 * `git clone https://github.com/bats-core/bats-core.git`
 * `cd bats-core`
-* `./install.sh /usr/local`
+* `./install.sh /usr/local` -->
 
 Install into folder with my bash projects:
 
+* `cd v-tests`
 * `git submodule add https://github.com/bats-core/bats-core.git ./bats`
 * `git submodule add https://github.com/bats-core/bats-support.git ./test_helper/bats-support`
 * `git submodule add https://github.com/bats-core/bats-assert.git ./test_helper/bats-assert`
@@ -20,3 +21,10 @@ Install into folder with my bash projects:
 * `git submodule add https://github.com/bats-core/bats-detik.git ./test_helper/bats-detik`
 
 Create `.bats/` subfolder in this folder for logs. Add `.bats/` in .gitignore file.
+
+Run bats tests: 
+
+* `cd vbash/v-tests`
+* `./bats/bin/bats ./`
+* `./bats/bin/bats ./vlib.bats`
+* `./bats/bin/bats ./vlib-script-init.bats`

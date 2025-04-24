@@ -8,7 +8,7 @@ source ./script-lib-1.bash
 source ./script-lib-2.bash
 source ./script-lib-3.bash
 source ../vlib.bash
-vlib.bashly-init-script
+vlib.bashly-init-command
 
 # $1: where execute unknown-command
 echo "script-lib.sh"

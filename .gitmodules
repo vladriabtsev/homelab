@@ -13,3 +13,6 @@
 [submodule "vbash/v-tests/test_helper/bats-detik"]
 	path = vbash/v-tests/test_helper/bats-detik
 	url = https://github.com/bats-core/bats-detik.git
+[submodule "vbash/v-tests/bats"]
+	path = vbash/v-tests/bats
+	url = https://github.com/bats-core/bats-core.git
