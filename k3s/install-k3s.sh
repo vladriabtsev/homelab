@@ -35,9 +35,9 @@ install_tools()
 
     # Copy SSH certs to ~/.ssh and change permissions
     if [[ -z $cert_name ]]; then
-      run "line '$LINENO';cp /home/$user/ssh/{$certName,$certName.pub} /home/$user/.ssh"
-      run "line '$LINENO';chmod 600 /home/$user/.ssh/$certName"
-      run "line '$LINENO';chmod 644 /home/$user/.ssh/$certName.pub"
+      run "line '$LINENO';cp $HOME/ssh/{$certName,$certName.pub} $HOME/.ssh"
+      run "line '$LINENO';chmod 600 $HOME/.ssh/$certName"
+      run "line '$LINENO';chmod 644 $HOME/.ssh/$certName.pub"
     fi
 
     # Install k3sup to local machine if not already present

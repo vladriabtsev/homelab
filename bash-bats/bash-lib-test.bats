@@ -127,3 +127,8 @@ third ef31bf5a-97d4-4701-bc8d-12fc06ffc95d"
   run vlib.wait-for-error -p 2 -t 3 "ls ~"
   [ "$status" -ne 0 ]
 }
+
+@test "comp-ver" {
+  run vlib.wait-for-error -p 2 -t 3 "ls ~"
+  [ "$status" -ne 0 ]
+}

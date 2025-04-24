@@ -8,6 +8,11 @@ Export path to bash scripts:
 
 Start script: `$VBASH/my-bash-script`
 
+[Handle line ending:](https://docs.github.com/en/get-started/git-basics/configuring-git-to-handle-line-endings)
+
+* `git config --global core.autocrlf true` - global
+* use .gitattributes file to change by repository
+
 ## bashly - modified version
 
 [Bashly](https://bashly.dev/)

@@ -309,7 +309,44 @@ function vlib.bashly-init-command() {
     \? ) err_and_exit "Wrong --framework argument ${args[framework-type]}. Expecting bashmatic or bsfl." ${LINENO} "$0"
     ;;
   esac
+  if [[ ${args[--verbose]} || ${args[--debug]} || ${args[--xtrace]} ]]; then
+    inspect_args
+  fi
 }
+# https://www.baeldung.com/linux/compare-dot-separated-version-string
+function vlib.vercomp() {
+    if [[ $1 == $2 ]]
+    then
+        return 0
+    fi
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+    # fill empty fields in ver1 with zeros
+    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+    do
+        ver1[i]=0
+    done
+    for ((i=0; i<${#ver1[@]}; i++))
+    do
+        if [[ -z ${ver2[i]} ]]
+        then
+            # fill empty fields in ver2 with zeros
+            ver2[i]=0
+        fi
+        if ((10#${ver1[i]} > 10#${ver2[i]}))
+        then
+            return 1
+        fi
+        if ((10#${ver1[i]} < 10#${ver2[i]}))
+        then
+            return 2
+        fi
+    done
+    return 0
+}
+# shellcheck disable=SC2046
+# shellcheck disable=SC2183
+function vlib.ver { printf "%03d%03d%03d%03d" $(echo "$1" | tr '.' ' '); } # [ $(vlib.ver 10.9) -lt $(vlib.ver 10.10) ] && echo 1
 function vlib.check-github-release-version() {
   usage="Usage: $(basename $0) name github_releases_url name_of_version_variable"
   if [ -z "$1" ]; then
