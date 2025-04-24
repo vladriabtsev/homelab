@@ -1,6 +1,7 @@
 [submodule "vbash/bashly"]
 	path = vbash/bashly
 	url = https://github.com/vladriabtsev/bashly.git
+	ignore = dirty
 [submodule "vbash/v-tests/test_helper/bats-support"]
 	path = vbash/v-tests/test_helper/bats-support
 	url = https://github.com/bats-core/bats-support.git
@@ -16,3 +17,4 @@
 [submodule "vbash/v-tests/bats"]
 	path = vbash/v-tests/bats
 	url = https://github.com/bats-core/bats-core.git
+	ignore = dirty

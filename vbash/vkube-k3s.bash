@@ -151,9 +151,7 @@ install_first_node() {
   if ! test -e ~/.kube; then  mkdir ~/.kube;  fi
   p_exist=0
   if test -e "${HOME}/.kube/${cluster_name}"; then 
-    if [ $opt_install_new -eq 1 ]; then
-      run.ui.ask "Cluster config '${cluster_name}' already exist. Uninstall and proceed new installation?" || exit 1
-    fi
+    run.ui.ask "Cluster config '${cluster_name}' already exist. Uninstall and proceed new installation?" || exit 1
     p_exist=1
     #if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; then
     #run.ui.press-any-key "Config for cluster '${cluster_name}' already exists. Override? (^C for cancel)"
@@ -166,46 +164,46 @@ install_first_node() {
     #fi
   # https://kube-vip.io/docs/usage/k3s/
   # [Remotely Execute Multi-line Commands with SSH](https://thornelabs.net/posts/remotely-execute-multi-line-commands-with-ssh/)
-  if [ $opt_install_new -eq 1 ]; then
-    # https://docs.k3s.io/cli/certificate#certificate-authority-ca-certificates
-    # https://github.com/k3s-io/k3s/blob/master/contrib/util/generate-custom-ca-certs.sh
-    # https://blog.chkpwd.com/posts/k3s-ha-installation-kube-vip-and-metallb/
-    if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$k3s_settings'." ${LINENO}; fi
-    cluster_node_ip=$node_ip4
-    if [ $kube_vip_use -eq 1 ]; then
-      gen_kube_vip_manifest
-    fi
-    install_k3s_cmd_parm="server \
+  
+  # https://docs.k3s.io/cli/certificate#certificate-authority-ca-certificates
+  # https://github.com/k3s-io/k3s/blob/master/contrib/util/generate-custom-ca-certs.sh
+  # https://blog.chkpwd.com/posts/k3s-ha-installation-kube-vip-and-metallb/
+  if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$k3s_settings'." ${LINENO}; fi
+  cluster_node_ip=$node_ip4
+  if [ $kube_vip_use -eq 1 ]; then
+    gen_kube_vip_manifest
+  fi
+  install_k3s_cmd_parm="server \
 --token kuku \
 --cluster-init \
 --disable traefik \
 --disable servicelb \
 --write-kubeconfig-mode 644 \
 --tls-san $cluster_node_ip"
-    inf "Install k3s first node. (Line:$LINENO)\n"
-    run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'curl -fL https://get.k3s.io > ~/install.sh;chmod 777 ~/install.sh'"
-    run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S INSTALL_K3S_VERSION=${k3s_ver} ~/install.sh ${install_k3s_cmd_parm} <<< \"$node_root_password\"'"
-    #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "sudo -S INSTALL_K3S_VERSION=${k3s_ver} ~/install.sh ${install_k3s_cmd_parm} <<< \"$node_root_password\""
-    #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S curl -fL https://get.k3s.io <<< \"$node_root_password\" | INSTALL_K3S_VERSION=${k3s_ver} sh -s - ${install_k3s_cmd_parm}'"
-    run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S cp /etc/rancher/k3s/k3s.yaml ~/k3s.yaml <<< \"$node_root_password\"'"
-    run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S chmod 777 ~/k3s.yaml <<< \"$node_root_password\"'"
-    run "line '$LINENO';scp -i ~/.ssh/$cert_name $node_user@$node_ip4:~/k3s.yaml ~/$cluster_name.yaml"
-    run "line '$LINENO';yq -i '.clusters[0].cluster.server = \"https://${cluster_node_ip}:6443\"' ~/$cluster_name.yaml"
-    run "line '$LINENO';cp ~/$cluster_name.yaml ~/.kube/$cluster_name"
-    #check_result $LINENO
-    #run cp --backup=t ~/$cluster_name.yaml ~/.kube/$cluster_name
-    run "line '$LINENO';chown $USER ~/.kube/$cluster_name"
-    #check_result $LINENO
-    # https://ss64.com/bash/chmod.html
-    run "line '$LINENO';chmod 600 ~/.kube/$cluster_name"
-    #check_result $LINENO
-    run "line '$LINENO';rm ~/$cluster_name.yaml"
-    #check_result $LINENO
-    run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'rm ~/k3s.yaml'"
-    #kubectl wait --for=condition=Ready node/$node_name
-    #echo "cluster_token=$cluster_token"
-    cluster_token="$(ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name echo \"$node_root_password\" | sudo -S cat /var/lib/rancher/k3s/server/token)"
-  fi
+  inf "Install k3s first node. (Line:$LINENO)\n"
+  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'curl -fL https://get.k3s.io > ~/install.sh;chmod 777 ~/install.sh'"
+  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S INSTALL_K3S_VERSION=${k3s_ver} ~/install.sh ${install_k3s_cmd_parm} <<< \"$node_root_password\"'"
+  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "sudo -S INSTALL_K3S_VERSION=${k3s_ver} ~/install.sh ${install_k3s_cmd_parm} <<< \"$node_root_password\""
+  #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S curl -fL https://get.k3s.io <<< \"$node_root_password\" | INSTALL_K3S_VERSION=${k3s_ver} sh -s - ${install_k3s_cmd_parm}'"
+  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S cp /etc/rancher/k3s/k3s.yaml ~/k3s.yaml <<< \"$node_root_password\"'"
+  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S chmod 777 ~/k3s.yaml <<< \"$node_root_password\"'"
+  run "line '$LINENO';scp -i ~/.ssh/$cert_name $node_user@$node_ip4:~/k3s.yaml ~/$cluster_name.yaml"
+  run "line '$LINENO';yq -i '.clusters[0].cluster.server = \"https://${cluster_node_ip}:6443\"' ~/$cluster_name.yaml"
+  run "line '$LINENO';cp ~/$cluster_name.yaml ~/.kube/$cluster_name"
+  #check_result $LINENO
+  #run cp --backup=t ~/$cluster_name.yaml ~/.kube/$cluster_name
+  run "line '$LINENO';chown $USER ~/.kube/$cluster_name"
+  #check_result $LINENO
+  # https://ss64.com/bash/chmod.html
+  run "line '$LINENO';chmod 600 ~/.kube/$cluster_name"
+  #check_result $LINENO
+  run "line '$LINENO';rm ~/$cluster_name.yaml"
+  #check_result $LINENO
+  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'rm ~/k3s.yaml'"
+  #kubectl wait --for=condition=Ready node/$node_name
+  #echo "cluster_token=$cluster_token"
+  cluster_token="$(ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name echo \"$node_root_password\" | sudo -S cat /var/lib/rancher/k3s/server/token)"
+
   #while [[ $(kubectl get pods -l app=nginx -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
   # sleep 1
   #done
@@ -357,7 +355,6 @@ function vkube-k3s.install() {
     warn "Latest version MetalLB: '$metal_lb_latest', but installing: '$metal_lb_ver'\n"
     fi
 
-    if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; then # install on nodes
     # Nodes
     #readarray nodes < <(yq '.nodes[] |= sort_by(.node_id)' < $k3s_settings)
     readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
@@ -407,7 +404,6 @@ function vkube-k3s.install() {
         inf "Kubernetes cluster '$cluster_name' is updated on servers described in cluster plan YAML file '$k3s_settings'\n"
     fi
     kubectl get nodes
-    fi
 
     hl.blue "$((++install_step)). Install the storage drivers and classes. (Line:$LINENO)"
     # if [ $csi_driver_iscsi_use -eq 1 ]; then
