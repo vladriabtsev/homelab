@@ -646,9 +646,6 @@ vkube_k3s_install_command() {
 
   # src/k3s_install_command.sh
   #!/usr/bin/env bash
-  if [[ ${args[--verbose]} || ${args[--debug]} || ${args[--xtrace]} ]]; then
-    inspect_args
-  fi
 
   # shellcheck source=/dev/null
   source "${VBASH}/vlib.bash"
@@ -2469,7 +2466,7 @@ vkube_k3s_restore_parse_requirements() {
 }
 
 # :command.initialize
-initialize() {
+bashly-initialize() {
 
   declare -g version="0.1.0"
 

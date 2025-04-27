@@ -2,6 +2,9 @@
 	path = vbash/bashly
 	url = https://github.com/vladriabtsev/bashly.git
 	ignore = dirty
+# https://stackoverflow.com/questions/41596529/what-is-a-dirty-submodule
+# https://medium.com/@maryam.ghani160/how-to-ignore-changes-in-git-submodules-a3ea1463bdde
+# https://longair.net/blog/2010/06/02/git-submodules-explained/comment-page-1/
 [submodule "vbash/v-tests/test_helper/bats-support"]
 	path = vbash/v-tests/test_helper/bats-support
 	url = https://github.com/bats-core/bats-support.git
