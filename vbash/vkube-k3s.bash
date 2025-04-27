@@ -127,8 +127,8 @@ gen_kube_vip_manifest() {
   #done
   #if ! test -s ~/tmp/kube-vip-node.yaml; then echo "~/tmp/kube-vip-node.yaml file is empty"; fi
   run "line '$LINENO';scp -i ~/.ssh/$cert_name ~/tmp/rbac.yaml $node_user@$node_ip4:~/rbac.yaml"
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S mkdir -p /var/lib/rancher/k3s/server/manifests/ <<< \"$node_root_password\"'"
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S mv ~/rbac.yaml /var/lib/rancher/k3s/server/manifests/rbac.yaml <<< \"$node_root_password\"'"
+  run "line '$LINENO';ssh $node_name 'sudo mkdir -p /var/lib/rancher/k3s/server/manifests/'"
+  run "line '$LINENO';ssh $node_name 'sudo mv ~/rbac.yaml /var/lib/rancher/k3s/server/manifests/rbac.yaml'"
   #run "ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo mv ~/kube-vip-node.yaml /var/lib/rancher/k3s/server/manifests/kube-vip-node.yaml'" || exit 1
 }
 remove_kubernetes_first_node() {
@@ -136,13 +136,12 @@ remove_kubernetes_first_node() {
   if [[ $2 -eq 1 ]]; then
     run "line '$LINENO';kubectl --kubeconfig ~/.kube/${cluster_name} delete daemonset kube-vip-ds -n kube-system"
     run "line '$LINENO';rm ~/.kube/${cluster_name}"
-    run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S rm -f /var/lib/rancher/k3s/server/tls/* <<< \"$node_root_password\"'"
+    run "line '$LINENO';ssh $node_name 'sudo rm -f /var/lib/rancher/k3s/server/tls/*'"
   fi
-  ssh $node_name 'if sudo -S test -e /usr/local/bin/k3s-uninstall.sh; then echo kuku; fi <<< \"$node_root_password\"'
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'if sudo -S test -e /usr/local/bin/k3s-uninstall.sh; then sudo -S /usr/local/bin/k3s-uninstall.sh; fi <<< \"$node_root_password\"'"
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S rm -rf /var/lib/rancher /etc/rancher ~/.kube/* <<< \"$node_root_password\"'"
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S ip addr flush dev lo <<< \"$node_root_password\"'"
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S ip addr add 127.0.0.1/8 dev lo <<< \"$node_root_password\"'"
+  run "line '$LINENO';ssh $node_name 'if sudo test -e /usr/local/bin/k3s-uninstall.sh; then sudo /usr/local/bin/k3s-uninstall.sh; fi'"
+  run "line '$LINENO';ssh $node_name 'sudo rm -rf /var/lib/rancher /etc/rancher ~/.kube/*'"
+  run "line '$LINENO';ssh $node_name 'sudo ip addr flush dev lo'"
+  run "line '$LINENO';ssh $node_name 'sudo ip addr add 127.0.0.1/8 dev lo'"
 }
 function uninstall_node() {
   hl.blue "$((++install_step)). Remove k3s node $node_name($node_ip4). (Line:$LINENO)"
@@ -183,12 +182,12 @@ function install_first_node() {
 --write-kubeconfig-mode 644 \
 --tls-san $cluster_node_ip"
   inf "Install k3s first node. (Line:$LINENO)\n"
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'curl -fL https://get.k3s.io > ~/install.sh;chmod 777 ~/install.sh'"
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S INSTALL_K3S_VERSION=${k3s_ver} ~/install.sh ${install_k3s_cmd_parm} <<< \"$node_root_password\"'"
-  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "sudo -S INSTALL_K3S_VERSION=${k3s_ver} ~/install.sh ${install_k3s_cmd_parm} <<< \"$node_root_password\""
-  #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S curl -fL https://get.k3s.io <<< \"$node_root_password\" | INSTALL_K3S_VERSION=${k3s_ver} sh -s - ${install_k3s_cmd_parm}'"
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S cp /etc/rancher/k3s/k3s.yaml ~/k3s.yaml <<< \"$node_root_password\"'"
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S chmod 777 ~/k3s.yaml <<< \"$node_root_password\"'"
+  run "line '$LINENO';ssh $node_name 'curl -fL https://get.k3s.io > ~/install.sh;chmod 777 ~/install.sh'"
+  run "line '$LINENO';ssh $node_name 'sudo INSTALL_K3S_VERSION=${k3s_ver} ~/install.sh ${install_k3s_cmd_parm}'"
+  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "sudo INSTALL_K3S_VERSION=${k3s_ver} ~/install.sh ${install_k3s_cmd_parm} <<< \"$node_root_password\""
+  #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo curl -fL https://get.k3s.io <<< \"$node_root_password\" | INSTALL_K3S_VERSION=${k3s_ver} sh -s - ${install_k3s_cmd_parm}'"
+  run "line '$LINENO';ssh $node_name 'sudo cp /etc/rancher/k3s/k3s.yaml ~/k3s.yaml'"
+  run "line '$LINENO';ssh $node_name 'sudo chmod 777 ~/k3s.yaml'"
   run "line '$LINENO';scp -i ~/.ssh/$cert_name $node_user@$node_ip4:~/k3s.yaml ~/$cluster_name.yaml"
   run "line '$LINENO';yq -i '.clusters[0].cluster.server = \"https://${cluster_node_ip}:6443\"' ~/$cluster_name.yaml"
   run "line '$LINENO';cp ~/$cluster_name.yaml ~/.kube/$cluster_name"
@@ -201,10 +200,10 @@ function install_first_node() {
   #check_result $LINENO
   run "line '$LINENO';rm ~/$cluster_name.yaml"
   #check_result $LINENO
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'rm ~/k3s.yaml'"
+  run "line '$LINENO';ssh $node_name 'rm ~/k3s.yaml'"
   #kubectl wait --for=condition=Ready node/$node_name
   #echo "cluster_token=$cluster_token"
-  cluster_token="$(ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name echo \"$node_root_password\" | sudo -S cat /var/lib/rancher/k3s/server/token)"
+  cluster_token=ssh $node_name 'sudo cat /var/lib/rancher/k3s/server/token'
 
   #while [[ $(kubectl get pods -l app=nginx -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
   # sleep 1
@@ -220,28 +219,28 @@ install_join_node() {
 --token kuku \
 --tls-san $cluster_node_ip \
 --server https://$cluster_node_ip:6443"
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'if sudo -S test -e /usr/local/bin/k3s-uninstall.sh; then /usr/local/bin/k3s-uninstall.sh; fi <<< \"$node_root_password\"'"
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name  'if sudo -S test -e /usr/local/bin/k3s-agent-uninstall.sh; then /usr/local/bin/k3s-agent-uninstall.sh; fi <<< \"$node_root_password\"'"
+  run "line '$LINENO';ssh $node_name 'if sudo test -e /usr/local/bin/k3s-uninstall.sh; then /usr/local/bin/k3s-uninstall.sh; fi'"
+  run "line '$LINENO';ssh $node_name 'if sudo test -e /usr/local/bin/k3s-agent-uninstall.sh; then /usr/local/bin/k3s-agent-uninstall.sh; fi'"
 
   #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'curl -fL https://get.k3s.io > ./install.sh;chmod 777 ./install.sh'"
-  #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'INSTALL_K3S_VERSION=${k3s_ver} sudo -S ./install.sh ${install_k3s_cmd_parm} <<< \"$node_root_password\"'"
+  #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'INSTALL_K3S_VERSION=${k3s_ver} sudo ./install.sh ${install_k3s_cmd_parm} <<< \"$node_root_password\"'"
 
-  #K3S_URL=https://192.168.100.51:6443 K3S_TOKEN=K109836edbf7c2b660b8c7515867f6da9aa59f1c75c7e46066a78e7fb63f78a62ce::server:69a6d7584a18bf32238e6f4c5cb35624 echo qpalwoskQ4.. | sudo -S "./install.sh server --disable traefik --disable servicelb --write-kubeconfig-mode 644 --tls-san 192.168.100.50"
+  #K3S_URL=https://192.168.100.51:6443 K3S_TOKEN=K109836edbf7c2b660b8c7515867f6da9aa59f1c75c7e46066a78e7fb63f78a62ce::server:69a6d7584a18bf32238e6f4c5cb35624 echo qpalwoskQ4.. | sudo "./install.sh server --disable traefik --disable servicelb --write-kubeconfig-mode 644 --tls-san 192.168.100.50"
 
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'curl -fL https://get.k3s.io > ~/install.sh;chmod 777 ~/install.sh'"
-  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "K3S_URL=https://$first_node_address:6443 K3S_TOKEN=$cluster_token sudo -S '$HOME/install.sh ${install_k3s_cmd_parm}' <<< \"$node_root_password\""
-  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "K3S_URL=https://$first_node_address:6443 K3S_TOKEN=$cluster_token sudo -S './install.sh ${install_k3s_cmd_parm}' <<< ${node_root_password}"
+  run "line '$LINENO';ssh $node_name 'curl -fL https://get.k3s.io > ~/install.sh;chmod 777 ~/install.sh'"
+  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "K3S_URL=https://$first_node_address:6443 K3S_TOKEN=$cluster_token sudo '$HOME/install.sh ${install_k3s_cmd_parm}' <<< \"$node_root_password\""
+  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "K3S_URL=https://$first_node_address:6443 K3S_TOKEN=$cluster_token sudo './install.sh ${install_k3s_cmd_parm}' <<< ${node_root_password}"
   #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'curl -fL https://get.k3s.io > ./install.sh;chmod 777 ./install.sh'"
-  #ssh vlad@192.168.100.52 -i /home/vlad/.ssh/id_rsa K3S_URL=https://192.168.100.51:6443 K3S_TOKEN=K109836edbf7c2b660b8c7515867f6da9aa59f1c75c7e46066a78e7fb63f78a62ce::server:69a6d7584a18bf32238e6f4c5cb35624 sudo -S '/home/vlad/install.sh server --disable traefik --disable servicelb --tls-san 192.168.100.50' <<< qpalwoskQ4..
-  #ssh vlad@192.168.100.52 -i /home/vlad/.ssh/id_rsa INSTALL_K3S_VERSION=v1.32.2+k3s1 K3S_URL=https://192.168.100.51:6443 K3S_TOKEN=K109836edbf7c2b660b8c7515867f6da9aa59f1c75c7e46066a78e7fb63f78a62ce::server:69a6d7584a18bf32238e6f4c5cb35624 sudo -S '/home/vlad/install.sh server --disable traefik --disable servicelb --tls-san 192.168.100.50' <<< qpalwoskQ4..
-  #echo ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "INSTALL_K3S_VERSION=${k3s_ver} sudo -S ~/install.sh ${install_k3s_cmd_parm} <<< ${node_root_password}"
-  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "sudo -S ./install.sh ${install_k3s_cmd_parm} <<< \"$node_root_password\""
-  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "INSTALL_K3S_VERSION=${k3s_ver} K3S_URL=https://$first_node_address:6443 K3S_TOKEN=$cluster_token sudo -S '~/install.sh ${install_k3s_cmd_parm}' <<< ${node_root_password}"
-  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "INSTALL_K3S_VERSION=${k3s_ver} sudo -S ~/install.sh ${install_k3s_cmd_parm} <<< ${node_root_password}"
-  run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S INSTALL_K3S_VERSION=${k3s_ver} ./install.sh ${install_k3s_cmd_parm} <<< \"$node_root_password\"'"
+  #ssh vlad@192.168.100.52 -i /home/vlad/.ssh/id_rsa K3S_URL=https://192.168.100.51:6443 K3S_TOKEN=K109836edbf7c2b660b8c7515867f6da9aa59f1c75c7e46066a78e7fb63f78a62ce::server:69a6d7584a18bf32238e6f4c5cb35624 sudo '/home/vlad/install.sh server --disable traefik --disable servicelb --tls-san 192.168.100.50' <<< qpalwoskQ4..
+  #ssh vlad@192.168.100.52 -i /home/vlad/.ssh/id_rsa INSTALL_K3S_VERSION=v1.32.2+k3s1 K3S_URL=https://192.168.100.51:6443 K3S_TOKEN=K109836edbf7c2b660b8c7515867f6da9aa59f1c75c7e46066a78e7fb63f78a62ce::server:69a6d7584a18bf32238e6f4c5cb35624 sudo '/home/vlad/install.sh server --disable traefik --disable servicelb --tls-san 192.168.100.50' <<< qpalwoskQ4..
+  #echo ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "INSTALL_K3S_VERSION=${k3s_ver} sudo ~/install.sh ${install_k3s_cmd_parm} <<< ${node_root_password}"
+  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "sudo ./install.sh ${install_k3s_cmd_parm} <<< \"$node_root_password\""
+  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "INSTALL_K3S_VERSION=${k3s_ver} K3S_URL=https://$first_node_address:6443 K3S_TOKEN=$cluster_token sudo '~/install.sh ${install_k3s_cmd_parm}' <<< ${node_root_password}"
+  #ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name "INSTALL_K3S_VERSION=${k3s_ver} sudo ~/install.sh ${install_k3s_cmd_parm} <<< ${node_root_password}"
+  run "line '$LINENO';ssh $node_name 'sudo INSTALL_K3S_VERSION=${k3s_ver} ./install.sh ${install_k3s_cmd_parm}'"
 
-  #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'curl -fL https://get.k3s.io | K3S_URL=https://$first_node_address:6443 K3S_TOKEN=$cluster_token sudo -S sh -s - ${install_k3s_cmd_parm} <<< \"$node_root_password\"'"
-  #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S curl -fL https://get.k3s.io | K3S_URL=https://$first_node_address:6443 K3S_TOKEN=$cluster_token sh -s - ${install_k3s_cmd_parm} <<< \"$node_root_password\"'"
+  #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'curl -fL https://get.k3s.io | K3S_URL=https://$first_node_address:6443 K3S_TOKEN=$cluster_token sudo sh -s - ${install_k3s_cmd_parm} <<< \"$node_root_password\"'"
+  #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo curl -fL https://get.k3s.io | K3S_URL=https://$first_node_address:6443 K3S_TOKEN=$cluster_token sh -s - ${install_k3s_cmd_parm} <<< \"$node_root_password\"'"
   #kubectl get nodes
   # sudo journalctl -xeu k3s.service # check k3s log on node
   # ls /var/lib/ca-certificates/pem
@@ -364,10 +363,10 @@ function vkube-k3s.install() {
         if [[ $i_node -eq 0 ]]; then # first cluster node
         first_node_address=$node_ip4
 
-        node_root_password=""
-        vlib.read-password node_root_password "Please enter root password for cluster nodes:"
-        echo
-        #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S rm -rfd /var/lib/kuku                                  <<< \"$node_root_password\"\""
+        #node_root_password=""
+        #vlib.read-password node_root_password "Please enter root password for cluster nodes:"
+        #echo
+        #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo rm -rfd /var/lib/kuku                                  <<< \"$node_root_password\"\""
         if [[ $first_node_address = "localhost" ]]; then
             err_and_exit "Not implemented yet" ${LINENO}
             k3sup install --local --local-path ~/.kube/local \

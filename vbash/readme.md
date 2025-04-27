@@ -39,4 +39,4 @@ Generate updated bashly script:
 * [Edit files](https://bashly.dev/)
 * `bashly generate`
 
-Run `../vkube k3s install ../../k3s//k3s-HA.yaml`
+Run `../vkube k3s install ../k3s-HA.yaml`
