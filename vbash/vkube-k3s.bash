@@ -138,15 +138,19 @@ remove_kubernetes_first_node() {
     run "line '$LINENO';rm ~/.kube/${cluster_name}"
     run "line '$LINENO';ssh $node_name 'sudo rm -f /var/lib/rancher/k3s/server/tls/*'"
   fi
-  run "line '$LINENO';ssh $node_name 'if sudo test -e /usr/local/bin/k3s-uninstall.sh; then sudo /usr/local/bin/k3s-uninstall.sh; fi'"
-  run "line '$LINENO';ssh $node_name 'sudo rm -rf /var/lib/rancher /etc/rancher ~/.kube/*'"
-  run "line '$LINENO';ssh $node_name 'sudo ip addr flush dev lo'"
-  run "line '$LINENO';ssh $node_name 'sudo ip addr add 127.0.0.1/8 dev lo'"
+  ssh $node_name 'if sudo test -e /usr/local/bin/k3s-uninstall.sh; then sudo /usr/local/bin/k3s-uninstall.sh; fi'
+  ssh $node_name 'sudo rm -rf /var/lib/rancher /etc/rancher ~/.kube/*'
+  ssh $node_name 'sudo ip addr flush dev lo'
+  ssh $node_name 'sudo ip addr add 127.0.0.1/8 dev lo'
+  # run "line '$LINENO';ssh $node_name 'if sudo test -e /usr/local/bin/k3s-uninstall.sh; then sudo /usr/local/bin/k3s-uninstall.sh; fi'"
+  # run "line '$LINENO';ssh $node_name 'sudo rm -rf /var/lib/rancher /etc/rancher ~/.kube/*'"
+  # run "line '$LINENO';ssh $node_name 'sudo ip addr flush dev lo'"
+  # run "line '$LINENO';ssh $node_name 'sudo ip addr add 127.0.0.1/8 dev lo'"
 }
 function uninstall_node() {
   hl.blue "$((++install_step)). Remove k3s node $node_name($node_ip4). (Line:$LINENO)"
 }
-function install_first_node() {
+function i_first_node() {
   hl.blue "$((++install_step)). Bootstrap First k3s node $node_name($node_ip4). (Line:$LINENO)"
   # https://docs.dman.cloud/tutorial-documentation/k3sup-ha/  
   if ! test -e ~/.kube; then  mkdir ~/.kube;  fi
@@ -376,7 +380,7 @@ function vkube-k3s.install() {
             inf "Config from file '~/.kube/local' is exported. Use 'ek local' to set local in KUBECONFIG env"
             inf "To uninstall: '/usr/local/bin/k3s-uninstall.sh' and may be restart computer"
         else
-            install_first_node
+            i_first_node
         fi
         else # additional node join cluster
             install_join_node

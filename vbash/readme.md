@@ -13,6 +13,12 @@ Start script: `$VBASH/my-bash-script`
 * `git config --global core.autocrlf true` - global
 * use .gitattributes file to change by repository
 
+## bashmatic
+
+[bashmatic](https://github.com/kigster/bashmatic?tab=readme-ov-file#installing-a-particular-version-or-a-branch)
+
+* `bash -c "$(curl -fsSL https://bashmatic.re1.re); bashmatic-install -q -b v3.4.1"` v3.3.0 v3.2.0
+
 ## bashly - modified version
 
 [Bashly](https://bashly.dev/)

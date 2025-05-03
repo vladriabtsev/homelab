@@ -44,6 +44,8 @@ flags:
 
   arg: log-file-path
 
+# https://github.com/kigster/bashmatic/tree/main
+# https://github.com/SkypLabs/bsfl/tree/develop
 - long: --framework
   help: Framework for commands (bashmatic, bsfl).
   arg: framework-type
