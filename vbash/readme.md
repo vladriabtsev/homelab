@@ -10,12 +10,12 @@ Start script: `$VBASH/my-bash-script`
 
 [Handle line ending:](https://docs.github.com/en/get-started/git-basics/configuring-git-to-handle-line-endings)
 
-* `git config --global core.autocrlf true` - global
+* `git config --global core.autocrlf false` - global
 * use .gitattributes file to change by repository
 
-* `git submodule add https://github.com/vladriabtsev/bashly ./bashly`
-* `git submodule add https://github.com/vladriabtsev/bashmatic.git ./bashmatic`
-* `git submodule add https://github.com/vladriabtsev/bsfl.git ./bsfl`
+* `git submodule add -f https://github.com/vladriabtsev/bashly ./bashly`
+* `git submodule add -f https://github.com/vladriabtsev/bashmatic.git ./bashmatic`
+* `git submodule add -f https://github.com/vladriabtsev/bsfl.git ./bsfl`
 
 ## bashmatic
 

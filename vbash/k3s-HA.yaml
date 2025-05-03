@@ -5,11 +5,11 @@ amount_nodes: 3 #3
 # can be overridden by node settings
 node_user: vlad
 # https://github.com/k3s-io/k3s/releases
-k3s_ver: v1.32.2+k3s1 # v1.30.10+k3s1 # v1.31.6+k3s1 # v1.32.2+k3s1
+k3s_ver: v1.32.4+k3s1 # v1.32.2+k3s1 v1.30.10+k3s1 # v1.31.6+k3s1 # v1.32.2+k3s1
 cert_name: id_rsa
 # https://github.com/kube-vip/kube-vip/releases
 kube_vip_use: 1
-kube_vip_ver: v0.9.0
+kube_vip_ver: v0.9.1
 #kube_vip_cloud_provider_ver: v0.0.10
 kube_vip_address: 192.168.100.50
 kube_vip_mode: ARP # ARP or BGP

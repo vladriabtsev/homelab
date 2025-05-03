@@ -138,14 +138,10 @@ remove_kubernetes_first_node() {
     run "line '$LINENO';rm ~/.kube/${cluster_name}"
     run "line '$LINENO';ssh $node_name 'sudo rm -f /var/lib/rancher/k3s/server/tls/*'"
   fi
-  ssh $node_name 'if sudo test -e /usr/local/bin/k3s-uninstall.sh; then sudo /usr/local/bin/k3s-uninstall.sh; fi'
-  ssh $node_name 'sudo rm -rf /var/lib/rancher /etc/rancher ~/.kube/*'
-  ssh $node_name 'sudo ip addr flush dev lo'
-  ssh $node_name 'sudo ip addr add 127.0.0.1/8 dev lo'
-  # run "line '$LINENO';ssh $node_name 'if sudo test -e /usr/local/bin/k3s-uninstall.sh; then sudo /usr/local/bin/k3s-uninstall.sh; fi'"
-  # run "line '$LINENO';ssh $node_name 'sudo rm -rf /var/lib/rancher /etc/rancher ~/.kube/*'"
-  # run "line '$LINENO';ssh $node_name 'sudo ip addr flush dev lo'"
-  # run "line '$LINENO';ssh $node_name 'sudo ip addr add 127.0.0.1/8 dev lo'"
+  run "line '$LINENO';ssh $node_name 'if sudo test -e /usr/local/bin/k3s-uninstall.sh; then sudo /usr/local/bin/k3s-uninstall.sh; fi'"
+  run "line '$LINENO';ssh $node_name 'sudo rm -rf /var/lib/rancher /etc/rancher ~/.kube/*'"
+  run "line '$LINENO';ssh $node_name 'sudo ip addr flush dev lo'"
+  run "line '$LINENO';ssh $node_name 'sudo ip addr add 127.0.0.1/8 dev lo'"
 }
 function uninstall_node() {
   hl.blue "$((++install_step)). Remove k3s node $node_name($node_ip4). (Line:$LINENO)"
@@ -207,7 +203,7 @@ function i_first_node() {
   run "line '$LINENO';ssh $node_name 'rm ~/k3s.yaml'"
   #kubectl wait --for=condition=Ready node/$node_name
   #echo "cluster_token=$cluster_token"
-  cluster_token=ssh $node_name 'sudo cat /var/lib/rancher/k3s/server/token'
+  cluster_token="$(ssh $node_name 'sudo cat /var/lib/rancher/k3s/server/token')"
 
   #while [[ $(kubectl get pods -l app=nginx -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
   # sleep 1
@@ -388,21 +384,12 @@ function vkube-k3s.install() {
         ((i_node++))
         if [ $i_node -eq $amount_nodes ]; then break; fi
     done
-    if [ $opt_install_remove -eq 1 ]; then
-        unset KUBECONFIG
-        #rm $HOME/.kube/$cluster_name
-        inf "Kubernetes cluster '$cluster_name' is uninstalled from servers described in cluster plan YAML file '$k3s_settings'\n"
-        exit 1
-    fi
     export KUBECONFIG=~/.kube/$cluster_name
     run "line '$LINENO';wait_kubectl_can_connect_cluster"
 
     inf "New kubernetes cluster '$cluster_name' is installed on servers described in cluster plan YAML file '$k3s_settings'\n"
     inf "To use kubectl: Run 'export KUBECONFIG=~/.kube/$cluster_name' or 'ek $cluster_name'\n"
 
-    if [ $opt_install_upgrade -eq 1 ]; then
-        inf "Kubernetes cluster '$cluster_name' is updated on servers described in cluster plan YAML file '$k3s_settings'\n"
-    fi
     kubectl get nodes
 
     hl.blue "$((++install_step)). Install the storage drivers and classes. (Line:$LINENO)"

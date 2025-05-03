@@ -229,7 +229,7 @@ function vlib.bashly-init-command() {
     ;;
   esac
 
-  vlib.bashly-init-error-handler
+  #vlib.bashly-init-error-handler
 
   # https://www.gnu.org/software/bash/manual/bash.html#The-Set-Builtin-1
   # https://tldp.org/LDP/abs/html/internal.html#EXECREF
@@ -308,9 +308,11 @@ function vlib.bashly-init-command() {
 
   case "${args[framework-type]}" in
     bashmatic )
+      echo "run.set-all $__bashmatic_init_set"
       run.set-all "$__bashmatic_init_set"
     ;;
     bsfl )
+      vlib.bashly-init-error-handler
       err_and_exit "Not implemented yet." ${LINENO} "$0"
     ;;
     \? ) err_and_exit "Wrong --framework argument ${args[framework-type]}. Expecting bashmatic or bsfl." ${LINENO} "$0"
