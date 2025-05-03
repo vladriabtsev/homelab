@@ -208,12 +208,19 @@ function vlib.bashly-init-command() {
 
   case ${args[--framework]} in
     bashmatic )
-      [[ -f ~/.bashmatic/init.sh ]] || {
+      # [[ -f ~/.bashmatic/init.sh ]] || {
+      #   echo "Can't find or install Bashmatic. Exiting."
+      #   exit 1
+      # }
+      # # shellcheck disable=SC1090
+      # source ~/.bashmatic/init.sh
+
+      [[ -f $VBASH/bashmatic/init.sh ]] || {
         echo "Can't find or install Bashmatic. Exiting."
         exit 1
       }
       # shellcheck disable=SC1090
-      source ~/.bashmatic/init.sh
+      source $VBASH/bashmatic/init.sh
     ;;
     bsfl )
       err_and_exit "Not implemented yet." ${LINENO} "$0"

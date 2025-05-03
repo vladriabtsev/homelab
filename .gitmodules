@@ -21,9 +21,3 @@
 	path = vbash/v-tests/bats
 	url = https://github.com/bats-core/bats-core.git
 	ignore = dirty
-[submodule "vbash/bsfl"]
-	path = vbash/bsfl
-	url = https://github.com/vladriabtsev/bsfl.git
-[submodule "vbash/bashmatic"]
-	path = vbash/bashmatic
-	url = https://github.com/vladriabtsev/bashmatic.git
