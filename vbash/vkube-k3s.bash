@@ -416,6 +416,7 @@ function vkube-k3s.install() {
     fi
     # https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
     # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
+    run "line '$LINENO';if ! test -e $csi_driver_smb_secret_folder; then  mkdir $csi_driver_smb_secret_folder; fi"
     run "line '$LINENO';kubectl create secret generic smb-csi-creds -n kube-system --from-file=$csi_driver_smb_secret_folder"
     # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data}'
     # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.username}' | base64 --decode
