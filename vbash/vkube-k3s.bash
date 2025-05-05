@@ -416,17 +416,28 @@ function vkube-k3s.install() {
   kubectl get nodes
 
   hl.blue "$((++install_step)). Install the storage drivers and classes. (Line:$LINENO)"
-  # if [ $csi_driver_iscsi_use -eq 1 ]; then
-  #   # https://www.talos.dev/v1.9/kubernetes-guides/configuration/synology-csi/
-  #   check-github-release-version 'csi_driver_iscsi' https://api.github.com/repos/kubernetes-csi/csi-driver-iscsi/releases 'csi_driver_iscsi_ver'
-  #   #echo $csi_driver_smb_ver
-  #   if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$csi_driver_smb_ver -n kube-system | wc -l) -eq 0 ]]; then
-  #     run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
-  #     run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb --namespace kube-system --version $csi_driver_smb_ver"
-  #     # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
-  #   fi
-  # fi
+
+  # https://www.youtube.com/watch?v=c6Qf9UeHld0
+  # https://github.com/Tech-Byte-Tips/Reference-Guides/tree/main/Installing%20the%20Synology%20CSI%20Driver%20with%20the%20Snapshot%20feature%20in%20k3s
+  # https://github.com/SynologyOpenSource/synology-csi
+  # https://github.com/christian-schlichtherle/synology-csi-chart
+  # https://github.com/democratic-csi/democratic-csi
+  # https://github.com/kubernetes-csi/csi-driver-iscsi
+  if [ $csi_driver_iscsi_use -eq 1 ]; then
+    inf "csi-driver-smb (Line:$LINENO)\n"
+    # https://www.talos.dev/v1.9/kubernetes-guides/configuration/synology-csi/
+    check-github-release-version 'csi_driver_iscsi' https://api.github.com/repos/kubernetes-csi/csi-driver-iscsi/releases 'csi_driver_iscsi_ver'
+    #echo $csi_driver_smb_ver
+    if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$csi_driver_smb_ver -n kube-system | wc -l) -eq 0 ]]; then
+      run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
+      run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb --namespace kube-system --version $csi_driver_smb_ver"
+      # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
+    else
+      inf "... already installed. (Line:$LINENO)\n"
+    fi
+  fi
   if [ $csi_driver_smb_use -eq 1 ]; then
+    inf "csi-driver-smb (Line:$LINENO)\n"
     # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/deploy/example/e2e_usage.md
     # https://rguske.github.io/post/using-windows-smb-shares-in-kubernetes/
     # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
@@ -440,6 +451,8 @@ function vkube-k3s.install() {
       # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
       run "line '$LINENO';if ! test -e $csi_driver_smb_secret_folder; then  mkdir $csi_driver_smb_secret_folder; fi"
       run "line '$LINENO';kubectl create secret generic smb-csi-creds -n kube-system --from-file=$csi_driver_smb_secret_folder"
+    else
+      inf "... already installed. (Line:$LINENO)\n"
     fi
     # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data}'
     # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.username}' | base64 --decode
@@ -448,15 +461,19 @@ function vkube-k3s.install() {
     # kubectl delete secret smb-csi-creds -n kube-system
   fi
   if [ $csi_driver_nfs_use -eq 1 ]; then
+    inf "csi-driver-nfs (Line:$LINENO)\n"
     vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
     #echo ${csi_driver_nfs_ver:1}
     if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n kube-system | wc -l) -eq 0 ]]; then
       run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
       run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs --namespace kube-system --version $csi_driver_nfs_ver"
       # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
+    else
+      inf "... already installed. (Line:$LINENO)\n"
     fi
   fi
   if [ $nfs_subdir_external_provisioner_use -eq 1 ]; then
+    inf "nfs-subdir-external-provisioner (Line:$LINENO)\n"
     vlib.check-github-release-version 'nfs_subdir_external_provisioner' https://api.github.com/repos/kubernetes-sigs/nfs-subdir-external-provisioner/releases 'nfs_subdir_external_provisioner_ver'
     #echo $nfs_subdir_external_provisioner_ver
     #if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$nfs_subdir_external_provisioner_ver -n kube-system | wc -l) -eq 0 ]]; then
@@ -468,6 +485,8 @@ function vkube-k3s.install() {
       --set nfs.path=$nfs_subdir_external_provisioner_server_path"
       #  --set image.tag=$nfs_subdir_external_provisioner_ver \
       # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=nfs-subdir-external-provisioner" --watch
+    else
+      inf "... already installed. (Line:$LINENO)\n"
     fi
   fi
   run "line '$LINENO';kubectl apply -f $VBASH/../k3s/storage-classes.yaml"
@@ -476,6 +495,7 @@ function vkube-k3s.install() {
   # https://kube-vip.io/docs/usage/cloud-provider/#install-the-kube-vip-cloud-provider
   if [ $kube_vip_use -eq 1 ]; then
     hl.blue "$((++install_step)). Install the kube-vip Cloud Provider. (Line:$LINENO)"
+    inf "kube-vip (Line:$LINENO)\n"
     vlib.check-github-release-version 'kube-vip' https://api.github.com/repos/kube-vip/kube-vip/releases 'kube_vip_ver'
     #echo ${kube_vip_ver}
     if [[ $(kubectl get pods -lapp.kubernetes.io/name=kube-vip-ds,app.kubernetes.io/version=${kube_vip_ver} -n kube-system | wc -l) -eq 0 ]]; then
@@ -485,6 +505,8 @@ function vkube-k3s.install() {
       run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provider/main/manifest/kube-vip-cloud-controller.yaml"
       #run kubectl apply -f https://raw.githubusercontent.com/kube-vip/kube-vip-cloud-provider/$kube_vip_cloud_provider_ver/deploy/kube-vip-cloud-controller.yaml
       run "line '$LINENO';kubectl create configmap -n kube-system kubevip --from-literal range-global=$kube_vip_lb_range"
+    else
+      inf "... already installed. (Line:$LINENO)\n"
     fi
   fi
 
