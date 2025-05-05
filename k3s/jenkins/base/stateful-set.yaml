@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: StatefulSet
+# https://www.pgadmin.org/docs/pgadmin4/latest/container_deployment.html
+metadata:
+  name: jenkins
+spec:
+  serviceName: cluster-ip #-balancer
+  selector:
+    #app: pgadmin
+  replicas: 1
+  template:
+    metadata:
+      name: jenkins
+      labels:
+        app: jenkins
+    spec:
+      securityContext: # https://kubernetes.io/docs/tasks/configure-pod-container/security-context/
+        #runAsUser: 1000
+        #runAsGroup: 5050
+        fsGroup: 5050
+        #supplementalGroups: [4000]
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: pgadmin
+          image: dpage/pgadmin4:latest
+          imagePullPolicy: "IfNotPresent"
+          ports:
+          - containerPort: 80
+            protocol: TCP
+            name: web
+          env:
+          - name: PGADMIN_DEFAULT_EMAIL
+            value: vlad.riabtsev@live.ca
+          - name: PGADMIN_DEFAULT_PASSWORD
+            value: passWord1
+          #- name: PGADMIN_DEFAULT_PASSWORD_FILE          
+          #  value: passWord1
+          #- name: PGADMIN_ENABLE_TLS # use port 80 if not set          
+          #  value: "true"
+          volumeMounts:
+          - name: data-pgadmin
+            mountPath: /var/lib/pgadmin
+            subPath: var-lib-pgadmin
+            readOnly: false
+      volumes:
+      - name: data-pgadmin
+        persistentVolumeClaim:
+          claimName: jenkins-pvc

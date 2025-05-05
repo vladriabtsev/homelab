@@ -81,6 +81,8 @@ function log() {
   echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
 
+#function vlib.
+
 # https://opensource.com/article/22/7/print-stack-trace-bash-scripts
 function _trap_failure() {
   #echo "_trap_failure()"

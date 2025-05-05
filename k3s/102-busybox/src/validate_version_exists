@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# $1 - version
+validate_version_exists() {
+  local latest=$(curl -sL https://api.github.com/repos/busybox/busybox/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
+  local ver="$1"
+  if [ -z $ver ]; then ver=$latest; fi
+  if ! [ -z $1 ]; then
+    if ! [ "$latest" == "$ver" ]; then
+      warn "Latest version of Busybox: '$latest', but installing: '$ver'\n"
+    fi
+  fi
+}

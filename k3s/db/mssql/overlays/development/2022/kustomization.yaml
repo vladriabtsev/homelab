@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# kubectl apply -k ./
+# https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
+namespace: mssql2022
+namePrefix: mssql2022-
+nameSuffix: "-master"
+labels:
+  - pairs:
+      db: sqlserver
+      ver: "16"
+      sub: master
+    includeSelectors: true
+images:
+  - name: mcr.microsoft.com/mssql/server
+    newTag: "2022-latest"
+resources:
+  - ../../../base
+patches:
+  - target:
+      kind: Service
+      name: mssql-balancer
+    patch: |
+      - op: replace
+        path: /spec/ports/0/port
+        value: 30222

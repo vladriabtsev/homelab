@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox
+  labels:
+    app: busybox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: busybox  
+  template:
+    metadata:
+      labels:
+        app: busybox
+    spec:
+      #securityContext: user for commands???
+      #  runAsUser: 1030  # Use UID of nsf_user on Synology
+      #  runAsGroup: 100  # Use GID user group on Synology
+      initContainers:
+      # https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#differences-from-regular-containers
+      - name: init
+        image: busybox:musl
+        # https://www.busybox.net/downloads/BusyBox.html
+        # https://boxmatrix.info/wiki/BusyBox-Commands
+        command: [ "sh", "-c" ]
+        args:
+        - |
+          #create archive directory
+          mkdir -p /home/mfs-csi && chown -R 999:999 /home/nfs-csi
+          mkdir -p /home/mfs-ext && chown -R 999:999 /home/nfs-ext
+          mkdir -p /home/smb-csi && chown -R 999:999 /home/smb-csi
+      containers:
+        - name: busybox
+          image: busybox:musl
+          imagePullPolicy: "IfNotPresent"
+          #command: [ "sh", "-c" ]
+          #args: ["while true; do sleep 30; done;"]
+          #args:
+          #- |
+            #create directory for NFS volume
+            #mkdir -p /home/nfs && chown -R 999:999 /home/nfs
+          command:
+            - "sh"
+            - "-c"
+            - "while true; do sleep 6000; done"
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+          volumeMounts:
+          #  - name: nvme-vol
+          #    mountPath: /home/nvme # The mountpoint inside the container
+          - name: nfs-csi-vol
+            mountPath: /home/nfs-csi # The mountpoint inside the container
+          - name: nfs-ext-vol
+            mountPath: /home/nfs-ext # The mountpoint inside the container
+          - name: smb-csi-vol
+            mountPath: /home/smb-csi # The mountpoint inside the container
+      volumes:
+      # - name: nvme-vol
+      #   persistentVolumeClaim:
+      #     claimName: longhorn-nvme
+      - name: nfs-csi-vol
+        persistentVolumeClaim:
+          claimName: busybox-pvc-nfs-csi
+      - name: nfs-ext-vol
+        persistentVolumeClaim:
+          claimName: busybox-pvc-nfs-ext
+      - name: smb-csi-vol
+        persistentVolumeClaim:
+          claimName: busybox-pvc-smb-csi

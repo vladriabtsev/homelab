@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# kubectl apply -k ./
+# https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
+namespace: pg15
+namePrefix: pg15-
+nameSuffix: "-master"
+labels:
+  - pairs:
+      db: postgres
+      ver: "15"
+      sub: master
+    includeSelectors: true
+images:
+  - name: postgres
+    newTag: "15.0"
+resources:
+  - ../../../base
+patches:
+  - target:
+      kind: Service
+      name: postgres-balancer
+    patch: |
+      - op: replace
+        path: /spec/ports/0/port
+        value: 30115

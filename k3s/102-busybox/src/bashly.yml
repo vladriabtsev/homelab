@@ -1,0 +1,79 @@
+name: k-busybox
+help: busybox on kubernetes
+version: 0.1.0
+
+flags:
+  import: src/../../vbashly/src/common_flags.yml
+
+environment_variables:
+- name: api_key
+  help: Set your API key
+
+commands:
+- name: install
+  alias: i
+  help: Install busybox deployment
+
+  args:
+  - name: version
+    required: true
+    help: version of busybox container
+    # validate: validate_version_exists
+  - name: cluster_plan
+    required: false
+    help: cluster plan in yaml format
+
+  flags:
+  - long: --namespace
+    short: -n
+    arg: name
+    help: Kubernetes namespace name
+    default: busybox
+  - long: --force
+    short: -f
+    help: Overwrite existing files
+
+  examples:
+  - k-busybox install v15 --namespace busybox
+
+  environment_variables:
+  - name: default_target_location
+    help: Set the default location to download to
+
+- name: upgrade
+  alias: u
+  help: Upgarde busybox deployment
+  args:
+  - name: version
+    required: true
+    help: version of busybox container
+
+  flags:
+  - long: --user
+    short: -u
+    arg: user
+    help: Username to use for logging in
+    required: true
+  - long: --password
+    short: -p
+    arg: password
+    help: Password to use for logging in
+
+- name: delete
+  alias: d
+  help: Delete busybox deployment
+  args:
+  - name: version
+    required: true
+    help: version of busybox container
+
+  flags:
+  - long: --user
+    short: -u
+    arg: user
+    help: Username to use for logging in
+    required: true
+  - long: --password
+    short: -p
+    arg: password
+    help: Password to use for logging in

@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: StatefulSet
+# https://github.com/marcel-dempers/docker-development-youtube-series/blob/master/storage/databases/postgresql/4-k8s-basic/README.md
+metadata:
+  name: postgres
+spec:
+  serviceName: postgres-balancer #postgres-clusterip
+  selector:
+  replicas: 1
+  template:
+    metadata:
+      name: postgres
+    spec:
+      terminationGracePeriodSeconds: 30
+      initContainers:
+      # https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#differences-from-regular-containers
+      - name: init
+        image: busybox:musl
+        # https://www.busybox.net/downloads/BusyBox.html
+        # https://boxmatrix.info/wiki/BusyBox-Commands
+        command: [ "sh", "-c" ]
+        args:
+        - |
+          #create archive directory
+          mkdir -p /data/datadb && chown -R root:root /data/datadb
+          mkdir -p /data/archive && chown -R root:root /data/archive
+        volumeMounts:
+        - name: data
+          mountPath: /data
+          readOnly: false
+      containers:
+        - name: postgres
+          image: postgres:latest # https://hub.docker.com/_/postgres
+          imagePullPolicy: "IfNotPresent"
+          args: ["-c", "config_file=/config/postgresql.conf"]
+          ports:
+          - containerPort: 5432
+            protocol: TCP
+            name: database
+          envFrom:
+          - configMapRef:
+              name: postgres-configs
+          volumeMounts:
+          - name: data
+            mountPath: /var/lib/postgresql/data
+            subPath: datadb
+            readOnly: false
+          - name: config
+            mountPath: "/config"
+            readOnly: true
+
+#          - name: busybox
+#          image: busybox:musl
+#          imagePullPolicy: "IfNotPresent"
+#          command:
+#            - sleep
+#            - "3600"
+#          volumeMounts:
+#          - name: data
+#            mountPath: /home
+#            readOnly: true
+          
+#          livenessProbe:
+#            exec:
+#              command:
+#                - /opt/bitnami/scripts/pgpool/healthcheck.sh
+#            initialDelaySeconds: 30
+#            periodSeconds: 10
+#            timeoutSeconds: 5
+#            successThreshold: 1
+#            failureThreshold: 5
+
+#          readinessProbe:
+#            exec:
+#              command:
+#                - bash
+#                - -ec
+#                - PGPASSWORD=${PGPOOL_POSTGRES_PASSWORD} psql -U "postgres" -d "postgres" -h /opt/bitnami/pgpool/tmp -tA -c "SELECT 1" >/dev/null
+#            initialDelaySeconds: 5
+#            periodSeconds: 5
+#            timeoutSeconds: 5
+#            successThreshold: 1
+#            failureThreshold: 5
+
+      volumes:
+      - name: config
+        configMap:
+          name: postgres-configs
+          items:
+          - key: "pg_hba.conf"
+            path: "pg_hba.conf"
+          - key: "postgresql.conf"
+            path: "postgresql.conf"
+          defaultMode: 0755      
+      - name: data
+        persistentVolumeClaim:
+          claimName: postgres-pvc

@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
+resources:
+  #- service.yaml # create first https://kubernetes.io/docs/concepts/configuration/overview/
+  - svc.yaml # create first https://kubernetes.io/docs/concepts/configuration/overview/
+  - pvc.yaml
+  - stateful-set.yaml

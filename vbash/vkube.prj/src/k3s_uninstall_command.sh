@@ -127,7 +127,7 @@ remove_kubernetes_first_node()
   ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S ip addr flush dev lo <<< \"$node_root_password\"'
   ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo -S ip addr add 127.0.0.1/8 dev lo <<< \"$node_root_password\"'
 }
-i_first_node()
+install_first_node()
 {
   if [ $opt_install_new -eq 1 ]; then
     h2 "$((++install_step)). Bootstrap First k3s node $node_name($node_ip4). (Line:$LINENO)"
@@ -379,7 +379,7 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
         inf "Config from file '~/.kube/local' is exported. Use 'ek local' to set local in KUBECONFIG env"
         inf "To uninstall: '/usr/local/bin/k3s-uninstall.sh' and may be restart computer"
       else
-        i_first_node
+        install_first_node
       fi
     else # additional node join cluster
         install_join_node

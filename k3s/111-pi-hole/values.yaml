@@ -1,0 +1,36 @@
+# DNS servers that pi-hole will use
+#DNS1: 9.9.9.9
+#DNS2: 1.1.1.1
+
+persistentVolumeClaim:
+  enabled: true
+  storageClass: longhorn-nvme
+
+admin:
+  # use the secret we just created 
+  existingSecret: "pihole-admin"
+
+#serviceDns:
+  # combine the TCP and UDP services
+  #mixedService: true
+
+# we won't need that
+serviceDhcp:
+  enabled: false
+
+podDnsConfig:
+  enabled: true
+  policy: "None"
+  nameservers:
+  - 127.0.0.1
+  - 9.9.9.9
+
+#serviceTCP:
+#  loadBalancerIP: 192.168.100.111
+#  annotations:
+#    metallb.universe.tf/allow-shared-ip: pihole-svc
+
+#serviceUDP:
+#  loadBalancerIP: 192.168.100.111
+#  annotations:
+#    metallb.universe.tf/allow-shared-ip: pihole-svc
