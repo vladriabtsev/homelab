@@ -69,11 +69,6 @@ commands:
   - name: install
     help: Install selected kubernetes components and services
 
-    args:
-    - name: plan_file
-      required: true
-      help: Cluster plan file path. Yaml file expected.
-
 - name: k3s
   help: k3s kubernetes
 
@@ -81,21 +76,29 @@ commands:
   - name: install
     help: Install k3s kubernetes
 
-    args:
-    - name: plan_file
-      required: true
-      help: Cluster plan file path. Yaml file expected.
+    args: &cluster_plan
+    - name: cluster_plan
+      help: |-
+        Cluster plan:
+        - Explicit path to cluster plan Yaml file.
+        - Subfolder name of 'vkube-data' folder 
+        or subfolder in a current folder or 
+
+        Command 'vkube' will try to find appropriate data in this subfolder.
+
+        Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command itself.
+
+      default: k3s-HA
 
   - name: uninstall
     help: Uninstall k3s kubernetes
 
+    args: *cluster_plan
+
   - name: upgrade
     help: Upgrade k3s kubernetes
 
-    args:
-    - name: plan_file
-      required: true
-      help: Cluster plan file path. Yaml file expected.
+    args: *cluster_plan
 
   - name: backup
     help: Backup k3s kubernetes
@@ -105,7 +108,8 @@ commands:
 
   examples:
   - ./vkube --help
-  - ./vkube k3s install ../k3s-HA.yaml
-  - ./vkube k3s upgrade ../k3s-HA.yaml
+  - ./vkube --data k3s-HA k3s install # with subfolder 'k3s-HA' in folder './vkube-data', and 'k3s-HA.yaml' cluster plan
+  - ./vkube --data ../k3s-HA.yaml k3s install # with explicit 'k3s-HA.yaml' cluster plan and path to data folder
+  - ./vkube k3s upgrade
   - ./vkube k3s backup
   - ./vkube k3s restore

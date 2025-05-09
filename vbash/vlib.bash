@@ -36,22 +36,25 @@ function echo_err() {
   echo "$(red_bold "$@")"
 }
 function err_and_exit() {
-  if [ -z "$1" ]; then
-    echo_err "Function err_and_exit is expecting error message as a first parameter"
-  fi
-  #caller.stack
-  #exit
-  if [ -z "$2" ]; then
-    echo_err "Function err_and_exit is expecting \$LINENO as a second parameter"
-    exit 1
-  fi
-  local call_lineno="$2"
+  # if [ -z "$1" ]; then
+  #   echo_err "Function err_and_exit is expecting error message as a first parameter"
+  # fi
+  # #caller.stack
+  # #exit
+  # if [ -z "$2" ]; then
+  #   echo_err "Function err_and_exit is expecting \$LINENO as a second parameter"
+  #   call-trace 1
+  #   exit 1
+  # fi
+  # local call_lineno="$2"
 
-  if [ -z "$3" ]; then
-    echo_err "$1 LINENO: $2"
-  else
-    echo_err "$1 FUNCNAME: $3, LINENO: $2"
-  fi
+  # if [ -z "$3" ]; then
+  #   echo_err "$1 LINENO: $2"
+  # else
+  #   echo_err "$1 FUNCNAME: $3, LINENO: $2"
+  # fi
+  echo_err "$1"
+  call-trace 1
   exit 1
 }
 function echo_red() {
@@ -82,7 +85,27 @@ function log() {
 }
 
 #function vlib.
-
+function call-trace() {
+  LEN=${#BASH_LINENO[@]}
+  INDEX_MAX=($LEN-1)
+  #LEN2=${#BASH_SOURCE[@]}
+  echo "##################### C A L L   T R A C E ###########################"
+  local index_start=0
+  if ! [[ -z $1 ]]; then index_start=$1; fi
+  for (( INDEX=$index_start; INDEX<$INDEX_MAX; INDEX++ ))
+  do
+    if [[ ${INDEX} -gt 0 ]]; then
+      # commands in stack trace
+      echo " - file: ${BASH_SOURCE[${INDEX}+1]}, line: ${BASH_LINENO[${INDEX}]}, func: ${FUNCNAME[${INDEX}+1]}, command: ${FUNCNAME[${INDEX}]}"
+    else
+      # command that failed
+      echo "source trace:"
+      #echo_green "source trace:"
+      echo " - file: ${BASH_SOURCE[${INDEX}+1]}, line: ${ERR_LINENO}, func: ${FUNCNAME[${INDEX}+1]}, command: ${BASH_COMMAND}"
+    fi
+  done
+  echo "################# E N D   C A L L   T R A C E ######################"
+}
 # https://opensource.com/article/22/7/print-stack-trace-bash-scripts
 function _trap_failure() {
   #echo "_trap_failure()"
@@ -92,6 +115,7 @@ function _trap_failure() {
   if [[ ${ERR_CODE} != 0 ]]; then
     # only log stack trace if requested (set -e)
     # and last command failed
+    call-trace
     LEN=${#BASH_LINENO[@]}
     INDEX_MAX=($LEN-1)
     #LEN2=${#BASH_SOURCE[@]}
@@ -362,27 +386,29 @@ function vlib.check-github-release-version() {
   usage="Usage: $(basename $0) name github_releases_url name_of_version_variable"
   if [ -z "$1" ]; then
     echo $usage
-    err_and_exit "Missing first parameter" ${LINENO}
+    err_and_exit "Missing first parameter"
   fi
   if [ -z "$2" ]; then
     echo $usage
-    err_and_exit "Missing second parameter" ${LINENO}
+    err_and_exit "Missing second parameter"
   fi
   if [ -z "$3" ]; then
     echo $usage
-    err_and_exit "Missing third parameter" ${LINENO}
+    err_and_exit "Missing third parameter"
   fi
   #longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
   local latest=$(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
-  eval local ver2=\"\$$3\"
-  local ver=$ver2
-  if [ -z $ver ]; then ver=$latest; fi
-  if ! [ -z $ver2 ]; then
-    if ! [ "$latest" == "$ver" ]; then
-      warn "Latest version of $name: '$latest', but installing: '$ver'\n"
+  if ! [ -z $latest ]; then
+    eval local ver2=\"\$$3\"
+    local ver=$ver2
+    if [ -z $ver ]; then ver=$latest; fi
+    if ! [ -z $ver2 ]; then
+      if ! [ "$latest" == "$ver" ]; then
+        warn "Latest version of $name: '$latest', but installing: '$ver'\n"
+      fi
     fi
+    eval "$3=$ver"
   fi
-  eval "$3=$ver"
 }
 # Waits until the user presses any key to continue.
 function vlib.press-any-key() {
@@ -397,6 +423,15 @@ function vlib.press-any-key() {
   # cursor.up 2
   # cursor.rewind
   echo
+}
+function vlib.check-data-for-secrets() {
+  # $1 - folder path with secret data
+  [ -d "$1" ] || err_and_exit "Can't find folder '$1'."
+  [ -a "$1/username.txt" ] || err_and_exit "Can't find user name file '$1/username'."
+  [ -r "$1/username.txt" ] || err_and_exit "File '$1/username' exists, but not readable."
+  [ -a "$1/password.txt" ] || err_and_exit "Can't find user name file '$1/password'."
+  [ -r "$1/password.txt" ] || err_and_exit "File '$1/password' exists, but not readable."
+  return 0
 }
 function vlib.read-password() {
   local variable="$1"
@@ -554,7 +589,7 @@ function vlib.wait-for-success() {
   echo "wait_check_period=$wait_check_period"
   echo "<bash command>='$1'"
 
-#set -x
+  #set -x
 
   # https://linuxsimply.com/bash-scripting-tutorial/conditional-statements/if/if-command-fails/
   until eval "$1" &> /dev/null;
@@ -632,7 +667,7 @@ function vlib.wait-for-error() {
   echo $wait_check_period
   echo "$1"
 
-#set -x
+  #set -x
 
   until ! eval "$1" &> /dev/null;
   do 

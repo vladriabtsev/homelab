@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 #inspect_args
-vlib.bashly-init-command
 
 # Functions
 install_tools()
@@ -263,7 +262,6 @@ wait_kubectl_can_connect_cluster()
 
 start_time=$(date +%s)
 install_step=0
-k3s_settings="${args[plan_file]}"
 
 vlib.cluster_plan_read
 

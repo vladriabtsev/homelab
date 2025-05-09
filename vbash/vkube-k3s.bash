@@ -1,11 +1,6 @@
 source "${VBASH}/vbashmatic.bash"
 
 function vkube-k3s.cluster_plan_read() {
-    if ! command -v brew help &> /dev/null; then
-      err_and_exit "Homebrew not found, please install ..."  ${LINENO} "$0"
-    fi
-
-
   # YML,JSON,XML,LUA,TOML https://mikefarah.gitbook.io/yq/how-it-works
   # https://www.baeldung.com/linux/yq-utility-processing-yaml
 
@@ -22,7 +17,6 @@ function vkube-k3s.cluster_plan_read() {
   eval "$( yq '.[] |(( select(kind == "scalar") | key + "='\''" + . + "'\''"))'  < $k3s_settings)"
 
   if ! test -e ~/tmp; then  mkdir ~/tmp;  fi
-
 }
 function vkube-k3s.install_tools() {
     # For testing purposes - in case time is wrong due to VM snapshots
@@ -68,7 +62,7 @@ function vkube-k3s.install_tools() {
       #run "line '$LINENO';rm ./install.sh"
     fi
 }
-gen_kube_vip_manifest() {
+function gen_kube_vip_manifest() {
   #local version
   #run "curl -o ~/tmp/rbac.yaml https://kube-vip.io/manifests/rbac.yaml" || exit 1
   #run "scp -i ~/.ssh/$cert_name ~/tmp/rbac.yaml $node_user@$node_ip4:~/rbac.yaml" || exit 1
@@ -131,7 +125,7 @@ gen_kube_vip_manifest() {
   run "line '$LINENO';ssh $node_name 'sudo mv ~/rbac.yaml /var/lib/rancher/k3s/server/manifests/rbac.yaml'"
   #run "ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name 'sudo mv ~/kube-vip-node.yaml /var/lib/rancher/k3s/server/manifests/kube-vip-node.yaml'" || exit 1
 }
-remove_kubernetes_first_node() {
+function remove_kubernetes_first_node() {
   inf "Uninstalling k3s first node. (Line:$LINENO)\n"
   if [[ $2 -eq 1 ]]; then
     run "line '$LINENO';kubectl --kubeconfig ~/.kube/${cluster_name} delete daemonset kube-vip-ds -n kube-system"
@@ -167,13 +161,7 @@ function install_first_node() {
   if [ $kube_vip_use -eq 1 ]; then
     gen_kube_vip_manifest
   fi
-  install_k3s_cmd_parm="server \
---token kuku \
---cluster-init \
---disable traefik \
---disable servicelb \
---write-kubeconfig-mode 644 \
---tls-san $cluster_node_ip"
+  install_k3s_cmd_parm="server --token kuku --cluster-init --disable traefik --disable servicelb --write-kubeconfig-mode 644 --tls-san $cluster_node_ip"
   inf "Install k3s first node. (Line:$LINENO)\n"
   run "line '$LINENO';ssh $node_name 'curl -fL https://get.k3s.io > ~/install.sh;chmod 777 ~/install.sh'"
   run "line '$LINENO';ssh $node_name 'sudo INSTALL_K3S_VERSION=${k3s_ver} ~/install.sh ${install_k3s_cmd_parm}'"
@@ -202,16 +190,11 @@ function install_first_node() {
   # sleep 1
   #done
 }
-install_join_node() {
+function install_join_node() {
   hl.blue "$((++install_step)). Join k3s node $node_name($node_ip4). (Line:$LINENO)"
   # https://docs.k3s.io/installation/configuration#configuration-file
-#--token $cluster_token \
-  install_k3s_cmd_parm="server \
---disable traefik \
---disable servicelb \
---token kuku \
---tls-san $cluster_node_ip \
---server https://$cluster_node_ip:6443"
+  #--token $cluster_token
+  install_k3s_cmd_parm="server --disable traefik --disable servicelb --token kuku --tls-san $cluster_node_ip --server https://$cluster_node_ip:6443"
   run "line '$LINENO';ssh $node_name 'if sudo test -e /usr/local/bin/k3s-uninstall.sh; then /usr/local/bin/k3s-uninstall.sh; fi'"
   run "line '$LINENO';ssh $node_name 'if sudo test -e /usr/local/bin/k3s-agent-uninstall.sh; then /usr/local/bin/k3s-agent-uninstall.sh; fi'"
 
@@ -239,7 +222,7 @@ install_join_node() {
   # ls /var/lib/ca-certificates/pem
   # ls -l /etc/ssl/certs
 }
-wait_kubectl_can_connect_cluster() {
+function wait_kubectl_can_connect_cluster() {
   # wait until cluster is ready
   timeout=160
   timeout_step=20
@@ -287,8 +270,6 @@ function _install_all() {
 function vkube-k3s.install() {
   start_time=$(date +%s)
   install_step=0
-  # shellcheck disable=SC2154
-  k3s_settings=${args[plan_file]}
 
   vkube-k3s.cluster_plan_read
 
@@ -318,49 +299,49 @@ function vkube-k3s.install() {
   # K3S Version
   k3s_latest=$(curl -sL https://api.github.com/repos/k3s-io/k3s/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
   if [ -z $k3s_ver ]; then
-  k3s_ver=$k3s_latest
+    k3s_ver=$k3s_latest
   fi
   if [[ $k3s_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
-  inf "                    k3s_ver: '$k3s_ver'\n"
+    inf "                    k3s_ver: '$k3s_ver'\n"
   else
-  err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
+    err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
   fi
   if ! [ "$k3s_latest" == "$k3s_ver" ]; then
-  warn "Latest version of K3s: '$k3s_latest', but installing: '$k3s_ver'\n"
+    warn "Latest version of K3s: '$k3s_latest', but installing: '$k3s_ver'\n"
   fi
 
   # kube vip
   if [[ $kube_vip_use -eq 1 ]]; then
-  #kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r ".[0].name")
-  kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-  if [ -z $kube_vip_ver ]; then
+    #kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r ".[0].name")
+    kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+    if [ -z $kube_vip_ver ]; then
       $kube_vip_ver=$kvversion_latest
-  fi
-  # Version of Kube-VIP to deploy
-  if [[ $kube_vip_ver =~ ^v[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
+    fi
+    # Version of Kube-VIP to deploy
+    if [[ $kube_vip_ver =~ ^v[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
       inf "               kube_vip_ver: '$kube_vip_ver'\n"
-  else
+    else
       err_and_exit "Error: Invalid input for kube_vip_ver: '$kube_vip_ver'." ${LINENO}
-  fi
-  if ! [ "$kvversion_latest" == "$kube_vip_ver" ]; then
+    fi
+    if ! [ "$kvversion_latest" == "$kube_vip_ver" ]; then
       warn "Latest version kube-vip: '$kvversion_latest', but installing: '$kube_vip_ver'\n"
-  fi
+    fi
 
-  # kube-vip-cloud-provider
-  #kvcloudversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip-cloud-provider/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
-  #if [ -z $kube_vip_cloud_provider_ver ]; then
-  #  $kube_vip_cloud_provider_ver=$kvcloudversion_latest
-  #fi
-  #inf "kube_vip_cloud_provider_ver: '$kube_vip_cloud_provider_ver'\n"
-  #if ! [ "$kvcloudversion_latest" == "$kube_vip_cloud_provider_ver" ]; then
-  #  warn "Latest version kube-vip-cloud-provider: '$kvcloudversion_latest', but installing: '$kube_vip_cloud_provider_ver'\n"
-  #fi
+    # kube-vip-cloud-provider
+    #kvcloudversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip-cloud-provider/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
+    #if [ -z $kube_vip_cloud_provider_ver ]; then
+    #  $kube_vip_cloud_provider_ver=$kvcloudversion_latest
+    #fi
+    #inf "kube_vip_cloud_provider_ver: '$kube_vip_cloud_provider_ver'\n"
+    #if ! [ "$kvcloudversion_latest" == "$kube_vip_cloud_provider_ver" ]; then
+    #  warn "Latest version kube-vip-cloud-provider: '$kvcloudversion_latest', but installing: '$kube_vip_cloud_provider_ver'\n"
+    #fi
 
-  # Kube-VIP mode
-  if ! [[ "$kube_vip_mode" == "ARP" || "BGP" ]]; then
-      err_and_exit "Error: Invalid kube_vip_mode: '$kube_vip_mode'. Expected 'ARP' or 'BGP'." ${LINENO}
-  fi
-  inf "              kube_vip_mode: '$kube_vip_mode'\n"
+    # Kube-VIP mode
+    if ! [[ "$kube_vip_mode" == "ARP" || "BGP" ]]; then
+        err_and_exit "Error: Invalid kube_vip_mode: '$kube_vip_mode'. Expected 'ARP' or 'BGP'." ${LINENO}
+    fi
+    inf "              kube_vip_mode: '$kube_vip_mode'\n"
   fi
 
 
@@ -417,21 +398,25 @@ function vkube-k3s.install() {
 
   hl.blue "$((++install_step)). Install the storage drivers and classes. (Line:$LINENO)"
 
+  # https://github.com/christian-schlichtherle/synology-csi-chart
   # https://www.youtube.com/watch?v=c6Qf9UeHld0
   # https://github.com/Tech-Byte-Tips/Reference-Guides/tree/main/Installing%20the%20Synology%20CSI%20Driver%20with%20the%20Snapshot%20feature%20in%20k3s
   # https://github.com/SynologyOpenSource/synology-csi
   # https://github.com/christian-schlichtherle/synology-csi-chart
   # https://github.com/democratic-csi/democratic-csi
   # https://github.com/kubernetes-csi/csi-driver-iscsi
-  if [ $csi_driver_iscsi_use -eq 1 ]; then
-    inf "csi-driver-smb (Line:$LINENO)\n"
-    # https://www.talos.dev/v1.9/kubernetes-guides/configuration/synology-csi/
-    check-github-release-version 'csi_driver_iscsi' https://api.github.com/repos/kubernetes-csi/csi-driver-iscsi/releases 'csi_driver_iscsi_ver'
-    #echo $csi_driver_smb_ver
-    if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$csi_driver_smb_ver -n kube-system | wc -l) -eq 0 ]]; then
-      run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
-      run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb --namespace kube-system --version $csi_driver_smb_ver"
-      # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
+  if [ $csi_synology_use -eq 1 ]; then
+    inf "synology-csi (Line:$LINENO)\n"
+    #vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
+    # echo $csi_synology_ver
+    if [[ $(kubectl get pods -lapp=node,app.kubernetes.io/name=synology-csi -n kube-system | wc -l) -eq 0 ]]; then
+      if [[ $(vlib.check-data-for-secrets "$csi_synology_secret_folder") -eq 0 ]]; then
+        run "line '$LINENO';helm repo add synology-csi-chart https://christian-schlichtherle.github.io/synology-csi-chart"
+        #run "line '$LINENO';helm install csi-synology synology-csi-chart/synology-csi --namespace kube-system --version $csi_synology_ver"
+        run "line '$LINENO';helm install csi-synology synology-csi-chart/synology-csi --namespace kube-system"
+        # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
+        # helm delete csi-synology --namespace kube-system
+      fi
     else
       inf "... already installed. (Line:$LINENO)\n"
     fi
@@ -444,13 +429,16 @@ function vkube-k3s.install() {
     vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
     #echo $csi_driver_smb_ver
     if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$csi_driver_smb_ver -n kube-system | wc -l) -eq 0 ]]; then
-      run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
-      run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb --namespace kube-system --version $csi_driver_smb_ver"
-      # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
-      # https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
-      # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
-      run "line '$LINENO';if ! test -e $csi_driver_smb_secret_folder; then  mkdir $csi_driver_smb_secret_folder; fi"
-      run "line '$LINENO';kubectl create secret generic smb-csi-creds -n kube-system --from-file=$csi_driver_smb_secret_folder"
+      if [[ $(vlib.check-data-for-secrets "$csi_driver_smb_secret_folder") -eq 0 ]]; then
+        run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
+        run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb --namespace kube-system --version $csi_driver_smb_ver"
+        # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
+        # https://kubernetes.io/docs/concepts/configuration/secret/
+        # https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+        # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
+        run "line '$LINENO';if ! test -e $csi_driver_smb_secret_folder; then  mkdir $csi_driver_smb_secret_folder; fi"
+        run "line '$LINENO';kubectl create secret generic smb-csi-creds -n kube-system --from-file=$csi_driver_smb_secret_folder"
+      fi
     else
       inf "... already installed. (Line:$LINENO)\n"
     fi
@@ -465,9 +453,11 @@ function vkube-k3s.install() {
     vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
     #echo ${csi_driver_nfs_ver:1}
     if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n kube-system | wc -l) -eq 0 ]]; then
-      run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
-      run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs --namespace kube-system --version $csi_driver_nfs_ver"
-      # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
+      if test vlib.check-data-for-secrets "$csi_driver_nfs_secret_folder"; then
+        run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
+        run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs --namespace kube-system --version $csi_driver_nfs_ver"
+        # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
+      fi
     else
       inf "... already installed. (Line:$LINENO)\n"
     fi

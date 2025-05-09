@@ -163,7 +163,7 @@ vkube_all_install_usage() {
   printf "vkube all install - Install selected kubernetes components and services\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube all install PLAN_FILE\n"
+  printf "  vkube all install\n"
   printf "  vkube all install --help | -h\n"
   echo
 
@@ -174,14 +174,6 @@ vkube_all_install_usage() {
     # :command.usage_fixed_flags
     printf "  %s\n" "$(magenta "--help, -h")"
     printf "    Show this help\n"
-    echo
-
-    # :command.usage_args
-    printf "%s\n" "$(bold "Arguments:")"
-
-    # :argument.usage
-    printf "  %s\n" "$(blue "PLAN_FILE")"
-    printf "    Cluster plan file path. Yaml file expected.\n"
     echo
 
   fi
@@ -216,8 +208,9 @@ vkube_k3s_usage() {
     # :command.usage_examples
     printf "%s\n" "$(bold "Examples:")"
     printf "  ./vkube --help\n"
-    printf "  ./vkube k3s install ../k3s-HA.yaml\n"
-    printf "  ./vkube k3s upgrade ../k3s-HA.yaml\n"
+    printf "  ./vkube --data k3s-HA k3s install\n"
+    printf "  ./vkube --data ../k3s-HA.yaml k3s install\n"
+    printf "  ./vkube k3s upgrade\n"
     printf "  ./vkube k3s backup\n"
     printf "  ./vkube k3s restore\n"
     echo
@@ -230,7 +223,7 @@ vkube_k3s_install_usage() {
   printf "vkube k3s install - Install k3s kubernetes\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s install PLAN_FILE\n"
+  printf "  vkube k3s install [CLUSTER_PLAN]\n"
   printf "  vkube k3s install --help | -h\n"
   echo
 
@@ -247,8 +240,9 @@ vkube_k3s_install_usage() {
     printf "%s\n" "$(bold "Arguments:")"
 
     # :argument.usage
-    printf "  %s\n" "$(blue "PLAN_FILE")"
-    printf "    Cluster plan file path. Yaml file expected.\n"
+    printf "  %s\n" "$(blue "CLUSTER_PLAN")"
+    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder \n    or subfolder in a current folder or \n    \n    Command 'vkube' will try to find appropriate data in this subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
+    printf "    %s\n" "Default: k3s-HA"
     echo
 
   fi
@@ -259,7 +253,7 @@ vkube_k3s_uninstall_usage() {
   printf "vkube k3s uninstall - Uninstall k3s kubernetes\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s uninstall\n"
+  printf "  vkube k3s uninstall [CLUSTER_PLAN]\n"
   printf "  vkube k3s uninstall --help | -h\n"
   echo
 
@@ -272,6 +266,15 @@ vkube_k3s_uninstall_usage() {
     printf "    Show this help\n"
     echo
 
+    # :command.usage_args
+    printf "%s\n" "$(bold "Arguments:")"
+
+    # :argument.usage
+    printf "  %s\n" "$(blue "CLUSTER_PLAN")"
+    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder \n    or subfolder in a current folder or \n    \n    Command 'vkube' will try to find appropriate data in this subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
+    printf "    %s\n" "Default: k3s-HA"
+    echo
+
   fi
 }
 
@@ -280,7 +283,7 @@ vkube_k3s_upgrade_usage() {
   printf "vkube k3s upgrade - Upgrade k3s kubernetes\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s upgrade PLAN_FILE\n"
+  printf "  vkube k3s upgrade [CLUSTER_PLAN]\n"
   printf "  vkube k3s upgrade --help | -h\n"
   echo
 
@@ -297,8 +300,9 @@ vkube_k3s_upgrade_usage() {
     printf "%s\n" "$(bold "Arguments:")"
 
     # :argument.usage
-    printf "  %s\n" "$(blue "PLAN_FILE")"
-    printf "    Cluster plan file path. Yaml file expected.\n"
+    printf "  %s\n" "$(blue "CLUSTER_PLAN")"
+    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder \n    or subfolder in a current folder or \n    \n    Command 'vkube' will try to find appropriate data in this subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
+    printf "    %s\n" "Default: k3s-HA"
     echo
 
   fi
@@ -442,6 +446,26 @@ blue_underlined() { print_in_color "\e[4;34m" "$*"; }
 magenta_underlined() { print_in_color "\e[4;35m" "$*"; }
 cyan_underlined() { print_in_color "\e[4;36m" "$*"; }
 
+# src/lib/validations/validate_dir_exists.sh
+validate_dir_exists() {
+  [[ -d "$1" ]] || echo "must be an existing directory"
+}
+
+# src/lib/validations/validate_file_exists.sh
+validate_file_exists() {
+  [[ -f "$1" ]] || echo "must be an existing file"
+}
+
+# src/lib/validations/validate_integer.sh
+validate_integer() {
+  [[ "$1" =~ ^[0-9]+$ ]] || echo "must be an integer"
+}
+
+# src/lib/validations/validate_not_empty.sh
+validate_not_empty() {
+  [[ -z "$1" ]] && echo "must not be empty"
+}
+
 # :command.command_functions
 # :command.function
 vkube_exec_command() {
@@ -449,7 +473,6 @@ vkube_exec_command() {
   # src/exec_command.sh
   #!/usr/bin/env bash
   #inspect_args
-  vlib.bashly-init-command
 
   # shellcheck disable=SC2154
   eval "${args[command]}"
@@ -489,7 +512,6 @@ vkube_k3s_uninstall_command() {
   # src/k3s_uninstall_command.sh
   #!/usr/bin/env bash
   #inspect_args
-  vlib.bashly-init-command
 
   # Functions
   install_tools()
@@ -752,7 +774,6 @@ wait_kubectl_can_connect_cluster()
 
 start_time=$(date +%s)
 install_step=0
-k3s_settings="${args[plan_file]}"
 
 vlib.cluster_plan_read
 
@@ -1607,26 +1628,13 @@ vkube_all_install_parse_requirements() {
       *)
         # :command.parse_requirements_case
         # :command.parse_requirements_case_simple
-        # :argument.case
-        if [[ -z ${args['plan_file']+x} ]]; then
-          args['plan_file']=$1
-          shift
-        else
-          printf "invalid argument: %s\n" "$key" >&2
-          exit 1
-        fi
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
 
         ;;
 
     esac
   done
-
-  # :command.required_args_filter
-  if [[ -z ${args['plan_file']+x} ]]; then
-    printf "missing required argument: PLAN_FILE\nusage: vkube all install PLAN_FILE\n" >&2
-
-    exit 1
-  fi
 
 }
 
@@ -1762,8 +1770,8 @@ vkube_k3s_install_parse_requirements() {
         # :command.parse_requirements_case
         # :command.parse_requirements_case_simple
         # :argument.case
-        if [[ -z ${args['plan_file']+x} ]]; then
-          args['plan_file']=$1
+        if [[ -z ${args['cluster_plan']+x} ]]; then
+          args['cluster_plan']=$1
           shift
         else
           printf "invalid argument: %s\n" "$key" >&2
@@ -1775,12 +1783,8 @@ vkube_k3s_install_parse_requirements() {
     esac
   done
 
-  # :command.required_args_filter
-  if [[ -z ${args['plan_file']+x} ]]; then
-    printf "missing required argument: PLAN_FILE\nusage: vkube k3s install PLAN_FILE\n" >&2
-
-    exit 1
-  fi
+  # :command.default_assignments
+  [[ -n ${args['cluster_plan']:-} ]] || args['cluster_plan']="k3s-HA"
 
 }
 
@@ -1819,13 +1823,22 @@ vkube_k3s_uninstall_parse_requirements() {
       *)
         # :command.parse_requirements_case
         # :command.parse_requirements_case_simple
-        printf "invalid argument: %s\n" "$key" >&2
-        exit 1
+        # :argument.case
+        if [[ -z ${args['cluster_plan']+x} ]]; then
+          args['cluster_plan']=$1
+          shift
+        else
+          printf "invalid argument: %s\n" "$key" >&2
+          exit 1
+        fi
 
         ;;
 
     esac
   done
+
+  # :command.default_assignments
+  [[ -n ${args['cluster_plan']:-} ]] || args['cluster_plan']="k3s-HA"
 
 }
 
@@ -1865,8 +1878,8 @@ vkube_k3s_upgrade_parse_requirements() {
         # :command.parse_requirements_case
         # :command.parse_requirements_case_simple
         # :argument.case
-        if [[ -z ${args['plan_file']+x} ]]; then
-          args['plan_file']=$1
+        if [[ -z ${args['cluster_plan']+x} ]]; then
+          args['cluster_plan']=$1
           shift
         else
           printf "invalid argument: %s\n" "$key" >&2
@@ -1878,12 +1891,8 @@ vkube_k3s_upgrade_parse_requirements() {
     esac
   done
 
-  # :command.required_args_filter
-  if [[ -z ${args['plan_file']+x} ]]; then
-    printf "missing required argument: PLAN_FILE\nusage: vkube k3s upgrade PLAN_FILE\n" >&2
-
-    exit 1
-  fi
+  # :command.default_assignments
+  [[ -n ${args['cluster_plan']:-} ]] || args['cluster_plan']="k3s-HA"
 
 }
 
@@ -1977,6 +1986,44 @@ vkube_k3s_restore_parse_requirements() {
 
 }
 
+# :command.user_hooks
+before_hook() {
+  # src/before.sh
+  #!/usr/bin/env bash
+  #inspect_args
+
+  vkube_folder="$(dirname $0)"
+  #echo $vkube_folder
+  # https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_07_01.html
+  if [[ -a ${args[cluster_plan]} ]]; then # file exists
+    # shellcheck disable=SC2154
+    k3s_settings=${args[cluster_plan]}
+  else # file is not exists
+    if ! [[ ${args[cluster_plan]} == *"/"* ]]; then # check if path is simple word
+      # trying to find 'vkube-data' in folder with vkube script
+      __tmp="${vkube_folder}/vkube-data/${args[cluster_plan]}/${args[cluster_plan]}.yaml"
+      if [[ -a $__tmp ]]; then # file exists
+        k3s_settings=$__tmp
+      else
+        # trying to find 'vkube-data' in current folder
+        __tmp2="${PWD}/vkube-data/${args[cluster_plan]}/${args[cluster_plan]}.yaml"
+        if [[ -a $__tmp ]]; then # file exists
+          k3s_settings=$__tmp2
+        else
+          err_and_exit "Can't find cluster plan file based on cluster plan parameter '${args[cluster_plan]}'\n  Checked files '$__tmp'\n  and '$__tmp2'" ${LINENO} "$0"
+        fi
+      fi
+    else
+      err_and_exit "Can't find file ${args[cluster_plan]} from cluster plan parameter." ${LINENO} "$0"
+    fi
+  fi
+  # find vkube data folder
+  #echo $k3s_settings
+  vkube_data_folder=$(dirname $k3s_settings)
+  #echo $vkube_data_folder
+
+}
+
 # :command.initialize
 bashly-initialize() {
   declare -g version="0.1.0"
@@ -1995,6 +2042,7 @@ bashly-run() {
 
   normalize_input "$@"
   parse_requirements "${input[@]}"
+  before_hook
 
   case "$action" in
     "exec") vkube_exec_command ;;
