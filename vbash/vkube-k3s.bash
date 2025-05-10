@@ -339,7 +339,7 @@ function vkube-k3s.install() {
 
     # Kube-VIP mode
     if ! [[ "$kube_vip_mode" == "ARP" || "BGP" ]]; then
-        err_and_exit "Error: Invalid kube_vip_mode: '$kube_vip_mode'. Expected 'ARP' or 'BGP'." ${LINENO}
+      err_and_exit "Error: Invalid kube_vip_mode: '$kube_vip_mode'. Expected 'ARP' or 'BGP'." ${LINENO}
     fi
     inf "              kube_vip_mode: '$kube_vip_mode'\n"
   fi
@@ -410,13 +410,13 @@ function vkube-k3s.install() {
     #vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
     # echo $csi_synology_ver
     if [[ $(kubectl get pods -lapp=node,app.kubernetes.io/name=synology-csi -n kube-system | wc -l) -eq 0 ]]; then
-      if [[ $(vlib.check-data-for-secrets "$csi_synology_secret_folder") -eq 0 ]]; then
-        run "line '$LINENO';helm repo add synology-csi-chart https://christian-schlichtherle.github.io/synology-csi-chart"
-        #run "line '$LINENO';helm install csi-synology synology-csi-chart/synology-csi --namespace kube-system --version $csi_synology_ver"
-        run "line '$LINENO';helm install csi-synology synology-csi-chart/synology-csi --namespace kube-system"
-        # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
-        # helm delete csi-synology --namespace kube-system
-      fi
+      eval "csi_synology_secret_folder=$csi_synology_secret_folder"
+      vlib.check-data-for-secrets "$csi_synology_secret_folder"
+      run "line '$LINENO';helm repo add synology-csi-chart https://christian-schlichtherle.github.io/synology-csi-chart"
+      #run "line '$LINENO';helm install csi-synology synology-csi-chart/synology-csi --namespace kube-system --version $csi_synology_ver"
+      run "line '$LINENO';helm install csi-synology synology-csi-chart/synology-csi --namespace kube-system"
+      # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
+      # helm delete csi-synology --namespace kube-system
     else
       inf "... already installed. (Line:$LINENO)\n"
     fi
@@ -429,16 +429,16 @@ function vkube-k3s.install() {
     vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
     #echo $csi_driver_smb_ver
     if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$csi_driver_smb_ver -n kube-system | wc -l) -eq 0 ]]; then
-      if [[ $(vlib.check-data-for-secrets "$csi_driver_smb_secret_folder") -eq 0 ]]; then
-        run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
-        run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb --namespace kube-system --version $csi_driver_smb_ver"
-        # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
-        # https://kubernetes.io/docs/concepts/configuration/secret/
-        # https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
-        # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
-        run "line '$LINENO';if ! test -e $csi_driver_smb_secret_folder; then  mkdir $csi_driver_smb_secret_folder; fi"
-        run "line '$LINENO';kubectl create secret generic smb-csi-creds -n kube-system --from-file=$csi_driver_smb_secret_folder"
-      fi
+      eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
+      vlib.check-data-for-secrets "$csi_driver_smb_secret_folder"
+      run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
+      run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb --namespace kube-system --version $csi_driver_smb_ver"
+      # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
+      # https://kubernetes.io/docs/concepts/configuration/secret/
+      # https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+      # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
+      run "line '$LINENO';if ! test -e $csi_driver_smb_secret_folder; then  mkdir $csi_driver_smb_secret_folder; fi"
+      run "line '$LINENO';kubectl create secret generic smb-csi-creds -n kube-system --from-file=$csi_driver_smb_secret_folder"
     else
       inf "... already installed. (Line:$LINENO)\n"
     fi
@@ -453,11 +453,11 @@ function vkube-k3s.install() {
     vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
     #echo ${csi_driver_nfs_ver:1}
     if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n kube-system | wc -l) -eq 0 ]]; then
-      if test vlib.check-data-for-secrets "$csi_driver_nfs_secret_folder"; then
-        run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
-        run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs --namespace kube-system --version $csi_driver_nfs_ver"
-        # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
-      fi
+      eval "csi_driver_nfs_secret_folder=$csi_driver_nfs_secret_folder"
+      vlib.check-data-for-secrets "$csi_driver_nfs_secret_folder"
+      run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
+      run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs --namespace kube-system --version $csi_driver_nfs_ver"
+      # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
     else
       inf "... already installed. (Line:$LINENO)\n"
     fi
