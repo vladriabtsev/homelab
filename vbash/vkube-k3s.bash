@@ -398,13 +398,16 @@ function vkube-k3s.install() {
 
   hl.blue "$((++install_step)). Install the storage drivers and classes. (Line:$LINENO)"
 
-  # https://github.com/christian-schlichtherle/synology-csi-chart
   # https://www.youtube.com/watch?v=c6Qf9UeHld0
   # https://github.com/Tech-Byte-Tips/Reference-Guides/tree/main/Installing%20the%20Synology%20CSI%20Driver%20with%20the%20Snapshot%20feature%20in%20k3s
-  # https://github.com/SynologyOpenSource/synology-csi
   # https://github.com/christian-schlichtherle/synology-csi-chart
+  # https://github.com/ryaneorth/k8s-scheduled-volume-snapshotter
+  # https://github.com/SynologyOpenSource/synology-csi
+  # https://www.talos.dev/v1.10/kubernetes-guides/configuration/synology-csi/
+
   # https://github.com/democratic-csi/democratic-csi
   # https://github.com/kubernetes-csi/csi-driver-iscsi
+
   if [ $csi_synology_use -eq 1 ]; then
     inf "synology-csi (Line:$LINENO)\n"
     #vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
@@ -428,7 +431,7 @@ function vkube-k3s.install() {
     # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
     vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
     #echo $csi_driver_smb_ver
-    if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$csi_driver_smb_ver -n kube-system | wc -l) -eq 0 ]]; then
+    if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n kube-system | wc -l) -eq 0 ]]; then
       eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
       vlib.check-data-for-secrets "$csi_driver_smb_secret_folder"
       run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"

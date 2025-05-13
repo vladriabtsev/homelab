@@ -50,3 +50,10 @@ Generate updated bashly script:
 * `bashly generate`
 
 Run `../vkube k3s install ../k3s-HA.yaml`
+
+### [Synology CSI Driver for Kubernetes](https://github.com/SynologyOpenSource/synology-csi)
+
+* from home directory `git clone https://github.com/SynologyOpenSource/synology-csi.git`
+* `cd synology-csi`
+* `homelab`
+* `cp config/client-info-template.yml config/client-info.yml`
