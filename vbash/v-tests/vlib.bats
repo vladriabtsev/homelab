@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
-# k8s bash tests: bats ./../bash-bats/bash-lib-test.bats --filter-status failed
-# k8s bash tests: bats ./../bash-bats/bash-lib-test.bats --filter-tags tag:yaml
+# k8s bash tests: ./bats/bin/bats ./../bash-bats/bash-lib-test.bats --filter-status failed
+# k8s bash tests: ./bats/bin/bats ./../bash-bats/bash-lib-test.bats --filter-tags tag:yaml
 # https://bats-core.readthedocs.io/en/stable/installation.html#linux-distribution-package-manager
 # https://bats-core.readthedocs.io/en/stable/writing-tests.html#run-test-other-commands
 # https://github.com/ztombol/bats-docs?tab=readme-ov-file#installation

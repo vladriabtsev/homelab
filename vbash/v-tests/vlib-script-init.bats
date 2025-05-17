@@ -1,4 +1,4 @@
-# bats ./bash-lib-script-init.bats
+# ./bats/bin/bats ./vlib-script-init.bats
 setup() {
   load 'test_helper/bats-support/load' # this is required by bats-assert!
   load 'test_helper/bats-assert/load'  
@@ -25,6 +25,11 @@ setup() {
   run ./script-1.sh 0
   assert_success
   #echo '# text' >&3
+  #echo "# output=$output" >&3
+
+  [ "${lines[0]}" = "script-1" ]
+  [ "${lines[1]}" = "script-2" ]
+  [ "${lines[2]}" = "script-3" ]
 }
 @test "./script-1.sh 1" {
   # https://bats-core.readthedocs.io/en/stable/writing-tests.html
@@ -32,6 +37,8 @@ setup() {
   run -127 ./script-1.sh 1
   # https://github.com/bats-core/bats-assert#partial-matching
   assert_failure
+
+  #echo "# output=$output" >&3
 
   assert_output --partial 'script ./script-1.sh exited with error code: 127'
   assert_output --partial 'error trace ./script-1.sh:'
@@ -45,6 +52,10 @@ setup() {
   run -127 ./script-1.sh 2
   # https://github.com/bats-core/bats-assert#partial-matching
   assert_failure
+
+  # assert_output "script-1"
+  # assert_output "script-2"
+  # refute_output "script-3"
 
   assert_output --partial 'script ./script-2.sh exited with error code: 127'
   assert_output --partial 'error trace ./script-2.sh:'

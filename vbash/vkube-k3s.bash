@@ -1,5 +1,11 @@
 source "${VBASH}/vbashmatic.bash"
 
+function vkube-k3s.is-app-ready() {
+  if [[ $(kubectl get pods -l app=$1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; then
+    return 1
+  fi
+  return 0
+}
 function vkube-k3s.cluster_plan_read() {
   # YML,JSON,XML,LUA,TOML https://mikefarah.gitbook.io/yq/how-it-works
   # https://www.baeldung.com/linux/yq-utility-processing-yaml
@@ -267,6 +273,15 @@ function _install_all() {
       if [ $i_node -eq $amount_nodes ]; then break; fi
   done
 }
+# function vkube-k3s.install-synology-csi() {
+#   # $1 - 
+#   (
+#     function install() {
+#     }
+#     function delete() {
+#     }
+#   )
+# }
 function vkube-k3s.install() {
   start_time=$(date +%s)
   install_step=0
@@ -397,22 +412,45 @@ function vkube-k3s.install() {
   kubectl get nodes
 
   hl.blue "$((++install_step)). Install the storage drivers and classes. (Line:$LINENO)"
+  # if use
+  #   if is not running
+  #     install
+  #   else
+  #     if is not ready
+  #       delete
+  #       install
+  #     else 
+  #       if need upgrade
+  #         https://stackoverflow.com/questions/59967925/kubernetes-csi-driver-upgrade
+  #         delete ???
+  #         install
 
-  # https://www.youtube.com/watch?v=c6Qf9UeHld0
-  # https://github.com/Tech-Byte-Tips/Reference-Guides/tree/main/Installing%20the%20Synology%20CSI%20Driver%20with%20the%20Snapshot%20feature%20in%20k3s
-  # https://github.com/christian-schlichtherle/synology-csi-chart
-  # https://github.com/ryaneorth/k8s-scheduled-volume-snapshotter
-  # https://github.com/SynologyOpenSource/synology-csi
-  # https://www.talos.dev/v1.10/kubernetes-guides/configuration/synology-csi/
+  # https://kubernetes.io/docs/tasks/access-application-cluster/list-all-running-container-images/
+  # https://kubernetes.io/docs/reference/kubectl/quick-reference/
+  # https://kubernetes.io/docs/reference/kubectl/jsonpath/
+  # kubectl get deployment csi-smb-controller -o=jsonpath='{$.spec.template.spec.containers[:1].image}' -n kube-system
+  # kubectl get pods --all-namespaces -o jsonpath="{..image}"
+  # kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec.containers[*].image}" -l app=controller,app.kubernetes.io/name=synology-csi
+  # kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec.containers[*] | select(.metadata.name | test("")).image}" -l app=controller,app.kubernetes.io/name=synology-csi
+  # kubectl get pod csi-smb-controller -o=jsonpath='{$.spec.template.spec.containers[:1].image}' -n kube-system
 
-  # https://github.com/democratic-csi/democratic-csi
-  # https://github.com/kubernetes-csi/csi-driver-iscsi
+  # kubectl get pods --all-namespaces -l app=controller,app.kubernetes.io/name=synology-csi -o yaml | grep image:
 
   if [ $csi_synology_use -eq 1 ]; then
+    # https://www.youtube.com/watch?v=c6Qf9UeHld0
+    # https://github.com/Tech-Byte-Tips/Reference-Guides/tree/main/Installing%20the%20Synology%20CSI%20Driver%20with%20the%20Snapshot%20feature%20in%20k3s
+    # https://github.com/christian-schlichtherle/synology-csi-chart
+    # https://github.com/ryaneorth/k8s-scheduled-volume-snapshotter
+    # https://github.com/SynologyOpenSource/synology-csi
+    # https://www.talos.dev/v1.10/kubernetes-guides/configuration/synology-csi/
+
+    # https://github.com/democratic-csi/democratic-csi
+    # https://github.com/kubernetes-csi/csi-driver-iscsi
+
     inf "synology-csi (Line:$LINENO)\n"
-    #vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
+    vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
     # echo $csi_synology_ver
-    if [[ $(kubectl get pods -lapp=node,app.kubernetes.io/name=synology-csi -n kube-system | wc -l) -eq 0 ]]; then
+    if [[ $(kubectl get pods -l app=controller,app.kubernetes.io/name=synology-csi -n kube-system | wc -l) -eq 0 ]]; then # not installed yet
       eval "csi_synology_secret_folder=$csi_synology_secret_folder"
       vlib.check-data-for-secrets "$csi_synology_secret_folder"
       run "line '$LINENO';helm repo add synology-csi-chart https://christian-schlichtherle.github.io/synology-csi-chart"
@@ -420,7 +458,24 @@ function vkube-k3s.install() {
       run "line '$LINENO';helm install csi-synology synology-csi-chart/synology-csi --namespace kube-system"
       # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
       # helm delete csi-synology --namespace kube-system
-    else
+      kubectl wait --for=create pod/busybox1 --timeout=60s
+    else # already installed
+      __get_json=$(kubectl get pods --all-namespaces -o json -l app=controller,app.kubernetes.io/name=synology-csi)
+      echo $__get_json | jq '[.[]|startwith("synology-csi")]'
+      if ! test vkube-k3s.is-app-ready "app=controller,app.kubernetes.io/name=synology-csi"; then
+      else
+      fi
+  #     if is not ready
+  #       delete
+  #       install
+  #     else 
+  #       if need upgrade
+  #         https://stackoverflow.com/questions/59967925/kubernetes-csi-driver-upgrade
+  #         delete ???
+  #         install
+
+
+
       inf "... already installed. (Line:$LINENO)\n"
     fi
   fi
