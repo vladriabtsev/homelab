@@ -31,6 +31,17 @@ setup() {
   [ "${lines[1]}" = "script-2" ]
   [ "${lines[2]}" = "script-3" ]
 }
+@test "./script-1-subshell.sh 0" {
+  # https://bats-core.readthedocs.io/en/stable/writing-tests.html
+  run ./script-1-subshell.sh 0
+  assert_success
+  #echo '# text' >&3
+  #echo "# output=$output" >&3
+
+  [ "${lines[0]}" = "script-1" ]
+  [ "${lines[1]}" = "script-2" ]
+  [ "${lines[2]}" = "script-3" ]
+}
 @test "./script-1.sh 1" {
   # https://bats-core.readthedocs.io/en/stable/writing-tests.html
   bats_require_minimum_version 1.5.0
@@ -45,6 +56,21 @@ setup() {
   assert_output --partial '>>>[[ "$1" == "1" ]] && unknown-command'
   assert_output --partial 'source trace:'
   assert_output --partial ' - file: ./script-1.sh, line: 12, func: main, command: unknown-command'
+}
+@test "./script-1-subshell.sh 1" {
+  # https://bats-core.readthedocs.io/en/stable/writing-tests.html
+  bats_require_minimum_version 1.5.0
+  run -127 ./script-1-subshell.sh 1
+  # https://github.com/bats-core/bats-assert#partial-matching
+  assert_failure
+
+  #echo "# output=$output" >&3
+
+  assert_output --partial 'script ./script-1-subshell.sh exited with error code: 127'
+  assert_output --partial 'error trace ./script-1-subshell.sh:'
+  assert_output --partial '>>>[[ "$1" == "1" ]] && unknown-command'
+  assert_output --partial 'source trace:'
+  assert_output --partial ' - file: ./script-1-subshell.sh, line: 12, func: main, command: unknown-command'
 }
 @test "./script-1.sh 2" {
   # https://bats-core.readthedocs.io/en/stable/writing-tests.html
@@ -67,6 +93,28 @@ setup() {
   assert_output --partial 'error trace ./script-1.sh:'
   assert_output --partial '>>>./script-2.sh $1'
   assert_output --partial ' - file: ./script-1.sh, line: 13, func: main, command: ./script-2.sh $1'
+}
+@test "./script-1-subshell.sh 2" {
+  # https://bats-core.readthedocs.io/en/stable/writing-tests.html
+  bats_require_minimum_version 1.5.0
+  run -127 ./script-1-subshell.sh 2
+  # https://github.com/bats-core/bats-assert#partial-matching
+  assert_failure
+
+  # assert_output "script-1"
+  # assert_output "script-2"
+  # refute_output "script-3"
+
+  assert_output --partial 'script ./script-2.sh exited with error code: 127'
+  assert_output --partial 'error trace ./script-2.sh:'
+  assert_output --partial '>>>[[ "$1" == "2" ]] && unknown-command'
+  assert_output --partial 'source trace:'
+  assert_output --partial ' - file: ./script-2.sh, line: 12, func: main, command: unknown-command'
+
+  assert_output --partial 'script ./script-1-subshell.sh exited with error code: 127'
+  assert_output --partial 'error trace ./script-1-subshell.sh:'
+  assert_output --partial '>>>./script-2.sh $1'
+  assert_output --partial ' - file: ./script-1-subshell.sh, line: 13, func: main, command: ./script-2.sh $1'
 }
 @test "./script-1.sh 3" {
   # https://bats-core.readthedocs.io/en/stable/writing-tests.html

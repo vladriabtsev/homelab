@@ -255,6 +255,7 @@ function vlib.bashly-init-command() {
         source $VBASH/bashmatic/init.sh
       ;;
       bsfl )
+        vlib.bashly-init-error-handler
         err_and_exit "Not implemented yet." ${LINENO} "$0"
       ;;
       \? ) 
