@@ -273,15 +273,15 @@ function _install_all() {
       if [ $i_node -eq $amount_nodes ]; then break; fi
   done
 }
-# function vkube-k3s.install-synology-csi() {
-#   # $1 - 
-#   (
-#     function install() {
-#     }
-#     function delete() {
-#     }
-#   )
-# }
+function vkube-k3s.install-synology-csi() {
+  # $1 - 
+  (
+    function install() {
+    }
+    function delete() {
+    }
+  )
+}
 function vkube-k3s.install() {
   start_time=$(date +%s)
   install_step=0
