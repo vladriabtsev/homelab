@@ -234,11 +234,11 @@ function vlib.bashly-init-command() {
   [[ -z $args ]] || ( echo_err "Expecting bashly script when call bashly-init-command()"; exit 1 ) 
   #[[ $# -eq 1 ]] || err_and_exit "Only one parameter is expected" ${LINENO}
 
-  # echo "${args[$--framework]}"
-  if [[ -z ${args[$--framework]} ]]; then
+  echo "framework: ${args['--framework']}"
+  if [[ -z ${args['--framework']} ]]; then
       vlib.bashly-init-error-handler
   else
-    case ${args[$--framework]} in
+    case ${args['--framework']} in
       bashmatic )
         # [[ -f ~/.bashmatic/init.sh ]] || {
         #   echo "Can't find or install Bashmatic. Exiting."

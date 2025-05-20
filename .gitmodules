@@ -27,3 +27,6 @@
 [submodule "vbash/bashmatic"]
 	path = vbash/bashmatic
 	url = https://github.com/vladriabtsev/bashmatic.git
+[submodule "vbash/synology-csi"]
+	path = vbash/synology-csi
+	url = https://github.com/vladriabtsev/synology-csi.git

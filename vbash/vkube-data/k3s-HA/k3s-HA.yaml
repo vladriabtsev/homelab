@@ -21,8 +21,9 @@ kube_vip_lb_range: 192.168.100.101-192.168.100.200
 
 # https://github.com/SynologyOpenSource/synology-csi
 csi_synology_use: 1
+csi_synology_snapshot_use: 1
 csi_synology_ver: v1.2.0 # auto upgrade to latest if empty
-csi_synology_secret_folder: ${HOME}/.ssh/k3s-HA-csi-synology-secrets # folder with username.txt and password.txt files
+csi_synology_secret_folder: ${HOME}/.ssh/k3s-HA-csi-synology-secrets # folder with client-info.yam file
 
 # https://github.com/kubernetes-csi/csi-driver-smb
 csi_driver_smb_use: 1

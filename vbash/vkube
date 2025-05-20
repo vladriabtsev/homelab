@@ -1465,10 +1465,10 @@ parse_requirements() {
 
     esac
   done
-
+#printf "framework 1: %s\n" "${args['--framework']:-}" >&2
   # :command.default_assignments
   [[ -n ${args['--framework']:-} ]] || args['--framework']="bashmatic"
-
+printf "framework 2: %s\n" "${args['--framework']:-}" >&2
 }
 
 # :command.parse_requirements
@@ -2010,11 +2010,13 @@ before_hook() {
         if [[ -a $__tmp ]]; then # file exists
           k3s_settings=$__tmp2
         else
-          err_and_exit "Can't find cluster plan file based on cluster plan parameter '${args[cluster_plan]}'\n  Checked files '$__tmp'\n  and '$__tmp2'" ${LINENO} "$0"
+          printf "Can't find cluster plan file based on cluster plan parameter '%s'\n  Checked files '%s'\n  and '%s'" "${args[cluster_plan]}" "$__tmp" "$__tmp2" >&2
+          exit 1
         fi
       fi
     else
-      err_and_exit "Can't find file ${args[cluster_plan]} from cluster plan parameter." ${LINENO} "$0"
+      printf "Can't find file '%s' from cluster plan parameter." "${args[cluster_plan]}" >&2
+      exit 1
     fi
   fi
   # find vkube data folder
