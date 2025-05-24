@@ -1,13 +1,3 @@
-name: vkube
-help: Kubernetes installation
-version: 0.1.0
-
-environment_variables:
-- name: my_log_dir
-  help: Set your default directory for bashly script log files 
-
-flags:
-#- import: src/common_flags.yml
 - long: --verbose
   help: Enabling verbose Mode (set -v, print every line before it's processed)
 
@@ -55,40 +45,3 @@ flags:
   help: Framework for commands (bashmatic, bsfl).
   arg: framework-type
   default: bashmatic
-
-commands:
-- name: exec
-  help: Run 'vkube exec "command"'. For test traps of vkube script
-  private: true
-
-  args:
-  - name: command
-    required: false
-    help: Bash command to execute
-    default: "ls"
-
-- name: cluster-install
-  help: Kubernetes and all services as described in cluster plan YAML file
-
-  args: &cluster_plan
-  - name: cluster_plan
-    help: |-
-      Cluster plan:
-      - Explicit path to cluster plan Yaml file.
-      - Subfolder name of 'vkube-data' folder or subfolder 
-        in a current folder. Expecting to find cluster plan 
-        YAML file with same name as subfolder.
-
-      Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command itself.
-
-    default: k3s-HA
-
-- import: src/k3s.yml
-- import: src/synology-csi.yml
-
-examples:
-- ./vkube --help
-- ./vkube k3s install k3s-HA # with subfolder 'k3s-HA' in folder './vkube-data', and 'k3s-HA.yaml' cluster plan
-- ./vkube k3s install ../k3s-HA.yaml # with explicit 'k3s-HA.yaml' cluster plan and path to data folder
-- ./vkube k3s backup
-- ./vkube synology-csi install

@@ -1,0 +1,44 @@
+name: synology-csi
+alias: syn
+help: Storage Synology CSI driver
+
+commands:
+- name: install
+  help: Install synology-csi driver
+  args:
+  - name: release
+    help: Synology CSI driver release version
+    default: latest
+  flags:
+  - long: --secret-folder
+    help: Secret folder with?????
+    #validate: dir_exists
+    required:
+    arg: folder
+  - long: --snapshot
+    help: Install snapshot support
+
+- name: uninstall
+  help: Uninstall synology-csi driver
+  args:
+  - name: release
+    help: Synology CSI driver release version
+    default: latest
+
+- name: upgrade
+  help: Upgrade synology-csi driver version
+  args:
+  - name: release
+    help: Synology CSI driver release version
+    default: latest
+
+- name: downgrade
+  help: Downgrade synology-csi driver version
+  args:
+  - name: release
+    help: Synology CSI driver release version
+    default: latest
+
+examples:
+  - ./vkube synology-csi --help
+  - ./vkube synology-csi install

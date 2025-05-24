@@ -26,8 +26,9 @@ vkube_usage() {
   echo
   # :command.usage_commands
   printf "%s\n" "$(bold "Commands:")"
-  printf "  %s   Kubernetes and all services\n" "$(green "all") "
-  printf "  %s   k3s kubernetes\n" "$(green "k3s") "
+  printf "  %s   Kubernetes and all services as described in cluster plan YAML file\n" "$(green "cluster-install")"
+  printf "  %s   k3s kubernetes\n" "$(green "k3s")            "
+  printf "  %s   Storage Synology CSI driver\n" "$(green "synology-csi")   "
   echo
 
   # :command.long_usage
@@ -58,6 +59,12 @@ vkube_usage() {
     # :flag.usage
     printf "  %s\n" "$(magenta "--noexec")"
     printf "    No exec mode. Check syntax without execution\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--trace")"
+    printf "    Trace debugging by using trace custom code in script\n"
+    printf "    %s\n" "Conflicts: --debug"
     echo
 
     # :flag.usage
@@ -100,6 +107,15 @@ vkube_usage() {
     printf "    Set your default directory for bashly script log files\n"
     echo
 
+    # :command.usage_examples
+    printf "%s\n" "$(bold "Examples:")"
+    printf "  ./vkube --help\n"
+    printf "  ./vkube k3s install k3s-HA\n"
+    printf "  ./vkube k3s install ../k3s-HA.yaml\n"
+    printf "  ./vkube k3s backup\n"
+    printf "  ./vkube synology-csi install\n"
+    echo
+
   fi
 }
 
@@ -134,16 +150,12 @@ vkube_exec_usage() {
 }
 
 # :command.usage
-vkube_all_usage() {
-  printf "vkube all - Kubernetes and all services\n\n"
+vkube_cluster_install_usage() {
+  printf "vkube cluster-install - Kubernetes and all services as described in cluster plan YAML file\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube all COMMAND\n"
-  printf "  vkube all [COMMAND] --help | -h\n"
-  echo
-  # :command.usage_commands
-  printf "%s\n" "$(bold "Commands:")"
-  printf "  %s   Install selected kubernetes components and services\n" "$(green "install")"
+  printf "  vkube cluster-install [CLUSTER_PLAN]\n"
+  printf "  vkube cluster-install --help | -h\n"
   echo
 
   # :command.long_usage
@@ -155,25 +167,13 @@ vkube_all_usage() {
     printf "    Show this help\n"
     echo
 
-  fi
-}
+    # :command.usage_args
+    printf "%s\n" "$(bold "Arguments:")"
 
-# :command.usage
-vkube_all_install_usage() {
-  printf "vkube all install - Install selected kubernetes components and services\n\n"
-
-  printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube all install\n"
-  printf "  vkube all install --help | -h\n"
-  echo
-
-  # :command.long_usage
-  if [[ -n "$long_usage" ]]; then
-    printf "%s\n" "$(bold "Options:")"
-
-    # :command.usage_fixed_flags
-    printf "  %s\n" "$(magenta "--help, -h")"
-    printf "    Show this help\n"
+    # :argument.usage
+    printf "  %s\n" "$(blue "CLUSTER_PLAN")"
+    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder or subfolder \n      in a current folder. Expecting to find cluster plan \n      YAML file with same name as subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
+    printf "    %s\n" "Default: k3s-HA"
     echo
 
   fi
@@ -241,7 +241,7 @@ vkube_k3s_install_usage() {
 
     # :argument.usage
     printf "  %s\n" "$(blue "CLUSTER_PLAN")"
-    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder \n    or subfolder in a current folder or \n    \n    Command 'vkube' will try to find appropriate data in this subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
+    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder or subfolder \n      in a current folder. Expecting to find cluster plan \n      YAML file with same name as subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
     printf "    %s\n" "Default: k3s-HA"
     echo
 
@@ -271,7 +271,7 @@ vkube_k3s_uninstall_usage() {
 
     # :argument.usage
     printf "  %s\n" "$(blue "CLUSTER_PLAN")"
-    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder \n    or subfolder in a current folder or \n    \n    Command 'vkube' will try to find appropriate data in this subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
+    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder or subfolder \n      in a current folder. Expecting to find cluster plan \n      YAML file with same name as subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
     printf "    %s\n" "Default: k3s-HA"
     echo
 
@@ -301,7 +301,7 @@ vkube_k3s_upgrade_usage() {
 
     # :argument.usage
     printf "  %s\n" "$(blue "CLUSTER_PLAN")"
-    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder \n    or subfolder in a current folder or \n    \n    Command 'vkube' will try to find appropriate data in this subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
+    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder or subfolder \n      in a current folder. Expecting to find cluster plan \n      YAML file with same name as subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
     printf "    %s\n" "Default: k3s-HA"
     echo
 
@@ -345,6 +345,173 @@ vkube_k3s_restore_usage() {
     # :command.usage_fixed_flags
     printf "  %s\n" "$(magenta "--help, -h")"
     printf "    Show this help\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_synology_csi_usage() {
+  printf "vkube synology-csi - Storage Synology CSI driver\n\n"
+  printf "Alias: syn\n"
+  echo
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube synology-csi COMMAND\n"
+  printf "  vkube synology-csi [COMMAND] --help | -h\n"
+  echo
+  # :command.usage_commands
+  printf "%s\n" "$(bold "Commands:")"
+  printf "  %s   Install synology-csi driver\n" "$(green "install")  "
+  printf "  %s   Uninstall synology-csi driver\n" "$(green "uninstall")"
+  printf "  %s   Upgrade synology-csi driver version\n" "$(green "upgrade")  "
+  printf "  %s   Downgrade synology-csi driver version\n" "$(green "downgrade")"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_examples
+    printf "%s\n" "$(bold "Examples:")"
+    printf "  ./vkube synology-csi --help\n"
+    printf "  ./vkube synology-csi install\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_synology_csi_install_usage() {
+  printf "vkube synology-csi install - Install synology-csi driver\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube synology-csi install [RELEASE] [OPTIONS]\n"
+  printf "  vkube synology-csi install --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_flags
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--secret-folder FOLDER")"
+    printf "    Secret folder with?????\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--snapshot")"
+    printf "    Install snapshot support\n"
+    echo
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_args
+    printf "%s\n" "$(bold "Arguments:")"
+
+    # :argument.usage
+    printf "  %s\n" "$(blue "RELEASE")"
+    printf "    Synology CSI driver release version\n"
+    printf "    %s\n" "Default: latest"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_synology_csi_uninstall_usage() {
+  printf "vkube synology-csi uninstall - Uninstall synology-csi driver\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube synology-csi uninstall [RELEASE]\n"
+  printf "  vkube synology-csi uninstall --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_args
+    printf "%s\n" "$(bold "Arguments:")"
+
+    # :argument.usage
+    printf "  %s\n" "$(blue "RELEASE")"
+    printf "    Synology CSI driver release version\n"
+    printf "    %s\n" "Default: latest"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_synology_csi_upgrade_usage() {
+  printf "vkube synology-csi upgrade - Upgrade synology-csi driver version\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube synology-csi upgrade [RELEASE]\n"
+  printf "  vkube synology-csi upgrade --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_args
+    printf "%s\n" "$(bold "Arguments:")"
+
+    # :argument.usage
+    printf "  %s\n" "$(blue "RELEASE")"
+    printf "    Synology CSI driver release version\n"
+    printf "    %s\n" "Default: latest"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_synology_csi_downgrade_usage() {
+  printf "vkube synology-csi downgrade - Downgrade synology-csi driver version\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube synology-csi downgrade [RELEASE]\n"
+  printf "  vkube synology-csi downgrade --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_args
+    printf "%s\n" "$(bold "Arguments:")"
+
+    # :argument.usage
+    printf "  %s\n" "$(blue "RELEASE")"
+    printf "    Synology CSI driver release version\n"
+    printf "    %s\n" "Default: latest"
     echo
 
   fi
@@ -480,13 +647,19 @@ vkube_exec_command() {
 }
 
 # :command.function
-vkube_all_install_command() {
+vkube_cluster_install_command() {
 
-  # src/all_install_command.sh
-  echo "# this file is located in 'src/all_install_command.sh'"
-  echo "# code for 'vkube all install' goes here"
-  echo "# you can edit it freely and regenerate (it will not be overwritten)"
-  inspect_args
+  # src/cluster_install_command.sh
+  #!/usr/bin/env bash
+  #inspect_args
+
+  # shellcheck source=/dev/null
+  source "${VBASH}/vlib.bash"
+  vlib.bashly-init-command
+  # shellcheck source=/dev/null
+  source "${VBASH}/vkube-k3s.bash"
+
+  vkube-k3s.install-csi-synology
 
 }
 
@@ -496,12 +669,11 @@ vkube_k3s_install_command() {
   # src/k3s_install_command.sh
   #!/usr/bin/env bash
 
-  # shellcheck source=/dev/null
-  source "${VBASH}/vlib.bash"
   vlib.bashly-init-command
+
   # shellcheck source=/dev/null
   source "${VBASH}/vkube-k3s.bash"
-
+  vkube-k3s.check_cluster_plan_path
   vkube-k3s.install
 
 }
@@ -1276,6 +1448,62 @@ vkube_k3s_restore_command() {
 
 }
 
+# :command.function
+vkube_synology_csi_install_command() {
+
+  # src/synology_csi_install_command.sh
+  #!/usr/bin/env bash
+  vlib.bashly-init-command
+  #echo "__is_trace=$__is_trace"
+  vlib.trace "$(inspect_args)"
+
+  # shellcheck source=/dev/null
+  source "${VBASH}/vkube-k3s.bash"
+
+  csi_synology_ver=${args[release]}
+  csi_synology_secret_folder=${args[--secret-folder]}
+  csi_synology_snapshot_use=${args[--snapshot]}
+
+  vkube-k3s.install-csi-synology
+
+}
+
+# :command.function
+vkube_synology_csi_uninstall_command() {
+
+  # src/synology_csi_uninstall_command.sh
+  echo "# This file is located at 'src/synology_csi_uninstall_command.sh'."
+  echo "# It contains the implementation for the 'vkube synology-csi uninstall' command."
+  echo "# The code you write here will be wrapped by a function named 'vkube_synology_csi_uninstall_command()'."
+  echo "# Feel free to edit this file; your changes will persist when regenerating."
+  inspect_args
+
+}
+
+# :command.function
+vkube_synology_csi_upgrade_command() {
+
+  # src/synology_csi_upgrade_command.sh
+  echo "# This file is located at 'src/synology_csi_upgrade_command.sh'."
+  echo "# It contains the implementation for the 'vkube synology-csi upgrade' command."
+  echo "# The code you write here will be wrapped by a function named 'vkube_synology_csi_upgrade_command()'."
+  echo "# Feel free to edit this file; your changes will persist when regenerating."
+  inspect_args
+
+}
+
+# :command.function
+vkube_synology_csi_downgrade_command() {
+
+  # src/synology_csi_downgrade_command.sh
+  echo "# This file is located at 'src/synology_csi_downgrade_command.sh'."
+  echo "# It contains the implementation for the 'vkube synology-csi downgrade' command."
+  echo "# The code you write here will be wrapped by a function named 'vkube_synology_csi_downgrade_command()'."
+  echo "# Feel free to edit this file; your changes will persist when regenerating."
+  inspect_args
+
+}
+
 # :command.parse_requirements
 parse_requirements() {
   # :command.fixed_flags_filter
@@ -1330,6 +1558,19 @@ parse_requirements() {
 
         # :flag.case_no_arg
         args['--noexec']=1
+        shift
+        ;;
+
+      # :flag.case
+      --trace)
+        # :flag.conflicts
+        if [[ -n "${args['--debug']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--debug" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--trace']=1
         shift
         ;;
 
@@ -1418,10 +1659,10 @@ parse_requirements() {
       shift $#
       ;;
 
-    all)
-      action="all"
+    cluster-install)
+      action="cluster-install"
       shift
-      vkube_all_parse_requirements "$@"
+      vkube_cluster_install_parse_requirements "$@"
       shift $#
       ;;
 
@@ -1429,6 +1670,13 @@ parse_requirements() {
       action="k3s"
       shift
       vkube_k3s_parse_requirements "$@"
+      shift $#
+      ;;
+
+    synology-csi | syn)
+      action="synology-csi"
+      shift
+      vkube_synology_csi_parse_requirements "$@"
       shift $#
       ;;
 
@@ -1465,10 +1713,10 @@ parse_requirements() {
 
     esac
   done
-#printf "framework 1: %s\n" "${args['--framework']:-}" >&2
+
   # :command.default_assignments
   [[ -n ${args['--framework']:-} ]] || args['--framework']="bashmatic"
-printf "framework 2: %s\n" "${args['--framework']:-}" >&2
+
 }
 
 # :command.parse_requirements
@@ -1526,14 +1774,14 @@ vkube_exec_parse_requirements() {
 }
 
 # :command.parse_requirements
-vkube_all_parse_requirements() {
+vkube_cluster_install_parse_requirements() {
   # :command.fixed_flags_filter
   while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
       --help | -h)
         long_usage=yes
-        vkube_all_usage
+        vkube_cluster_install_usage
         exit
         ;;
 
@@ -1545,30 +1793,7 @@ vkube_all_parse_requirements() {
   done
 
   # :command.command_filter
-  action=${1:-}
-
-  case $action in
-    -*) ;;
-
-    install)
-      action="install"
-      shift
-      vkube_all_install_parse_requirements "$@"
-      shift $#
-      ;;
-
-    # :command.command_fallback
-    "")
-      vkube_all_usage >&2
-      exit 1
-      ;;
-
-    *)
-      printf "invalid command: %s\n" "$action" >&2
-      exit 1
-      ;;
-
-  esac
+  action="cluster-install"
 
   # :command.parse_requirements_while
   while [[ $# -gt 0 ]]; do
@@ -1583,58 +1808,22 @@ vkube_all_parse_requirements() {
       *)
         # :command.parse_requirements_case
         # :command.parse_requirements_case_simple
-        printf "invalid argument: %s\n" "$key" >&2
-        exit 1
+        # :argument.case
+        if [[ -z ${args['cluster_plan']+x} ]]; then
+          args['cluster_plan']=$1
+          shift
+        else
+          printf "invalid argument: %s\n" "$key" >&2
+          exit 1
+        fi
 
         ;;
 
     esac
   done
 
-}
-
-# :command.parse_requirements
-vkube_all_install_parse_requirements() {
-  # :command.fixed_flags_filter
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-      --help | -h)
-        long_usage=yes
-        vkube_all_install_usage
-        exit
-        ;;
-
-      *)
-        break
-        ;;
-
-    esac
-  done
-
-  # :command.command_filter
-  action="all install"
-
-  # :command.parse_requirements_while
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-
-      -?*)
-        printf "invalid option: %s\n" "$key" >&2
-        exit 1
-        ;;
-
-      *)
-        # :command.parse_requirements_case
-        # :command.parse_requirements_case_simple
-        printf "invalid argument: %s\n" "$key" >&2
-        exit 1
-
-        ;;
-
-    esac
-  done
+  # :command.default_assignments
+  [[ -n ${args['cluster_plan']:-} ]] || args['cluster_plan']="k3s-HA"
 
 }
 
@@ -1986,43 +2175,343 @@ vkube_k3s_restore_parse_requirements() {
 
 }
 
+# :command.parse_requirements
+vkube_synology_csi_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_synology_csi_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action=${1:-}
+
+  case $action in
+    -*) ;;
+
+    install)
+      action="install"
+      shift
+      vkube_synology_csi_install_parse_requirements "$@"
+      shift $#
+      ;;
+
+    uninstall)
+      action="uninstall"
+      shift
+      vkube_synology_csi_uninstall_parse_requirements "$@"
+      shift $#
+      ;;
+
+    upgrade)
+      action="upgrade"
+      shift
+      vkube_synology_csi_upgrade_parse_requirements "$@"
+      shift $#
+      ;;
+
+    downgrade)
+      action="downgrade"
+      shift
+      vkube_synology_csi_downgrade_parse_requirements "$@"
+      shift $#
+      ;;
+
+    # :command.command_fallback
+    "")
+      vkube_synology_csi_usage >&2
+      exit 1
+      ;;
+
+    *)
+      printf "invalid command: %s\n" "$action" >&2
+      exit 1
+      ;;
+
+  esac
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+vkube_synology_csi_install_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_synology_csi_install_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="synology-csi install"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      # :flag.case
+      --secret-folder)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--secret-folder']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--secret-folder requires an argument: --secret-folder FOLDER" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --snapshot)
+
+        # :flag.case_no_arg
+        args['--snapshot']=1
+        shift
+        ;;
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        # :argument.case
+        if [[ -z ${args['release']+x} ]]; then
+          args['release']=$1
+          shift
+        else
+          printf "invalid argument: %s\n" "$key" >&2
+          exit 1
+        fi
+
+        ;;
+
+    esac
+  done
+
+  # :command.default_assignments
+  [[ -n ${args['release']:-} ]] || args['release']="latest"
+
+}
+
+# :command.parse_requirements
+vkube_synology_csi_uninstall_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_synology_csi_uninstall_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="synology-csi uninstall"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        # :argument.case
+        if [[ -z ${args['release']+x} ]]; then
+          args['release']=$1
+          shift
+        else
+          printf "invalid argument: %s\n" "$key" >&2
+          exit 1
+        fi
+
+        ;;
+
+    esac
+  done
+
+  # :command.default_assignments
+  [[ -n ${args['release']:-} ]] || args['release']="latest"
+
+}
+
+# :command.parse_requirements
+vkube_synology_csi_upgrade_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_synology_csi_upgrade_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="synology-csi upgrade"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        # :argument.case
+        if [[ -z ${args['release']+x} ]]; then
+          args['release']=$1
+          shift
+        else
+          printf "invalid argument: %s\n" "$key" >&2
+          exit 1
+        fi
+
+        ;;
+
+    esac
+  done
+
+  # :command.default_assignments
+  [[ -n ${args['release']:-} ]] || args['release']="latest"
+
+}
+
+# :command.parse_requirements
+vkube_synology_csi_downgrade_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_synology_csi_downgrade_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="synology-csi downgrade"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        # :argument.case
+        if [[ -z ${args['release']+x} ]]; then
+          args['release']=$1
+          shift
+        else
+          printf "invalid argument: %s\n" "$key" >&2
+          exit 1
+        fi
+
+        ;;
+
+    esac
+  done
+
+  # :command.default_assignments
+  [[ -n ${args['release']:-} ]] || args['release']="latest"
+
+}
+
 # :command.user_hooks
 before_hook() {
   # src/before.sh
   #!/usr/bin/env bash
   #inspect_args
 
+  # shellcheck source=/dev/null
+  source "${VBASH}/vlib.bash"
+
   vkube_folder="$(dirname $0)"
   #echo $vkube_folder
-  # https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_07_01.html
-  if [[ -a ${args[cluster_plan]} ]]; then # file exists
-    # shellcheck disable=SC2154
-    k3s_settings=${args[cluster_plan]}
-  else # file is not exists
-    if ! [[ ${args[cluster_plan]} == *"/"* ]]; then # check if path is simple word
-      # trying to find 'vkube-data' in folder with vkube script
-      __tmp="${vkube_folder}/vkube-data/${args[cluster_plan]}/${args[cluster_plan]}.yaml"
-      if [[ -a $__tmp ]]; then # file exists
-        k3s_settings=$__tmp
-      else
-        # trying to find 'vkube-data' in current folder
-        __tmp2="${PWD}/vkube-data/${args[cluster_plan]}/${args[cluster_plan]}.yaml"
-        if [[ -a $__tmp ]]; then # file exists
-          k3s_settings=$__tmp2
-        else
-          printf "Can't find cluster plan file based on cluster plan parameter '%s'\n  Checked files '%s'\n  and '%s'" "${args[cluster_plan]}" "$__tmp" "$__tmp2" >&2
-          exit 1
-        fi
-      fi
-    else
-      printf "Can't find file '%s' from cluster plan parameter." "${args[cluster_plan]}" >&2
-      exit 1
-    fi
-  fi
-  # find vkube data folder
-  #echo $k3s_settings
-  vkube_data_folder=$(dirname $k3s_settings)
-  #echo $vkube_data_folder
 
 }
 
@@ -2048,14 +2537,18 @@ bashly-run() {
 
   case "$action" in
     "exec") vkube_exec_command ;;
-    "all") vkube_all_command ;;
-    "all install") vkube_all_install_command ;;
+    "cluster-install") vkube_cluster_install_command ;;
     "k3s") vkube_k3s_command ;;
     "k3s install") vkube_k3s_install_command ;;
     "k3s uninstall") vkube_k3s_uninstall_command ;;
     "k3s upgrade") vkube_k3s_upgrade_command ;;
     "k3s backup") vkube_k3s_backup_command ;;
     "k3s restore") vkube_k3s_restore_command ;;
+    "synology-csi") vkube_synology_csi_command ;;
+    "synology-csi install") vkube_synology_csi_install_command ;;
+    "synology-csi uninstall") vkube_synology_csi_uninstall_command ;;
+    "synology-csi upgrade") vkube_synology_csi_upgrade_command ;;
+    "synology-csi downgrade") vkube_synology_csi_downgrade_command ;;
   esac
 }
 

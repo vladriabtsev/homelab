@@ -43,7 +43,7 @@ function err_and_exit() {
   # #exit
   # if [ -z "$2" ]; then
   #   echo_err "Function err_and_exit is expecting \$LINENO as a second parameter"
-  #   call-trace 1
+  #   vlib.call-trace 1
   #   exit 1
   # fi
   # local call_lineno="$2"
@@ -54,7 +54,7 @@ function err_and_exit() {
   #   echo_err "$1 FUNCNAME: $3, LINENO: $2"
   # fi
   echo_err "$1"
-  call-trace 1
+  vlib.call-trace 1
   exit 1
 }
 function echo_red() {
@@ -83,13 +83,11 @@ function log() {
   file=${BASH_SOURCE[$i-1]}
   echo "${now} $(hostname) $0:${lineno} ${msg}"
 }
-
-#function vlib.
-function call-trace() {
+function vlib.call-trace() {
   LEN=${#BASH_LINENO[@]}
   INDEX_MAX=($LEN-1)
   #LEN2=${#BASH_SOURCE[@]}
-  echo "##################### C A L L   T R A C E ###########################"
+  echo "##################### C A L L   T R A C E ##########################"
   local index_start=0
   if ! [[ -z $1 ]]; then index_start=$1; fi
   for (( INDEX=$index_start; INDEX<$INDEX_MAX; INDEX++ ))
@@ -106,6 +104,27 @@ function call-trace() {
   done
   echo "################# E N D   C A L L   T R A C E ######################"
 }
+function vlib.trace() {
+  #echo "is trace: '$__is_trace'"
+  [[ $__is_trace -eq 0 ]] && return 0
+  if [[ ${#BASH_LINENO[@]} -gt 1 ]]; then
+    echo "$(green 'Trace:') $(green "$@") # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}, from file: ${BASH_SOURCE[2]}, line: ${BASH_LINENO[1]}"
+  else
+    echo "$(green 'Trace:') $(green "$@") # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
+  fi
+}
+function vlib.error-printf() {
+  printf "$@" >&2
+  printf "\n" >&2
+  vlib.call-trace 2
+  exit 1
+}
+
+#bashmatic.run() {
+#  .run $@
+#  return "${LibRun__LastExitCode}"
+#}
+
 # https://opensource.com/article/22/7/print-stack-trace-bash-scripts
 function _trap_failure() {
   #echo "_trap_failure()"
@@ -115,7 +134,7 @@ function _trap_failure() {
   if [[ ${ERR_CODE} != 0 ]]; then
     # only log stack trace if requested (set -e)
     # and last command failed
-    call-trace
+    #vlib.call-trace
     LEN=${#BASH_LINENO[@]}
     INDEX_MAX=($LEN-1)
     #LEN2=${#BASH_SOURCE[@]}
@@ -234,70 +253,84 @@ function vlib.bashly-init-command() {
   [[ -z $args ]] || ( echo_err "Expecting bashly script when call bashly-init-command()"; exit 1 ) 
   #[[ $# -eq 1 ]] || err_and_exit "Only one parameter is expected" ${LINENO}
 
-  echo "framework: ${args['--framework']}"
-  if [[ -z ${args['--framework']} ]]; then
-      vlib.bashly-init-error-handler
-  else
-    case ${args['--framework']} in
-      bashmatic )
-        # [[ -f ~/.bashmatic/init.sh ]] || {
-        #   echo "Can't find or install Bashmatic. Exiting."
-        #   exit 1
-        # }
-        # # shellcheck disable=SC1090
-        # source ~/.bashmatic/init.sh
-
-        [[ -f $VBASH/bashmatic/init.sh ]] || {
-          echo "Can't find or install Bashmatic. Exiting."
-          exit 1
-        }
-        # shellcheck disable=SC1090
-        source $VBASH/bashmatic/init.sh
-      ;;
-      bsfl )
-        vlib.bashly-init-error-handler
-        err_and_exit "Not implemented yet." ${LINENO} "$0"
-      ;;
-      \? ) 
-        err_and_exit "Wrong --framework argument ${args[framework-type]}. Expecting bashmatic or bsfl." ${LINENO} "$0"
-      ;;
-    esac
+  __is_trace=0
+  if [[ ${args[--trace]} || ${args[--debug]} ]]; then 
+    __is_trace=1
   fi
+
+  #local inarray=$(echo ${haystack[@]} | grep -ow "--framework" | wc -w)
+  #if [[ -z ${args[--framework]} ]]; then
+  #vlib.trace "framework=${args[--framework]}"
+  case ${args[--framework]} in
+    bashmatic )
+      vlib.trace "Bashmatic framework"
+      # [[ -f ~/.bashmatic/init.sh ]] || {
+      #   echo "Can't find or install Bashmatic. Exiting."
+      #   exit 1
+      # }
+      # # shellcheck disable=SC1090
+      # source ~/.bashmatic/init.sh
+
+      [[ -f $VBASH/bashmatic/init.sh ]] || {
+        echo "Can't find or install Bashmatic. Exiting."
+        exit 1
+      }
+      # shellcheck disable=SC1090
+      source $VBASH/bashmatic/init.sh
+      source "${VBASH}/vbashmatic.bash"
+    ;;
+    bsfl )
+      vlib.trace "Bsfl framework"
+      vlib.bashly-init-error-handler
+      err_and_exit "Not implemented yet." ${LINENO} "$0"
+    ;;
+    none )
+      vlib.trace "Pure bash without framework"
+      vlib.bashly-init-error-handler
+    ;;
+    \? ) 
+      err_and_exit "Wrong --framework argument ${args[framework-type]}. Expecting bashmatic, bsfl or none." ${LINENO} "$0"
+    ;;
+  esac
   # https://www.gnu.org/software/bash/manual/bash.html#The-Set-Builtin-1
   # https://tldp.org/LDP/abs/html/internal.html#EXECREF
   # https://github.com/kigster/bashmatic
   set +u
   __bashly_init_command_set=""
   __bashmatic_init_set=""
-  if [[ ${args[$--noerrexit]} ]]; then 
+  if [[ ${args[--noerrexit]} ]]; then 
     set +e
   else
     __bashmatic_init_set="${__bashmatic_init_set} abort-on-error"
   fi
-  if [[ ${args[$--noexec]} ]]; then 
+  if [[ ${args[--noexec]} ]]; then 
     __bashly_init_command_set="${__bashly_init_command_set}n"
     __bashmatic_init_set="${__bashmatic_init_set} dry-run-on"
   else
     __bashmatic_init_set="${__bashmatic_init_set} dry-run-off"
   fi
-  if [[ ${args[$--debug]} ]]; then 
+  if [[ ${args[--trace]} ]]; then 
+    __is_trace=1
+  fi
+  if [[ ${args[--debug]} ]]; then
+    __is_trace=1
     __bashly_init_command_set="${__bashly_init_command_set}vx"
     __bashmatic_init_set="${__bashmatic_init_set} show-command-on"
     __bashmatic_init_set="${__bashmatic_init_set} show-output-on"
-    if [[ ${args[$--noerrexit]} ]]; then 
+    if [[ ${args[--noerrexit]} ]]; then 
       __bashmatic_init_set="${__bashmatic_init_set} ask-on-error"
     fi
   else
-    if [[ ${args[$--verbose]} ]]; then 
+    if [[ ${args[--verbose]} ]]; then 
       __bashly_init_command_set="${__bashly_init_command_set}v"
       __bashmatic_init_set="${__bashmatic_init_set} show-command-on"
       __bashmatic_init_set="${__bashmatic_init_set} show-output-on"
     fi
-    if [[ ${args[$--xtrace]} ]]; then 
+    if [[ ${args[--xtrace]} ]]; then 
       __bashly_init_command_set="${__bashly_init_command_set}x"
       __bashmatic_init_set="${__bashmatic_init_set} show-command-on"
     fi
-    if [[ ${args[$--unset]} ]]; then 
+    if [[ ${args[--unset]} ]]; then 
       __bashly_init_command_set="${__bashly_init_command_set}u"
     fi
   fi
@@ -305,7 +338,7 @@ function vlib.bashly-init-command() {
   # Bash Tips #1 – Logging in Shell Scripts
   # https://blog.tratif.com/2023/01/09/bash-tips-1-logging-in-shell-scripts/
   #echo "${args[--log]}"
-  if [ -n "${args[$--log]}" ]; then
+  if [ -n "${args[--log]}" ]; then
     if [ -n "${MY_LOG_DIR}" ]; then
       local __command_action_name="${BASH_SOURCE[${#BASH_LINENO[@]}-1]}"
       __command_action_name="$(basename $__command_action_name)-${action}"
@@ -320,7 +353,7 @@ function vlib.bashly-init-command() {
       echo_err "Environment variable MY_LOG_DIR is empty."
       exit 1
     fi
-  elif [ -n "${args[$--log-file]}" ]; then
+  elif [ -n "${args[--log-file]}" ]; then
     redirect-to-log-file "${args[log-file-path]}"
   fi
 
@@ -334,13 +367,14 @@ function vlib.bashly-init-command() {
   # https://blog.tratif.com/2023/01/30/bash-tips-4-error-handling-in-bash-scripts/
 
   if [[ "$__bashly_init_command_set" != "" ]]; then 
+    vlib.trace "__bashly_init_command_set=${__bashly_init_command_set}"
     #echo "-$__bashly_init_command_set"
     set "-${__bashly_init_command_set}"; 
   fi
 
-  case "${args[framework-type]}" in
+  case ${args[--framework]} in
     bashmatic )
-      echo "run.set-all $__bashmatic_init_set"
+      vlib.trace "__bashmatic_init_set=${__bashmatic_init_set}"
       run.set-all "$__bashmatic_init_set"
     ;;
     bsfl )
@@ -350,9 +384,9 @@ function vlib.bashly-init-command() {
     \? ) err_and_exit "Wrong --framework argument ${args[framework-type]}. Expecting bashmatic or bsfl." ${LINENO} "$0"
     ;;
   esac
-  if [[ ${args[$--verbose]} || ${args[$--debug]} || ${args[$--xtrace]} ]]; then
-    inspect_args
-  fi
+  #if [[ ${args[--verbose]} || ${args[--debug]} || ${args[--xtrace]} ]]; then
+  #  inspect_args
+  #fi
 }
 # https://www.baeldung.com/linux/compare-dot-separated-version-string
 function vlib.vercomp() {
