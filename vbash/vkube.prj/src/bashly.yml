@@ -56,6 +56,18 @@ flags:
   arg: framework-type
   default: bashmatic
 
+- long: --cluster-plan
+  help: |-
+    Cluster plan:
+    - Explicit path to cluster plan Yaml file.
+    - Subfolder name of 'vkube-data' folder or subfolder 
+      in a current folder. Expecting to find cluster plan 
+      YAML file with same name as subfolder.
+
+    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command itself.
+  arg: cluster-plan
+  default: k3s-HA
+
 commands:
 - name: exec
   help: Run 'vkube exec "command"'. For test traps of vkube script
@@ -69,19 +81,6 @@ commands:
 
 - name: cluster-install
   help: Kubernetes and all services as described in cluster plan YAML file
-
-  args: &cluster_plan
-  - name: cluster_plan
-    help: |-
-      Cluster plan:
-      - Explicit path to cluster plan Yaml file.
-      - Subfolder name of 'vkube-data' folder or subfolder 
-        in a current folder. Expecting to find cluster plan 
-        YAML file with same name as subfolder.
-
-      Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command itself.
-
-    default: k3s-HA
 
 - import: src/k3s.yml
 - import: src/synology-csi.yml

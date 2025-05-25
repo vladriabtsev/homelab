@@ -24,6 +24,9 @@ commands:
   - name: release
     help: Synology CSI driver release version
     default: latest
+  flags:
+  - long: --snapshot
+    help: Uninstall snapshot support
 
 - name: upgrade
   help: Upgrade synology-csi driver version

@@ -1,5 +1,14 @@
-echo "# This file is located at 'src/synology_csi_uninstall_command.sh'."
-echo "# It contains the implementation for the 'vkube synology-csi uninstall' command."
-echo "# The code you write here will be wrapped by a function named 'vkube_synology_csi_uninstall_command()'."
-echo "# Feel free to edit this file; your changes will persist when regenerating."
-inspect_args
+#!/usr/bin/env bash
+vlib.bashly-init-command
+#echo "__is_trace=$__is_trace"
+lib.trace "$(inspect_args)"
+
+# shellcheck source=/dev/null
+source "${VBASH}/vkube-k3s.bash"
+
+#csi_synology_ver=${args[release]}
+#csi_synology_secret_folder=${args[--secret-folder]}
+csi_synology_snapshot_use=${args[--snapshot]}
+
+vkube-k3s.check_cluster_plan_path
+vkube-k3s.csi-synology-uninstall
