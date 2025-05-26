@@ -1,3 +1,14 @@
+function vkube-k3s.kubectl-container-image-version() {
+  # $1 pod name
+  # $2 container image name
+  # return container image version
+  [[ -z $1 ]] && vlib.error-printf "Empty pod name"
+  [[ -z $2 ]] && vlib.error-printf "Empty container image name"
+  if [[ $(kubectl get pods -l app=$1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; then
+    return 1
+  fi
+  return 0
+}
 function vkube-k3s.is-app-ready() {
   if [[ $(kubectl get pods -l app=$1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; then
     return 1
