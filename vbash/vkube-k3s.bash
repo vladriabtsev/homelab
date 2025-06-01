@@ -1,13 +1,32 @@
-function vkube-k3s.kubectl-container-image-version() {
-  # $1 pod name
-  # $2 container image name
+  #while [[ $(kubectl get pods -l app=nginx -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
+  # sleep 1
+  #done
+  # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data}'
+  # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.username}' | base64 --decode
+  # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.password}' | base64 --decode
+
+# https://kubernetes.io/docs/tasks/access-application-cluster/list-all-running-container-images/
+# https://kubernetes.io/docs/reference/kubectl/quick-reference/
+# https://jqlang.org/
+# https://www.digitalocean.com/community/tutorials/how-to-transform-json-data-with-jq
+# https://kubernetes.io/docs/reference/kubectl/jsonpath/
+# https://github.com/json-path/JsonPath
+# https://support.smartbear.com/alertsite/docs/monitors/api/endpoint/jsonpath.html
+# https://docs.hevodata.com/sources/engg-analytics/streaming/rest-api/writing-jsonpath-expressions/
+function vkube-k3s.get-pod-image-version() {
   # return container image version
-  [[ -z $1 ]] && vlib.error-printf "Empty pod name"
-  [[ -z $2 ]] && vlib.error-printf "Empty container image name"
-  if [[ $(kubectl get pods -l app=$1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; then
-    return 1
-  fi
-  return 0
+  [[ -z $1 ]] && vlib.error-printf "Missing namespace parameter"
+  [[ -z $2 ]] && vlib.error-printf "Missing pod name parameter"
+  [[ -z $3 ]] && vlib.error-printf "Missing container image name without version parameter"
+
+  # jsonpath filtering is not working !!! https://kubernetes.io/docs/reference/kubectl/jsonpath/
+  # kubectl get pods -n synology-csi -l app=synology-csi-controller -o jsonpath='{.items[0].spec.containers[?(@.name=="csi-plugin")]}' | jq '.image'
+  local image=$(eval "kubectl get pods -n $1 -l app=$2 -o jsonpath='{.items[0].spec.containers[?(@.name==\"$3\")]}' | jq '.image'")
+  #echo "image=$image" >&3
+  local ver="${image#*:}"
+  ver="${ver/%\"/}"
+  #echo "ver=$ver" >&3
+  echo "$ver"
 }
 function vkube-k3s.is-app-ready() {
   if [[ $(kubectl get pods -l app=$1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; then
@@ -403,9 +422,138 @@ function vkube-k3s.csi-synology-install() {
   # https://github.com/democratic-csi/democratic-csi
   # https://github.com/kubernetes-csi/csi-driver-iscsi
 
+  # https://stackoverflow.com/questions/2914220/bash-templating-how-to-build-configuration-files-from-templates-with-bash
+  # https://blog.tratif.com/2023/01/27/bash-tips-3-templating-in-bash-scripts/
+set -x
+  if [[ $(yq v ${args[plan]} > /dev/null) ]]; then
+    err_and_exit "Error: Not valid YAML file: '${args[plan]}'." ${LINENO}
+  fi
+  if [[ $(yq --exit-status 'tag == "!!map" or tag== "!!seq"' ${args[plan]} > /dev/null) ]]; then
+    err_and_exit "Error: Invalid format for YAML file: '${args[plan]}'." ${LINENO}
+  fi
+  # if [[ $(yamllint ${args[plan]} > /dev/null) ]]; then
+  #   err_and_exit "Error: Not valid csi synology plan file: '${args[plan]}'." ${LINENO}
+  # fi
+
+  local data_folder=$(dirname ${args[plan]})
+  vlib.trace "data folder=$data_folder"
+
+  # Root level scalar settings
+  eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_" + key + "='\''" + . + "'\''")'  < ${args[plan]})"
+  readarray csi_synology_hosts < <(yq -o=j -I=0 ".hosts[]" ${args[plan]})
+  vlib.trace "storage hosts(${#csi_synology_hosts[@]})=$csi_synology_hosts[@]"
+  local txt=""
+  local separator=""
+  i_host=0
+
+  #vlib.trace "default reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
+  for csi_synology_host in "${csi_synology_hosts[@]}"; do
+    vlib.trace "storage host=$csi_synology_host"
+    # Host level scalar settings
+    eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_host_" + key + "='\''" + . + "'\''")' <<<$csi_synology_host)"
+    readarray csi_synology_host_protocols < <(yq -o=j -I=0 ".hosts[$i_host].protocols[]" ${args[plan]})
+    vlib.trace "storage protocols(${#csi_synology_host_protocols[@]})=$csi_synology_host_protocols[@]"
+    i_protocol=0
+    vlib.trace "storage host name=$csi_synology_host_name"
+    #vlib.trace "reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
+    for csi_synology_host_protocol in "${csi_synology_host_protocols[@]}"; do
+      vlib.trace "storage protocol=$csi_synology_host_protocol"
+      eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_host_" + key + "='\''" + . + "'\''")' <<<$csi_synology_host)"
+      eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_host_protocol_" + key + "='\''" + . + "'\''")' <<<$csi_synology_host_protocol)"
+      readarray csi_synology_host_protocol_classes < <(yq -o=j -I=0 ".hosts[$i_host].protocols[$i_protocol].classes[]" ${args[plan]})
+      vlib.trace "storage classes(${#csi_synology_host_protocol_classes[@]})=$csi_synology_host_protocol_classes[@]"
+      vlib.trace "storage protocol name=$csi_synology_host_protocol_name"
+      #vlib.trace "reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
+      for csi_synology_host_protocol_class in "${csi_synology_host_protocol_classes[@]}"; do
+        vlib.trace "storage class=$csi_synology_host_protocol_class"
+        eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_host_" + key + "='\''" + . + "'\''")' <<<$csi_synology_host)"
+        eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_host_protocol_" + key + "='\''" + . + "'\''")' <<<$csi_synology_host_protocol)"
+        eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_host_protocol_class_" + key + "='\''" + . + "'\''")' <<<$csi_synology_host_protocol_class)"
+        vlib.trace "storage class name=$csi_synology_host_protocol_class_name"
+        #vlib.trace "reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
+        case $csi_synology_host_protocol_name in
+          ISCSI )
+            txt+="${separator}apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+    storageclass.kubernetes.io/is-default-class: \"false\"
+  name: $csi_synology_host_protocol_class_name
+provisioner: csi.san.synology.com
+parameters:
+  fsType: '$csi_synology_host_protocol_class_fsType'
+  dsm: '$csi_synology_host_dsm_ip4'
+  location: '$csi_synology_host_protocol_class_location'
+  formatOptions: '--nodiscard'
+reclaimPolicy: $csi_synology_host_protocol_class_reclaimPolicy
+allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
+"
+          ;;
+          SMB )
+            txt+="${separator}apiVersion: v1
+kind: Secret
+metadata:
+  name: cifs-csi-credentials
+  namespace: default
+type: Opaque
+stringData:
+  username: <username>  # DSM user account accessing the shared folder
+  password: <password>  # DSM user password accessing the shared folder
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: $csi_synology_host_protocol_class_name
+provisioner: csi.san.synology.com
+parameters:
+  protocol: \"smb\"
+  dsm: '$csi_synology_host_dsm_ip4'
+  location: '$csi_synology_host_protocol_class_location'
+  csi.storage.k8s.io/node-stage-secret-name: \"cifs-csi-credentials\"
+  csi.storage.k8s.io/node-stage-secret-namespace: \"default\"
+reclaimPolicy: $csi_synology_host_protocol_class_reclaimPolicy
+allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
+"
+          ;;
+          NFS )
+            txt+="${separator}apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: $csi_synology_host_protocol_class_name
+provisioner: csi.san.synology.com
+parameters:
+  protocol: \"nfs\"
+  dsm: '$csi_synology_host_dsm_ip4'
+  location: '$csi_synology_host_protocol_class_location'
+  mountPermissions: $csi_synology_host_protocol_class_mountPermissions
+mountOptions:
+  - nfsvers=$mountOptions_nfsvers
+reclaimPolicy: $csi_synology_host_protocol_class_reclaimPolicy
+allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
+"
+          ;;
+          * )
+            err_and_exit "Unsupported storage protocol '$name'. Expected: ISCSI, SMB, NFS" ${LINENO};
+        esac
+        separator="
+---
+"
+      done
+      i_protocol+=1
+    done
+    i_host+=1
+  done
+set +x
+  vlib.trace "generated storage classes=\n$txt"
+  run "line '$LINENO';echo '$txt' > '$data_folder/generated-storage-classes.yaml'"
+  #run "line '$LINENO';kubectl apply edit-last-applied -f '$data_folder/generated-storage-classes.yaml'"
+  run "line '$LINENO';kubectl apply -f '$data_folder/generated-storage-classes.yaml'"
+
+exit 1
+
   local deploy_k8s_version="v1.20"
   inf "synology-csi (Line:$LINENO)\n"
-  vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
+  #vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
   # echo $csi_synology_ver
   if [[ $(kubectl get pods -l app=controller,app.kubernetes.io/name=synology-csi -n synology-csi | wc -l) -eq 0 ]]; then # not installed yet
     eval "csi_synology_secret_folder=$csi_synology_secret_folder"

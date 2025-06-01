@@ -12,6 +12,40 @@ Bash Tips:
 * [Bash Tips #4 – Error Handling in Bash Scripts](https://blog.tratif.com/2023/01/30/bash-tips-4-error-handling-in-bash-scripts/)
 * [Logging and monitoring from Bash scripts](https://www.linuxbash.sh/post/logging-and-monitoring-from-bash-scripts)
 
+Bash string substitution is a powerful tool for manipulating strings. It allows for extracting substrings, replacing parts of strings, and changing the case of strings. Here's an overview of common string substitution techniques in Bash:
+
+Substring Extraction:
+
+* ${string:position}: Extracts the substring starting at position.
+* ${string:position:length}: Extracts a substring of length characters starting at position.
+  
+Substring Replacement:
+
+* ${string/pattern/replacement}: Replaces the first occurrence of pattern with replacement.
+* ${string//pattern/replacement}: Replaces all occurrences of pattern with replacement.
+* ${string/#pattern/replacement}: Replaces pattern with replacement only if pattern matches the beginning of the string.
+* ${string/%pattern/replacement}: Replaces pattern with replacement only if pattern matches the end of the string.
+  
+Case Modification:
+
+* ${string^^}: Converts the string to uppercase.
+* ${string,,}: Converts the string to lowercase.
+* ${string^}: Converts the first character of the string to uppercase.
+* ${string,}: Converts the first character of the string to lowercase.
+  
+String Length:
+
+* ${#string}: Returns the length of the string.
+
+Default Values:
+
+* ${variable:-default}: If variable is unset or null, it expands to default.
+* ${variable:=default}: If variable is unset or null, it's assigned the value default and then expands to that value.
+* ${variable:?error_message}: If variable is unset or null, it prints error_message and exits.
+* ${variable:+alternative}: If variable is set, it expands to alternative; otherwise, it expands to nothing.
+
+These techniques can be combined and nested to achieve complex string manipulations. For example, to extract the filename from a path and convert it to lowercase, one could use ${filename##*/,,}.
+
 ## Other
 
 [Murex](https://github.com/lmorg/murex)

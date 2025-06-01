@@ -1,3 +1,13 @@
+# Language
+
+## [Rust](https://www.rust-lang.org/)
+
+### UI
+
+[Dioxus is the Rust framework for building fullstack web, desktop, and mobile apps](https://dioxuslabs.com/)
+
+https://github.com/unobserved-io/furtherance-mobile
+
 ### Board
 
 https://github.com/excalidraw/excalidraw !!!???

@@ -361,8 +361,6 @@ vkube_synology_csi_usage() {
   printf "%s\n" "$(bold "Commands:")"
   printf "  %s   Install synology-csi driver\n" "$(green "install")  "
   printf "  %s   Uninstall synology-csi driver\n" "$(green "uninstall")"
-  printf "  %s   Upgrade synology-csi driver version\n" "$(green "upgrade")  "
-  printf "  %s   Downgrade synology-csi driver version\n" "$(green "downgrade")"
   echo
 
   # :command.long_usage
@@ -377,7 +375,7 @@ vkube_synology_csi_usage() {
     # :command.usage_examples
     printf "%s\n" "$(bold "Examples:")"
     printf "  ./vkube synology-csi --help\n"
-    printf "  ./vkube synology-csi install\n"
+    printf "  ./vkube synology-csi install ../synology-csi-plan.yaml\n"
     echo
 
   fi
@@ -388,7 +386,7 @@ vkube_synology_csi_install_usage() {
   printf "vkube synology-csi install - Install synology-csi driver\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube synology-csi install [RELEASE] [OPTIONS]\n"
+  printf "  vkube synology-csi install PLAN [OPTIONS]\n"
   printf "  vkube synology-csi install --help | -h\n"
   echo
 
@@ -398,7 +396,7 @@ vkube_synology_csi_install_usage() {
 
     # :command.usage_flags
     # :flag.usage
-    printf "  %s\n" "$(magenta "--secret-folder FOLDER")"
+    printf "  %s\n" "$(magenta "--secret-folder FOLDER (required)")"
     printf "    Secret folder with?????\n"
     echo
 
@@ -416,9 +414,8 @@ vkube_synology_csi_install_usage() {
     printf "%s\n" "$(bold "Arguments:")"
 
     # :argument.usage
-    printf "  %s\n" "$(blue "RELEASE")"
-    printf "    Synology CSI driver release version\n"
-    printf "    %s\n" "Default: latest"
+    printf "  %s\n" "$(blue "PLAN")"
+    printf "    Installation plan YAML file for Sinology CSI storage\n"
     echo
 
   fi
@@ -429,7 +426,7 @@ vkube_synology_csi_uninstall_usage() {
   printf "vkube synology-csi uninstall - Uninstall synology-csi driver\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube synology-csi uninstall [RELEASE] [OPTIONS]\n"
+  printf "  vkube synology-csi uninstall [OPTIONS]\n"
   printf "  vkube synology-csi uninstall --help | -h\n"
   echo
 
@@ -446,75 +443,6 @@ vkube_synology_csi_uninstall_usage() {
     # :command.usage_fixed_flags
     printf "  %s\n" "$(magenta "--help, -h")"
     printf "    Show this help\n"
-    echo
-
-    # :command.usage_args
-    printf "%s\n" "$(bold "Arguments:")"
-
-    # :argument.usage
-    printf "  %s\n" "$(blue "RELEASE")"
-    printf "    Synology CSI driver release version\n"
-    printf "    %s\n" "Default: latest"
-    echo
-
-  fi
-}
-
-# :command.usage
-vkube_synology_csi_upgrade_usage() {
-  printf "vkube synology-csi upgrade - Upgrade synology-csi driver version\n\n"
-
-  printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube synology-csi upgrade [RELEASE]\n"
-  printf "  vkube synology-csi upgrade --help | -h\n"
-  echo
-
-  # :command.long_usage
-  if [[ -n "$long_usage" ]]; then
-    printf "%s\n" "$(bold "Options:")"
-
-    # :command.usage_fixed_flags
-    printf "  %s\n" "$(magenta "--help, -h")"
-    printf "    Show this help\n"
-    echo
-
-    # :command.usage_args
-    printf "%s\n" "$(bold "Arguments:")"
-
-    # :argument.usage
-    printf "  %s\n" "$(blue "RELEASE")"
-    printf "    Synology CSI driver release version\n"
-    printf "    %s\n" "Default: latest"
-    echo
-
-  fi
-}
-
-# :command.usage
-vkube_synology_csi_downgrade_usage() {
-  printf "vkube synology-csi downgrade - Downgrade synology-csi driver version\n\n"
-
-  printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube synology-csi downgrade [RELEASE]\n"
-  printf "  vkube synology-csi downgrade --help | -h\n"
-  echo
-
-  # :command.long_usage
-  if [[ -n "$long_usage" ]]; then
-    printf "%s\n" "$(bold "Options:")"
-
-    # :command.usage_fixed_flags
-    printf "  %s\n" "$(magenta "--help, -h")"
-    printf "    Show this help\n"
-    echo
-
-    # :command.usage_args
-    printf "%s\n" "$(bold "Arguments:")"
-
-    # :argument.usage
-    printf "  %s\n" "$(blue "RELEASE")"
-    printf "    Synology CSI driver release version\n"
-    printf "    %s\n" "Default: latest"
     echo
 
   fi
@@ -1463,7 +1391,7 @@ vkube_synology_csi_install_command() {
   # shellcheck source=/dev/null
   source "${VBASH}/vkube-k3s.bash"
 
-  csi_synology_ver=${args[release]}
+  #csi_synology_ver=${args[release]}
   csi_synology_secret_folder=${args[--secret-folder]}
   csi_synology_snapshot_use=${args[--snapshot]}
 
@@ -1490,30 +1418,6 @@ vkube_synology_csi_uninstall_command() {
 
   vkube-k3s.check_cluster_plan_path
   vkube-k3s.csi-synology-uninstall
-
-}
-
-# :command.function
-vkube_synology_csi_upgrade_command() {
-
-  # src/synology_csi_upgrade_command.sh
-  echo "# This file is located at 'src/synology_csi_upgrade_command.sh'."
-  echo "# It contains the implementation for the 'vkube synology-csi upgrade' command."
-  echo "# The code you write here will be wrapped by a function named 'vkube_synology_csi_upgrade_command()'."
-  echo "# Feel free to edit this file; your changes will persist when regenerating."
-  inspect_args
-
-}
-
-# :command.function
-vkube_synology_csi_downgrade_command() {
-
-  # src/synology_csi_downgrade_command.sh
-  echo "# This file is located at 'src/synology_csi_downgrade_command.sh'."
-  echo "# It contains the implementation for the 'vkube synology-csi downgrade' command."
-  echo "# The code you write here will be wrapped by a function named 'vkube_synology_csi_downgrade_command()'."
-  echo "# Feel free to edit this file; your changes will persist when regenerating."
-  inspect_args
 
 }
 
@@ -2233,20 +2137,6 @@ vkube_synology_csi_parse_requirements() {
       shift $#
       ;;
 
-    upgrade)
-      action="upgrade"
-      shift
-      vkube_synology_csi_upgrade_parse_requirements "$@"
-      shift $#
-      ;;
-
-    downgrade)
-      action="downgrade"
-      shift
-      vkube_synology_csi_downgrade_parse_requirements "$@"
-      shift $#
-      ;;
-
     # :command.command_fallback
     "")
       vkube_synology_csi_usage >&2
@@ -2340,8 +2230,8 @@ vkube_synology_csi_install_parse_requirements() {
         # :command.parse_requirements_case
         # :command.parse_requirements_case_simple
         # :argument.case
-        if [[ -z ${args['release']+x} ]]; then
-          args['release']=$1
+        if [[ -z ${args['plan']+x} ]]; then
+          args['plan']=$1
           shift
         else
           printf "invalid argument: %s\n" "$key" >&2
@@ -2353,8 +2243,25 @@ vkube_synology_csi_install_parse_requirements() {
     esac
   done
 
-  # :command.default_assignments
-  [[ -n ${args['release']:-} ]] || args['release']="latest"
+  # :command.required_args_filter
+  if [[ -z ${args['plan']+x} ]]; then
+    printf "missing required argument: PLAN\nusage: vkube synology-csi install PLAN [OPTIONS]\n" >&2
+
+    exit 1
+  fi
+
+  # :command.required_flags_filter
+  if [[ -z ${args['--secret-folder']+x} ]]; then
+    printf "missing required flag: --secret-folder FOLDER\n" >&2
+    exit 1
+  fi
+
+  # :command.validations
+  # :argument.validations
+  if [[ -v args['plan'] && -n $(validate_file_exists "${args['plan']:-}") ]]; then
+    printf "validation error in %s:\n%s\n" "PLAN" "$(validate_file_exists "${args['plan']:-}")" >&2
+    exit 1
+  fi
 
 }
 
@@ -2400,130 +2307,13 @@ vkube_synology_csi_uninstall_parse_requirements() {
       *)
         # :command.parse_requirements_case
         # :command.parse_requirements_case_simple
-        # :argument.case
-        if [[ -z ${args['release']+x} ]]; then
-          args['release']=$1
-          shift
-        else
-          printf "invalid argument: %s\n" "$key" >&2
-          exit 1
-        fi
-
-        ;;
-
-    esac
-  done
-
-  # :command.default_assignments
-  [[ -n ${args['release']:-} ]] || args['release']="latest"
-
-}
-
-# :command.parse_requirements
-vkube_synology_csi_upgrade_parse_requirements() {
-  # :command.fixed_flags_filter
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-      --help | -h)
-        long_usage=yes
-        vkube_synology_csi_upgrade_usage
-        exit
-        ;;
-
-      *)
-        break
-        ;;
-
-    esac
-  done
-
-  # :command.command_filter
-  action="synology-csi upgrade"
-
-  # :command.parse_requirements_while
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-
-      -?*)
-        printf "invalid option: %s\n" "$key" >&2
+        printf "invalid argument: %s\n" "$key" >&2
         exit 1
-        ;;
-
-      *)
-        # :command.parse_requirements_case
-        # :command.parse_requirements_case_simple
-        # :argument.case
-        if [[ -z ${args['release']+x} ]]; then
-          args['release']=$1
-          shift
-        else
-          printf "invalid argument: %s\n" "$key" >&2
-          exit 1
-        fi
 
         ;;
 
     esac
   done
-
-  # :command.default_assignments
-  [[ -n ${args['release']:-} ]] || args['release']="latest"
-
-}
-
-# :command.parse_requirements
-vkube_synology_csi_downgrade_parse_requirements() {
-  # :command.fixed_flags_filter
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-      --help | -h)
-        long_usage=yes
-        vkube_synology_csi_downgrade_usage
-        exit
-        ;;
-
-      *)
-        break
-        ;;
-
-    esac
-  done
-
-  # :command.command_filter
-  action="synology-csi downgrade"
-
-  # :command.parse_requirements_while
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-
-      -?*)
-        printf "invalid option: %s\n" "$key" >&2
-        exit 1
-        ;;
-
-      *)
-        # :command.parse_requirements_case
-        # :command.parse_requirements_case_simple
-        # :argument.case
-        if [[ -z ${args['release']+x} ]]; then
-          args['release']=$1
-          shift
-        else
-          printf "invalid argument: %s\n" "$key" >&2
-          exit 1
-        fi
-
-        ;;
-
-    esac
-  done
-
-  # :command.default_assignments
-  [[ -n ${args['release']:-} ]] || args['release']="latest"
 
 }
 
@@ -2573,8 +2363,6 @@ bashly-run() {
     "synology-csi") vkube_synology_csi_command ;;
     "synology-csi install") vkube_synology_csi_install_command ;;
     "synology-csi uninstall") vkube_synology_csi_uninstall_command ;;
-    "synology-csi upgrade") vkube_synology_csi_upgrade_command ;;
-    "synology-csi downgrade") vkube_synology_csi_downgrade_command ;;
   esac
 }
 

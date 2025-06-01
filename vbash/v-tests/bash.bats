@@ -1,4 +1,5 @@
-# bats ./bash.bats
+# ./bats/bin/bats ./bash.bats
+# ./bats/bin/bats ./bash.bats --filter-tags tag:test
 
 setup() {
   load 'test_helper/bats-support/load' # this is required by bats-assert!
@@ -20,6 +21,49 @@ setup() {
   #echo "teardown"
   #rm -f /tmp/bats-tutorial-project-ran
 #}
+
+# https://kodekloud.com/blog/return-value-from-bash-function/
+function return-result-to-stream() {
+  # $1 variable name
+  local ret="func result"
+  echo ${ret}
+}
+@test "return from function to stream" {
+  run return-result-to-stream
+  assert_success
+  assert_output "func result"
+  [ "$output" == "func result" ]
+  returned_value="$(return-result-to-stream)"
+  [ "$returned_value" == "func result" ]
+}
+function return-result-to-global-variable() {
+  # $1 variable name
+  __return_result_to_global_variable='func result'
+}
+# bats test_tags=tag:test
+@test "return from function to global variable" {
+  skip "is not working. Bats problem???"
+  __return_result_to_global_variable="initial"
+  run return-result-to-global-variable
+  assert_success
+  echo "__return_result_to_global_variable=$__return_result_to_global_variable" >&3
+  [ "$__return_result_to_global_variable" == "func result" ]
+}
+function return-result-to-variable() {
+  # $1 variable name
+  eval "$1='func result'"
+  eval local ver2=\"\$$1\"
+  echo "$1=$ver2" >&3
+  echo "kuku $__return_result_to_variable" >&3
+}
+@test "return from function to variable" {
+  __return_result_to_variable="initial"
+  run return-result-to-variable __return_result_to_global_variable
+  assert_success
+  echo "kuku0 $__return_result_to_variable" >&3
+  [ "$__return_result_to_variable" == "func result" ]
+}
+
 
 @test "bash -s EOF" {
   run bash -s << EOF
