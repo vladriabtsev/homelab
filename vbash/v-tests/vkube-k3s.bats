@@ -74,10 +74,10 @@ setup_file() {
   echo "__synology_ver=$__synology_ver"
   [ "$__synology_ver" == "v1.2.0" ]
 
-  # return 0
   ##########################################################################################
   echo "      Step $[step=$step+1]. Busybox with ISCSI, SMB, and NFS disks" >&3
 
+exit 1
 
   ##########################################################################################
   echo "      Step $[step=$step+1]. ../vkube --trace synology-csi uninstall" >&3

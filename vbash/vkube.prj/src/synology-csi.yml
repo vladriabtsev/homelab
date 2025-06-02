@@ -19,8 +19,8 @@ commands:
     #validate: dir_exists
     required: true
     arg: folder
-  - long: --snapshot
-    help: Install snapshot support
+  # - long: --snapshot
+  #   help: Install snapshot support
 
 - name: uninstall
   help: Uninstall synology-csi driver
@@ -30,7 +30,7 @@ commands:
   #   default: latest
   flags:
   - long: --snapshot
-    help: Uninstall snapshot support
+    help: Uninstall snapshot support only
 
 # - name: upgrade
 #   help: Upgrade synology-csi driver version

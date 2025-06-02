@@ -424,7 +424,7 @@ function vkube-k3s.csi-synology-install() {
 
   # https://stackoverflow.com/questions/2914220/bash-templating-how-to-build-configuration-files-from-templates-with-bash
   # https://blog.tratif.com/2023/01/27/bash-tips-3-templating-in-bash-scripts/
-set -x
+#set -x
   if [[ $(yq v ${args[plan]} > /dev/null) ]]; then
     err_and_exit "Error: Not valid YAML file: '${args[plan]}'." ${LINENO}
   fi
@@ -438,8 +438,15 @@ set -x
   local data_folder=$(dirname ${args[plan]})
   vlib.trace "data folder=$data_folder"
 
+  # Defaults
+  csi_synology_namespace="synology-csi"
   # Root level scalar settings
   eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_" + key + "='\''" + . + "'\''")'  < ${args[plan]})"
+
+  if ! kubectl get namespace $csi_synology_namespace > /dev/null ; then 
+    run "line '$LINENO';kubectl create namespace $csi_synology_namespace"
+  fi
+
   readarray csi_synology_hosts < <(yq -o=j -I=0 ".hosts[]" ${args[plan]})
   vlib.trace "storage hosts count=${#csi_synology_hosts[@]}"
   local txt=""
@@ -448,8 +455,6 @@ set -x
 
   #vlib.trace "default reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
   declare -A host_names=()
-  unset host_names
-  declare -A protocol_names=()
   for csi_synology_host in "${csi_synology_hosts[@]}"; do
     i_host+=1
     vlib.trace "storage host=$csi_synology_host"
@@ -471,7 +476,7 @@ set -x
     fi
     i_protocol=-1
     #vlib.trace "reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
-    unset protocol_names
+    declare -A protocol_names=()
     for csi_synology_host_protocol in "${csi_synology_host_protocols[@]}"; do
       i_protocol+=1
       vlib.trace "storage protocol=$csi_synology_host_protocol"
@@ -480,7 +485,9 @@ set -x
       vlib.trace "storage protocol name=$csi_synology_host_protocol_name"
       if [[ -v protocol_names["${csi_synology_host_protocol_name}"] ]]; then
         #echo "${!protocol_names[@]}" "${protocol_names[@]}"
-        vlib.trace "protocol names(${#protocol_names[@]})=" "${!protocol_names[@]}" "${protocol_names[@]}" "${protocol_names["kuku"]}"
+        vlib.trace "protocol names(${#protocol_names[@]})=" "${!protocol_names[@]}"
+        #vlib.trace "storage host=$csi_synology_host"
+        #vlib.trace "storage protocol=$csi_synology_host_protocol"
         err_and_exit "Storage protocol name is not unique. Configuration YAML file: '${args[plan]}'. Host name '$csi_synology_host_name'. Protocol name '$csi_synology_host_protocol_name'." ${LINENO}
       fi
       protocol_names["${csi_synology_host_protocol_name}"]='y'
@@ -506,6 +513,7 @@ metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: \"false\"
   name: $csi_synology_host_name-synology-csi-iscsi-$csi_synology_host_protocol_class_name
+  #namespace: $csi_synology_namespace
 provisioner: csi.san.synology.com
 parameters:
   fsType: '$csi_synology_host_protocol_class_fsType'
@@ -517,11 +525,12 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 "
           ;;
           SMB )
+            run "line '$LINENO';kubectl create secret generic $csi_synology_host_name-synology-csi-smb-credentials -n kube-system --from-file=$csi_synology_host_protocol_secret_folder"
             txt+="${separator}apiVersion: v1
 kind: Secret
 metadata:
   name: $csi_synology_host_name-synology-csi-smb-credentials
-  namespace: default
+  #namespace: $csi_synology_namespace
 type: Opaque
 stringData:
   username: <username>  # DSM user account accessing the shared folder
@@ -531,6 +540,7 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: $csi_synology_host_name-synology-csi-smb-$csi_synology_host_protocol_class_name
+  #namespace: $csi_synology_namespace
 provisioner: csi.san.synology.com
 parameters:
   protocol: \"smb\"
@@ -547,6 +557,7 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 kind: StorageClass
 metadata:
   name: $csi_synology_host_name-synology-csi-nfs-$csi_synology_host_protocol_class_name
+  #namespace: $csi_synology_namespace
 provisioner: csi.san.synology.com
 parameters:
   protocol: \"nfs\"
@@ -567,31 +578,26 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
       done
     done
   done
-set +x
+#set +x
   vlib.trace "generated storage classes=\n$txt"
   run "line '$LINENO';echo '$txt' > '$data_folder/generated-storage-classes.yaml'"
   #run "line '$LINENO';kubectl apply edit-last-applied -f '$data_folder/generated-storage-classes.yaml'"
   run "line '$LINENO';kubectl apply -f '$data_folder/generated-storage-classes.yaml'"
-
-exit 1
 
   local deploy_k8s_version="v1.20"
   inf "synology-csi (Line:$LINENO)\n"
   #vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
   # echo $csi_synology_ver
   if [[ $(kubectl get pods -l app=controller,app.kubernetes.io/name=synology-csi -n synology-csi | wc -l) -eq 0 ]]; then # not installed yet
-    eval "csi_synology_secret_folder=$csi_synology_secret_folder"
+    eval "csi_synology_host_folder_with_dsm_secrets=$csi_synology_host_folder_with_dsm_secrets"
 
     # /etc/synology/client-info.yml
 
-    if ! kubectl get namespace synology-csi > /dev/null ; then 
-      run "line '$LINENO';kubectl create namespace synology-csi"
-    fi
     #run "line '$LINENO';if ! ($(kubectl get namespace synology-csi > /dev/null )); then kubectl create namespace synology-csi; fi"
     if kubectl get secret -n synology-csi client-info-secret > /dev/null ; then
       run "line '$LINENO';kubectl delete secret -n synology-csi client-info-secret"
     fi
-    run "line '$LINENO';kubectl create secret -n synology-csi generic client-info-secret --from-file="$csi_synology_secret_folder/client-info.yml""
+    run "line '$LINENO';kubectl create secret -n synology-csi generic client-info-secret --from-file="$csi_synology_host_folder_with_dsm_secrets/client-info.yml""
     run "line '$LINENO';kubectl apply -f $vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version"
 
     if [ $csi_synology_snapshot_use -eq 1 ]; then

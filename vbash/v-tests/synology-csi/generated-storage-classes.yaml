@@ -4,6 +4,7 @@ metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: "false"
   name: office-synology-csi-iscsi-test
+  #namespace: synology-csi
 provisioner: csi.san.synology.com
 parameters:
   fsType: btrfs
@@ -17,7 +18,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: office-synology-csi-smb-credentials
-  namespace: default
+  #namespace: synology-csi
 type: Opaque
 stringData:
   username: <username>  # DSM user account accessing the shared folder
@@ -27,6 +28,7 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: office-synology-csi-smb-test
+  #namespace: synology-csi
 provisioner: csi.san.synology.com
 parameters:
   protocol: "smb"
@@ -41,6 +43,7 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: office-synology-csi-nfs-test
+  #namespace: synology-csi
 provisioner: csi.san.synology.com
 parameters:
   protocol: "nfs"
@@ -56,6 +59,7 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: backup2-synology-csi-nfs-test
+  #namespace: synology-csi
 provisioner: csi.san.synology.com
 parameters:
   protocol: "nfs"
@@ -67,18 +71,28 @@ mountOptions:
 reclaimPolicy: Retain
 allowVolumeExpansion: true
 ---
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
+apiVersion: v1
+kind: Secret
 metadata:
-  name: backup2-synology-csi-nfs-test
+  name: backup2-synology-csi-smb-credentials
+  #namespace: synology-csi
+type: Opaque
+stringData:
+  username: <username>  # DSM user account accessing the shared folder
+  password: <password>  # DSM user password accessing the shared folder
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: backup2-synology-csi-smb-test
+  #namespace: synology-csi
 provisioner: csi.san.synology.com
 parameters:
-  protocol: "nfs"
+  protocol: "smb"
   dsm: 192.168.100.223
   location: /volume1
-  mountPermissions: "0755"
-mountOptions:
-  - nfsvers=4.1
+  csi.storage.k8s.io/node-stage-secret-name: "synology-backup2-csi-smb-credentials"
+  csi.storage.k8s.io/node-stage-secret-namespace: "default"
 reclaimPolicy: Retain
 allowVolumeExpansion: true
 

@@ -1,5 +1,6 @@
 # https://github.com/SynologyOpenSource/synology-csi
-snapshot_use: 1
+namespace: synology-csi
+snapshot_use: 0
 #csi_synology_ver: v1.2.0 # auto upgrade to latest if empty
 
 # Synology node settings
@@ -10,7 +11,8 @@ hosts:
   dsm_ip4: 192.168.100.227
   dsm_port: 5100
   https: true
-  folder_with_dsm_secrets: ${HOME}/.ssh/k3s-HA-csi-synology-secrets # folder with client-info.yam file
+  # https://github.com/SynologyOpenSource/synology-csi # Creating a Secret
+  folder_with_dsm_secrets: ${HOME}/.ssh/synology-office-secrets # folder with client-info.yam file
   protocol_class_location: /volume1 # default for all internal elements
   protocols:
   - name: ISCSI
@@ -18,6 +20,7 @@ hosts:
     - name: test
       fsType: 'btrfs'
   - name: SMB
+    secret_folder: ${HOME}/.ssh/synology-office-smb-secrets # folder with username.txt and password.txt files
     classes:
     - name: test
       #fsType: 'btrfs'
@@ -33,7 +36,7 @@ hosts:
   dsm_ip4: 192.168.100.223
   dsm_port: 5100
   https: true
-  folder_with_dsm_secrets: ${HOME}/.ssh/k3s-HA-csi-synology-secrets # folder with client-info.yam file
+  folder_with_dsm_secrets: ${HOME}/.ssh/synology-backup2-secrets # folder with client-info.yam file
   protocols:
   - name: NFS
     classes:
@@ -43,7 +46,8 @@ hosts:
       mountOptions_nfsvers: 4.1
       reclaimPolicy: Retain
       allowVolumeExpansion: true
-  - protocol: SMB
+  - name: SMB
+    secret_folder: ${HOME}/.ssh/synology-backup2-smb-secrets # folder with username.txt and password.txt files
     classes:
     - name: test
       location: /volume1
