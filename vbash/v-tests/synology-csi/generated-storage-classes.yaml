@@ -1,0 +1,84 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+  name: office-synology-csi-iscsi-test
+provisioner: csi.san.synology.com
+parameters:
+  fsType: btrfs
+  dsm: 192.168.100.227
+  location: /volume1
+  formatOptions: --nodiscard
+reclaimPolicy: Delete
+allowVolumeExpansion: false
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: office-synology-csi-smb-credentials
+  namespace: default
+type: Opaque
+stringData:
+  username: <username>  # DSM user account accessing the shared folder
+  password: <password>  # DSM user password accessing the shared folder
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: office-synology-csi-smb-test
+provisioner: csi.san.synology.com
+parameters:
+  protocol: "smb"
+  dsm: 192.168.100.227
+  location: /volume1
+  csi.storage.k8s.io/node-stage-secret-name: "synology-office-csi-smb-credentials"
+  csi.storage.k8s.io/node-stage-secret-namespace: "default"
+reclaimPolicy: Delete
+allowVolumeExpansion: false
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: office-synology-csi-nfs-test
+provisioner: csi.san.synology.com
+parameters:
+  protocol: "nfs"
+  dsm: 192.168.100.227
+  location: /volume1
+  mountPermissions: "0755"
+mountOptions:
+  - nfsvers=4.1
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: backup2-synology-csi-nfs-test
+provisioner: csi.san.synology.com
+parameters:
+  protocol: "nfs"
+  dsm: 192.168.100.223
+  location: /volume1
+  mountPermissions: "0755"
+mountOptions:
+  - nfsvers=4.1
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: backup2-synology-csi-nfs-test
+provisioner: csi.san.synology.com
+parameters:
+  protocol: "nfs"
+  dsm: 192.168.100.223
+  location: /volume1
+  mountPermissions: "0755"
+mountOptions:
+  - nfsvers=4.1
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+

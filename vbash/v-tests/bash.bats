@@ -22,6 +22,64 @@ setup() {
   #rm -f /tmp/bats-tutorial-project-ran
 #}
 
+function function-with-associative-array() {
+  declare -A array=()
+  array["one"]="one value"
+  test="[ "${#array[@]}" == "1" ]"
+  echo "${test}" && eval "${test}" || exit 1
+  test="[ "${!array[@]}" == "one" ]"
+  echo "${test}" && eval "${test}" || exit 1
+  test="[ "${array[@]}" == "one value" ]"
+  echo "${test}" && eval "${test}" || exit 1
+  test="[ "${array[one]}" == "one value" ]"
+  echo "${test}" && eval "${test}" || exit 1
+  test="[ "${array["one"]}" == "one value" ]"
+  echo "${test}" && eval "${test}" || exit 1
+  two="two"
+  array["two"]="two value"
+  test="[ "${#array[@]}" == "2" ]"
+  echo "${test}" && eval "${test}" || exit 1
+  test="[ "${array[two]}" == "two value" ]"
+  echo "${test}" && eval "${test}" || exit 1
+  test="[ "${array[$two]}" == "two value" ]"
+  echo "${test}" && eval "${test}" || exit 1
+}
+# bats test_tags=tag:test
+@test "associative array" {
+  declare -A array=()
+  array["one"]="one value"
+  [ "${#array[@]}" == "1" ]
+  [ "${!array[@]}" == "one" ]
+  [ "${array[@]}" == "one value" ]
+  [ "${array[one]}" == "one value" ]
+  [ "${array["one"]}" == "one value" ]
+  [ "${array[kuku]}" != "one value" ]
+  if ! [[ -v array[one] ]]; then
+    fail 'if [[ -v array[one] ]] - fail'
+  fi
+  two="two"
+  array["two"]="two value"
+  [ "${#array[@]}" == "2" ]
+  [ "${array[two]}" == "two value" ]
+  [ "${array[$two]}" == "two value" ]
+  [ "${array[${two}]}" == "two value" ]
+  [ "${array["${two}"]}" == "two value" ]
+  if ! [[ -v array[one] ]]; then
+    fail 'if [[ -v array[one] ]] - fail'
+  fi
+  if [[ -v array[kuku] ]]; then
+    fail 'if [[ -v array[kuku] ]] - fail'
+  fi
+  if ! [[ -v array[two] ]]; then
+    fail 'if [[ -v array[two] ]] - fail'
+  fi
+  if ! [[ -v array["${two}"] ]]; then
+    fail 'if [[ -v array[two] ]] - fail'
+  fi
+  run function-with-associative-array
+  assert_success
+}
+
 # https://kodekloud.com/blog/return-value-from-bash-function/
 function return-result-to-stream() {
   # $1 variable name
@@ -40,7 +98,6 @@ function return-result-to-global-variable() {
   # $1 variable name
   __return_result_to_global_variable='func result'
 }
-# bats test_tags=tag:test
 @test "return from function to global variable" {
   skip "is not working. Bats problem???"
   __return_result_to_global_variable="initial"

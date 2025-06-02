@@ -312,6 +312,9 @@ function vlib.bashly-init-command() {
   if [[ ${args[--trace]} ]]; then 
     __is_trace=1
   fi
+  if [[ ${args[--unset]} ]]; then 
+    __bashly_init_command_set="${__bashly_init_command_set}u"
+  fi
   if [[ ${args[--debug]} ]]; then
     __is_trace=1
     __bashly_init_command_set="${__bashly_init_command_set}vx"
@@ -329,9 +332,6 @@ function vlib.bashly-init-command() {
     if [[ ${args[--xtrace]} ]]; then 
       __bashly_init_command_set="${__bashly_init_command_set}x"
       __bashmatic_init_set="${__bashmatic_init_set} show-command-on"
-    fi
-    if [[ ${args[--unset]} ]]; then 
-      __bashly_init_command_set="${__bashly_init_command_set}u"
     fi
   fi
 

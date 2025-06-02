@@ -1,0 +1,74 @@
+# https://github.com/SynologyOpenSource/synology-csi
+
+# Prefix 'csi_synology_' will be used to convert all root scalar fields to bash variables
+snapshot_use: 1
+#csi_synology_ver: v1.2.0 # auto upgrade to latest if empty
+
+# Synology node settings
+hosts:
+# Bash variable prefix 'csi_synology_host_'
+- name: office
+  dsm_ip4: 192.168.100.227
+  dsm_port: 5100
+  https: true
+  folder_with_dsm_secrets: ${HOME}/.ssh/k3s-HA-csi-synology-secrets # folder with client-info.yam file
+  protocol_class_location: /volume1 # default for all internal elements
+  protocols:
+  # Bash variable prefix 'csi_synology_host_protocol_'
+  - name: ISCSI
+    class_fsType: 'btrfs' # default for all internal elements
+    classes:
+    # Bash variable prefix 'csi_synology_host_protocol_class_'
+    - name: csi_syn_iscsi_btrfs_delete
+      #fsType: From default for class.
+      #location: From default for protocol_class.
+      reclaimPolicy: Delete
+      allowVolumeExpansion: false
+    - name: csi_syn_iscsi_btrfs_retain
+      fsType: 'btrfs'
+      location: /volume1
+      reclaimPolicy: Retain
+      allowVolumeExpansion: false
+    - name: csi_syn_iscsi_btrfs_retain_exp
+      reclaimPolicy: Retain
+      allowVolumeExpansion: true
+  - name: SMB
+    classes:
+    - name: csi_syn_smb_delete
+      #location: From default for protocol_class.
+      reclaimPolicy: Delete
+      allowVolumeExpansion: false
+    - name: csi_syn_smb_retain
+      location: /volume1
+      reclaimPolicy: Retain
+      allowVolumeExpansion: false
+    - name: csi_syn_smb_retain_exp
+      #location: From default for protocol_class.
+      reclaimPolicy: Retain
+      allowVolumeExpansion: true
+  - name: NFS
+    classes:
+    - name: csi_syn_nfs_delete
+      location: /volume1
+      mountPermissions: '0755'
+      mountOptions_nfsvers: 4.1
+      reclaimPolicy: Delete
+      allowVolumeExpansion: false
+    - name: csi_syn_nfs_retain
+      location: /volume1
+      reclaimPolicy: Retain
+      allowVolumeExpansion: false
+    - name: csi_syn_nfs_retain_exp
+      location: /volume1
+      reclaimPolicy: Retain
+      allowVolumeExpansion: true
+- name: backup2
+  dsm_ip4: 192.168.100.223
+  dsm_port: 5100
+  https: true
+  folder_with_dsm_secrets: ${HOME}/.ssh/k3s-HA-csi-synology-secrets # folder with client-info.yam file
+  protocols:
+  - name: NFS
+    location: /volume1
+  - name: SMB
+    location: /volume1

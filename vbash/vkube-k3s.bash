@@ -441,28 +441,55 @@ set -x
   # Root level scalar settings
   eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_" + key + "='\''" + . + "'\''")'  < ${args[plan]})"
   readarray csi_synology_hosts < <(yq -o=j -I=0 ".hosts[]" ${args[plan]})
-  vlib.trace "storage hosts(${#csi_synology_hosts[@]})=$csi_synology_hosts[@]"
+  vlib.trace "storage hosts count=${#csi_synology_hosts[@]}"
   local txt=""
   local separator=""
-  i_host=0
+  i_host=-1
 
   #vlib.trace "default reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
+  declare -A host_names=()
+  unset host_names
+  declare -A protocol_names=()
   for csi_synology_host in "${csi_synology_hosts[@]}"; do
+    i_host+=1
     vlib.trace "storage host=$csi_synology_host"
     # Host level scalar settings
     eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_host_" + key + "='\''" + . + "'\''")' <<<$csi_synology_host)"
-    readarray csi_synology_host_protocols < <(yq -o=j -I=0 ".hosts[$i_host].protocols[]" ${args[plan]})
-    vlib.trace "storage protocols(${#csi_synology_host_protocols[@]})=$csi_synology_host_protocols[@]"
-    i_protocol=0
     vlib.trace "storage host name=$csi_synology_host_name"
+    if [[ -z $csi_synology_host_name ]]; then
+      err_and_exit "Empty host name. Configuration YAML file: '${args[plan]}'." ${LINENO}
+    fi
+    if [[ -v host_names["${csi_synology_host_name}"] ]]; then
+      vlib.trace "host names(${#host_names[@]})=" "${!host_names[@]}"
+      err_and_exit "Host name is not unique. Configuration YAML file: '${args[plan]}'. Host name '$csi_synology_host_name'." ${LINENO}
+    fi
+    host_names["${csi_synology_host_name}"]='y'
+    readarray csi_synology_host_protocols < <(echo $csi_synology_host | yq -o=j -I=0 ".protocols[]")
+    vlib.trace "storage protocols count=${#csi_synology_host_protocols[@]}"
+    if [[ ${#csi_synology_host_protocols[@]} -eq 0 ]]; then
+      err_and_exit "There are no storage protocol for host. Configuration YAML file: '${args[plan]}'. Host '$csi_synology_host_name'." ${LINENO}
+    fi
+    i_protocol=-1
     #vlib.trace "reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
+    unset protocol_names
     for csi_synology_host_protocol in "${csi_synology_host_protocols[@]}"; do
+      i_protocol+=1
       vlib.trace "storage protocol=$csi_synology_host_protocol"
       eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_host_" + key + "='\''" + . + "'\''")' <<<$csi_synology_host)"
       eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_host_protocol_" + key + "='\''" + . + "'\''")' <<<$csi_synology_host_protocol)"
-      readarray csi_synology_host_protocol_classes < <(yq -o=j -I=0 ".hosts[$i_host].protocols[$i_protocol].classes[]" ${args[plan]})
-      vlib.trace "storage classes(${#csi_synology_host_protocol_classes[@]})=$csi_synology_host_protocol_classes[@]"
       vlib.trace "storage protocol name=$csi_synology_host_protocol_name"
+      if [[ -v protocol_names["${csi_synology_host_protocol_name}"] ]]; then
+        #echo "${!protocol_names[@]}" "${protocol_names[@]}"
+        vlib.trace "protocol names(${#protocol_names[@]})=" "${!protocol_names[@]}" "${protocol_names[@]}" "${protocol_names["kuku"]}"
+        err_and_exit "Storage protocol name is not unique. Configuration YAML file: '${args[plan]}'. Host name '$csi_synology_host_name'. Protocol name '$csi_synology_host_protocol_name'." ${LINENO}
+      fi
+      protocol_names["${csi_synology_host_protocol_name}"]='y'
+      #readarray csi_synology_host_protocol_classes < <(yq -o=j -I=0 ".hosts[$i_host].protocols[$i_protocol].classes[]" ${args[plan]})
+      readarray csi_synology_host_protocol_classes < <(echo $csi_synology_host_protocol | yq -o=j -I=0 ".classes[]")
+      vlib.trace "storage classes count=${#csi_synology_host_protocol_classes[@]}"
+      if [[ ${#csi_synology_host_protocol_classes[@]} -eq 0 ]]; then
+        err_and_exit "There are no storage class for protocol. Configuration YAML file: '${args[plan]}'. Host '$csi_synology_host_name'. Protocol '$csi_synology_host_protocol_name'." ${LINENO}
+      fi
       #vlib.trace "reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
       for csi_synology_host_protocol_class in "${csi_synology_host_protocol_classes[@]}"; do
         vlib.trace "storage class=$csi_synology_host_protocol_class"
@@ -478,7 +505,7 @@ kind: StorageClass
 metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: \"false\"
-  name: $csi_synology_host_protocol_class_name
+  name: $csi_synology_host_name-synology-csi-iscsi-$csi_synology_host_protocol_class_name
 provisioner: csi.san.synology.com
 parameters:
   fsType: '$csi_synology_host_protocol_class_fsType'
@@ -493,7 +520,7 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
             txt+="${separator}apiVersion: v1
 kind: Secret
 metadata:
-  name: cifs-csi-credentials
+  name: $csi_synology_host_name-synology-csi-smb-credentials
   namespace: default
 type: Opaque
 stringData:
@@ -503,13 +530,13 @@ stringData:
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-  name: $csi_synology_host_protocol_class_name
+  name: $csi_synology_host_name-synology-csi-smb-$csi_synology_host_protocol_class_name
 provisioner: csi.san.synology.com
 parameters:
   protocol: \"smb\"
   dsm: '$csi_synology_host_dsm_ip4'
   location: '$csi_synology_host_protocol_class_location'
-  csi.storage.k8s.io/node-stage-secret-name: \"cifs-csi-credentials\"
+  csi.storage.k8s.io/node-stage-secret-name: \"synology-$csi_synology_host_name-csi-smb-credentials\"
   csi.storage.k8s.io/node-stage-secret-namespace: \"default\"
 reclaimPolicy: $csi_synology_host_protocol_class_reclaimPolicy
 allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
@@ -519,15 +546,15 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
             txt+="${separator}apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: $csi_synology_host_protocol_class_name
+  name: $csi_synology_host_name-synology-csi-nfs-$csi_synology_host_protocol_class_name
 provisioner: csi.san.synology.com
 parameters:
   protocol: \"nfs\"
   dsm: '$csi_synology_host_dsm_ip4'
   location: '$csi_synology_host_protocol_class_location'
-  mountPermissions: $csi_synology_host_protocol_class_mountPermissions
+  mountPermissions: \"$csi_synology_host_protocol_class_mountPermissions\"
 mountOptions:
-  - nfsvers=$mountOptions_nfsvers
+  - nfsvers='$csi_synology_host_protocol_class_mountOptions_nfsvers'
 reclaimPolicy: $csi_synology_host_protocol_class_reclaimPolicy
 allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 "
@@ -535,13 +562,10 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
           * )
             err_and_exit "Unsupported storage protocol '$name'. Expected: ISCSI, SMB, NFS" ${LINENO};
         esac
-        separator="
----
+        separator="---
 "
       done
-      i_protocol+=1
     done
-    i_host+=1
   done
 set +x
   vlib.trace "generated storage classes=\n$txt"
