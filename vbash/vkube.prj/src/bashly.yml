@@ -84,6 +84,7 @@ commands:
 
 - import: src/k3s.yml
 - import: src/synology-csi.yml
+- import: src/busybox.yml
 
 examples:
 - ./vkube --help

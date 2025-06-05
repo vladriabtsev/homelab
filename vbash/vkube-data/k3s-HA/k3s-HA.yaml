@@ -25,12 +25,12 @@ csi_synology_use: 1 # csi-synology/csi-synology-plan.yaml is expected in same fo
 # https://github.com/kubernetes-csi/csi-driver-smb
 csi_driver_smb_use: 1
 csi_driver_smb_ver:   # auto upgrade to latest if empty
-csi_driver_smb_secret_folder: ~/.ssh/k3s-HA-csi-driver-smb-secrets # folder with username.txt and password.txt files
+csi_driver_smb_secret_folder: ${HOME}/.ssh/office-csi-driver-smb-secrets # folder with username.txt and password.txt files
 
 # https://github.com/kubernetes-csi/csi-driver-nfs
 csi_driver_nfs_use: 1
 csi_driver_nfs_ver:  # auto upgrade to latest if empty
-csi_driver_nfs_secret_folder: ~/.ssh/k3s-HA-csi-driver-nfs-secrets # folder with username.txt and password.txt files
+csi_driver_nfs_secret_folder: ${HOME}/.ssh/office-csi-driver-nfs-secrets # folder with username.txt and password.txt files
 
 # https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner
 # https://hbayraktar.medium.com/how-to-setup-dynamic-nfs-provisioning-in-a-kubernetes-cluster-cbf433b7de29

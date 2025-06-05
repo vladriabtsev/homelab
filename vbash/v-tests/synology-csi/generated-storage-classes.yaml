@@ -4,7 +4,8 @@ metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: "false"
   name: office-synology-csi-iscsi-test
-  #namespace: synology-csi
+  labels:
+    vkube/storage-type: synology-csi-iscsi
 provisioner: csi.san.synology.com
 parameters:
   fsType: btrfs
@@ -18,7 +19,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: office-synology-csi-smb-credentials
-  #namespace: synology-csi
+  namespace: synology-csi
 type: Opaque
 stringData:
   username: <username>  # DSM user account accessing the shared folder
@@ -28,7 +29,8 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: office-synology-csi-smb-test
-  #namespace: synology-csi
+  labels:
+    vkube/storage-type: synology-csi-smb
 provisioner: csi.san.synology.com
 parameters:
   protocol: "smb"
@@ -43,7 +45,8 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: office-synology-csi-nfs-test
-  #namespace: synology-csi
+  labels:
+    vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com
 parameters:
   protocol: "nfs"
@@ -59,7 +62,8 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: backup2-synology-csi-nfs-test
-  #namespace: synology-csi
+  labels:
+    vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com
 parameters:
   protocol: "nfs"
@@ -75,7 +79,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: backup2-synology-csi-smb-credentials
-  #namespace: synology-csi
+  namespace: synology-csi
 type: Opaque
 stringData:
   username: <username>  # DSM user account accessing the shared folder
@@ -85,7 +89,8 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: backup2-synology-csi-smb-test
-  #namespace: synology-csi
+  labels:
+    vkube/storage-type: synology-csi-smb
 provisioner: csi.san.synology.com
 parameters:
   protocol: "smb"

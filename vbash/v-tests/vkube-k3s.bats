@@ -44,7 +44,6 @@ setup_file() {
 #  k3d cluster delete test
 #}
 
-# bats test_tags=tag:test
 @test "synology-csi installation integration tests" {
   # https://bats-core.readthedocs.io/en/stable/writing-tests.html
   ##########################################################################################
@@ -74,32 +73,30 @@ setup_file() {
   echo "__synology_ver=$__synology_ver"
   [ "$__synology_ver" == "v1.2.0" ]
 
-  ##########################################################################################
-  echo "      Step $[step=$step+1]. Busybox with ISCSI, SMB, and NFS disks" >&3
+  # ##########################################################################################
+  # echo "      Step $[step=$step+1]. Busybox with ISCSI, SMB, and NFS disks" >&3
 
-exit 1
+  # ##########################################################################################
+  # echo "      Step $[step=$step+1]. ../vkube --trace synology-csi uninstall" >&3
+  # run ../vkube --trace synology-csi uninstall
+  # # https://github.com/bats-core/bats-assert#partial-matching
+  # #echo '# text' >&3
+  # assert_success
 
-  ##########################################################################################
-  echo "      Step $[step=$step+1]. ../vkube --trace synology-csi uninstall" >&3
-  run ../vkube --trace synology-csi uninstall
-  # https://github.com/bats-core/bats-assert#partial-matching
-  #echo '# text' >&3
-  assert_success
+  # sleep 10
 
-  sleep 10
-
-  DETIK_CLIENT_NAMESPACE="synology-csi"
-  run verify "there is 0 pod named 'synology-csi-node'"
-  assert_success
-  run verify "there is 0 pod named 'synology-csi-controller'"
-  assert_success
-  run verify "there is 0 pod named 'synology-csi-controller'"
-  assert_success
-  run verify "there is 0 pod named 'synology-csi-snapshotter'"
-  assert_success
-  DETIK_CLIENT_NAMESPACE="default"
-  run verify "there is 0 pod named 'snapshot-controller'"
-  assert_success
+  # DETIK_CLIENT_NAMESPACE="synology-csi"
+  # run verify "there is 0 pod named 'synology-csi-node'"
+  # assert_success
+  # run verify "there is 0 pod named 'synology-csi-controller'"
+  # assert_success
+  # run verify "there is 0 pod named 'synology-csi-controller'"
+  # assert_success
+  # run verify "there is 0 pod named 'synology-csi-snapshotter'"
+  # assert_success
+  # DETIK_CLIENT_NAMESPACE="default"
+  # run verify "there is 0 pod named 'snapshot-controller'"
+  # assert_success
   
   # ##########################################################################################
   # run ../vkube --trace synology-csi install v1.1.3 --snapshot --secret-folder "~/.ssh/k3s-HA-csi-synology-secrets"
@@ -179,4 +176,31 @@ exit 1
   # DETIK_CLIENT_NAMESPACE="default"
   # run verify "there is 0 pod named 'snapshot-controller'"
   # assert_success
+}
+# bats test_tags=tag:test
+@test "busybox installation integration tests" {
+  echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox 1.37 --storage-class backup2-synology-csi-nfs-test" >&3
+  run ../vkube --trace busybox install test-busybox 1.37 --storage-class backup2-synology-csi-nfs-test
+  # https://github.com/bats-core/bats-assert#partial-matching
+  #echo '# text' >&3
+  assert_success
+
+  sleep 10
+
+  DETIK_CLIENT_NAMESPACE="default"
+  run verify "there is 1 pod named 'test-busybox'"
+  assert_success
+
+  ___ver=$(vkube-k3s.get-pod-image-version default test-busybox busybox)
+  [ "$status" -eq 0 ]
+  [ "$___ver" == "1.37.0" ]
+
+  #run ../vkube --trace busybox install mybusybox --storage-class backup2-nfs-test
+  #run ../vkube --trace busybox install mybusybox --storage-class backup2-iscsi-test
+  #run ../vkube --trace busybox install mybusybox --storage-class backup2-smb-test
+
+  #run ../vkube --trace busybox install mybusybox --storage-class backup2-synology-csi-nfs-test
+  #run ../vkube --trace busybox install mybusybox --storage-class backup2-synology-csi-smb-test
+  #run ../vkube --trace busybox install mybusybox --storage-class backup2-synology-csi-iscsi-test
+
 }

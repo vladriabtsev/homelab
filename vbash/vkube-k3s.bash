@@ -28,6 +28,23 @@ function vkube-k3s.get-pod-image-version() {
   #echo "ver=$ver" >&3
   echo "$ver"
 }
+function vkube-k3s.get-storage-class-type() { # backup2-synology-csi-nfs-test
+  # return container image version
+  [[ -z $1 ]] && vlib.error-printf "Missing storage class name parameter"
+  #vlib.trace "storage class=$1"
+  if ! command kubectl get storageclass $1 &> /dev/null; then
+    err_and_exit "Storage class '$1' is not found in cluster."  ${LINENO}
+  fi
+  #local yaml
+  #yaml=$(kubectl get storageclass $1 -o yaml | yq '.metadata.labels[] | select(.name == "vkube/storage-type")')
+  #yaml=$(kubectl get storageclass $1 -o yaml  | yq '.metadata.labels.vkube/storage-type')
+  #vlib.trace "yaml=$yaml"
+  local type
+  type=$(kubectl get storageclass $1 -o yaml  | yq '.metadata.labels.vkube/storage-type')
+  #vlib.trace "storage type=$type"
+  #err_and_exit "Not implemented" ${LINENO}
+  echo "$type"
+}
 function vkube-k3s.is-app-ready() {
   if [[ $(kubectl get pods -l app=$1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; then
     return 1
@@ -411,6 +428,294 @@ function _install_all() {
 #   )
 # }
 
+function vkube-k3s.busybox-install() {
+  declare _storage_classes=()
+  if [[ -n ${args[--storage-class]} ]]; then
+    vlib.trace "--storage-class=${args[--storage-class]}"
+    eval "_storage_classes=(${args[--storage-class]:-})"
+  elif [[ -n ${args[--synology-csi-plan]} ]]; then
+    for csi_synology_host in "${csi_synology_hosts[@]}"; do
+      err_and_exit "Not implemented" ${LINENO}
+    done
+  elif [[ -n ${args[--cluster-plan]} ]]; then
+    err_and_exit "Not implemented" ${LINENO}
+  fi
+
+
+  for __s in "${_storage_classes[@]}"; do
+  #local yaml
+  #yaml=$(kubectl get storageclass $__storage_type -o yaml | yq '.metadata.labels[] | select(.name == "vkube/storage-type")')
+  #yaml=$(kubectl get storageclass $__storage_type -o yaml)
+  #vlib.trace "yaml=$yaml"
+
+    vlib.trace "__s=$__s"
+    # check storage class exists
+    local __storage_type
+    __storage_type="$(vkube-k3s.get-storage-class-type $__s)"
+    vlib.trace "__storage_type=$__storage_type"
+
+    # get storage class label vkube/storage-type
+    #err_and_exit "Not implemented" ${LINENO}
+
+    case $__storage_type in
+      iscsi )
+        err_and_exit "Not implemented" ${LINENO}
+      ;;
+      smb )
+        err_and_exit "Not implemented" ${LINENO}
+      ;;
+      nfs )
+        err_and_exit "Not implemented" ${LINENO}
+      ;;
+      synology-csi-iscsi )
+        err_and_exit "Not implemented" ${LINENO}
+      ;;
+      synology-csi-smb )
+        err_and_exit "Not implemented" ${LINENO}
+      ;;
+      synology-csi-nfs )
+        err_and_exit "Not implemented" ${LINENO}
+      ;;
+      * )
+        if [[ -z $__storage_type ]]; then
+          err_and_exit "Storage class '$__s with label 'vkube/storage-type' is not found in kubernetes cluster" ${LINENO};
+        else
+          err_and_exit "Storage class '$__s with label 'vkube/storage-type: $$__storage_type' is not supported" ${LINENO};
+        fi
+    esac
+  done
+
+  txt="apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: busybox-pvc-nfs-csi
+spec:
+  storageClassName: nfs-csi
+  accessModes: 
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+"
+txt="apiVersion: v1
+kind: PersistentVolume
+metadata:
+    name: pv-smb-example-name
+    namespace: smb-example-namespace # PersistentVolume and PersistentVolumeClaim must use the same namespace parameter
+spec:
+    capacity:
+        storage: 100Gi
+    accessModes:
+        - ReadWriteMany
+    persistentVolumeReclaimPolicy: Retain
+    mountOptions:
+        - dir_mode=0777
+        - file_mode=0777
+        - vers=3.0
+    csi:
+        driver: smb.csi.k8s.io
+        readOnly: false
+        volumeHandle: examplehandle  # make sure it's a unique id in the cluster
+        volumeAttributes:
+            source: \"//gateway-dns-name-or-ip-address/example-share-name\"
+        nodeStageSecretRef:
+            name: example-smbcreds
+            namespace: smb-example-namespace
+"
+txt="apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: busybox-pvc-nfs-ext
+spec:
+  storageClassName: nfs-client
+  accessModes: 
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+"
+txt="kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: busybox-pvc-smb-csi
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Mi
+  storageClassName: smb-csi
+"
+txt="apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: local-pv
+spec:
+  capacity:
+    storage: 500Mi 
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  hostPath:
+    path: /mnt/pv-data
+"
+txt="
+"
+
+  txt="apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox
+  labels:
+    app: busybox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: busybox  
+  template:
+    metadata:
+      labels:
+        app: busybox
+    spec:
+      #securityContext: user for commands???
+      #  runAsUser: 1030  # Use UID of nsf_user on Synology
+      #  runAsGroup: 100  # Use GID user group on Synology
+      initContainers:
+      # https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#differences-from-regular-containers
+      - name: init
+        image: busybox:musl
+        # https://www.busybox.net/downloads/BusyBox.html
+        # https://boxmatrix.info/wiki/BusyBox-Commands
+        command: [ \"sh\", \"-c\" ]
+        args:
+        - |
+          #create archive directory
+          mkdir -p /home/mfs-csi && chown -R 999:999 /home/nfs-csi
+          mkdir -p /home/mfs-ext && chown -R 999:999 /home/nfs-ext
+          mkdir -p /home/smb-csi && chown -R 999:999 /home/smb-csi
+      containers:
+        - name: busybox
+          image: busybox:musl
+          imagePullPolicy: \"IfNotPresent\"
+          #command: [ \"sh\", \"-c\" ]
+          #args: [\"while true; do sleep 30; done;\"]
+          #args:
+          #- |
+            #create directory for NFS volume
+            #mkdir -p /home/nfs && chown -R 999:999 /home/nfs
+          command:
+            - \"sh\"
+            - \"-c\"
+            - \"while true; do sleep 6000; done\"
+          resources:
+            limits:
+              memory: \"128Mi\"
+              cpu: \"100m\"
+          volumeMounts:
+          #  - name: nvme-vol
+          #    mountPath: /home/nvme # The mountpoint inside the container
+          - name: nfs-csi-vol
+            mountPath: /home/nfs-csi # The mountpoint inside the container
+          - name: nfs-ext-vol
+            mountPath: /home/nfs-ext # The mountpoint inside the container
+          - name: smb-csi-vol
+            mountPath: /home/smb-csi # The mountpoint inside the container
+      volumes:
+      # - name: nvme-vol
+      #   persistentVolumeClaim:
+      #     claimName: longhorn-nvme
+      - name: nfs-csi-vol
+        persistentVolumeClaim:
+          claimName: busybox-pvc-nfs-csi
+      - name: nfs-ext-vol
+        persistentVolumeClaim:
+          claimName: busybox-pvc-nfs-ext
+      - name: smb-csi-vol
+        persistentVolumeClaim:
+          claimName: busybox-pvc-smb-csi
+"
+
+  # ${args[--storage-class]}
+
+  # if ! [[ -e ${k3s_settings} ]]; then
+  #   err_and_exit "Cluster plan file '${k3s_settings}' is not found" ${LINENO};
+  # fi
+  # #echo $node_root_password
+  # if [[ -z $node_root_password ]]; then
+  #   node_root_password=""
+  #   vlib.read-password node_root_password "Please enter root password for cluster nodes:"
+  #   echo
+  # fi
+
+  hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
+  if command kubectl get deploy busybox -n busybox-system &> /dev/null; then
+    err_and_exit "Busybox already installed."  ${LINENO} "$0"
+  fi
+  exit 1
+}
+function vkube-k3s.busybox-uninstall() {
+  hl.blue "$parent_step$((++install_step)). Uninstalling Busybox. (Line:$LINENO)"
+
+  if ! command kubectl get deploy busybox -n busybox-system &> /dev/null; then
+    err_and_exit "Busybox not installed yet."  ${LINENO} "$0"
+  fi
+
+  if ! command kubectl get deploy -l app.kubernetes.io/version=$busybox_ver -n busybox-system &> /dev/null; then
+    err_and_exit "Trying uninstall Busybox version '$busybox_ver', but this version is not installed."  ${LINENO} "$0"
+  fi
+
+  # busybox_installed_ver=$( busyboxctl version )
+  # if ! [ $busybox_installed_ver == $busybox_ver ]; then
+  #   err_and_exit "Trying uninstall Busybox version '$busybox_ver', but expected '$busybox_installed_ver'."  ${LINENO} "$0"
+  # fi
+
+  # manually deleting stucked-namespace
+  #kubectl get namespace "busybox-system" -o json | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/" | kubectl replace --raw /api/v1/namespaces/busybox-system/finalize -f -
+  #kubectl get namespace "stucked-namespace" -o json \
+  #  | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/" \
+  #  | kubectl replace --raw /api/v1/namespaces/stucked-namespace/finalize -f -
+
+  # busybox deleting-confirmation-flag
+  # kubectl get lhs -n busybox-system
+  # can be edit in k9s or apply deleting-confirmation-flag.yaml
+  local dir="$(dirname "$0")"
+  #run "line $LINENO;kubectl -n busybox-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
+  #run "line $LINENO;helm uninstall busybox -n busybox-system"
+  #run "line $LINENO;kubectl apply -f ./101-busybox/deleting-confirmation-flag.yaml"
+
+  run "line $LINENO;kubectl create -f https://raw.githubusercontent.com/busybox/busybox/$busybox_ver/uninstall/uninstall.yaml"
+  #kubectl get job/busybox-uninstall -n busybox-system -w
+
+  # https://medium.com/@sirtcp/how-to-resolve-stuck-kubernetes-namespace-deletions-by-cleaning-finalizers-38190bf3165f
+  # Get all resorces
+  #kubectl api-resources
+  # Get all resorces for namespace
+  #kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n busybox-system
+
+  # kubectl wait --for jsonpath='{.status.state}'=AtLatestKnown sub mysub -n myns --timeout=3m
+  #run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=complete job/busybox-uninstall -n busybox-system'"
+  run "line '$LINENO';kubectl wait --for=condition=complete job/busybox-uninstall -n busybox-system --timeout=5m"
+  #run "line '$LINENO';wait-for-success \"kubectl get job/busybox-uninstall -n busybox-system -o jsonpath='{.status.conditions[?(@.type==\"Complete\")].status}' | grep True\""
+
+  # crd_array=(backingimagedatasources backingimagemanagers backingimages backupbackingimages backups backuptargets /
+  #   backupvolumes engineimages engines instancemanagers nodes orphans recurringjobs replicas settings sharemanagers /
+  #   snapshots supportbundles systembackups systemrestores volumeattachments volumes)
+  # for crd in "${crd_array[@]}"; do
+  #   run "line '$LINENO';kubectl patch crd $crd -n busybox-system -p '{"metadata":{"finalizers":[]}}' --type=merge"
+  #   run "line '$LINENO';kubectl delete crd $crd -n busybox-system"
+  #   #run "line '$LINENO';kubectl delete crd $crd"
+  # done
+
+  run "line '$LINENO';kubectl delete namespace busybox-system"
+  run "line '$LINENO';kubectl delete storageclass busybox-ssd"
+  run "line '$LINENO';kubectl delete storageclass busybox-nvme"
+
+  run "line '$LINENO';kubectl delete namespace busybox-system"
+}
+
 function vkube-k3s.csi-synology-install() {
   # https://www.youtube.com/watch?v=c6Qf9UeHld0
   # https://github.com/Tech-Byte-Tips/Reference-Guides/tree/main/Installing%20the%20Synology%20CSI%20Driver%20with%20the%20Snapshot%20feature%20in%20k3s
@@ -424,7 +729,7 @@ function vkube-k3s.csi-synology-install() {
 
   # https://stackoverflow.com/questions/2914220/bash-templating-how-to-build-configuration-files-from-templates-with-bash
   # https://blog.tratif.com/2023/01/27/bash-tips-3-templating-in-bash-scripts/
-#set -x
+  #set -x
   if [[ $(yq v ${args[plan]} > /dev/null) ]]; then
     err_and_exit "Error: Not valid YAML file: '${args[plan]}'." ${LINENO}
   fi
@@ -513,7 +818,8 @@ metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: \"false\"
   name: $csi_synology_host_name-synology-csi-iscsi-$csi_synology_host_protocol_class_name
-  #namespace: $csi_synology_namespace
+  labels:
+    vkube/storage-type: synology-csi-iscsi
 provisioner: csi.san.synology.com
 parameters:
   fsType: '$csi_synology_host_protocol_class_fsType'
@@ -525,12 +831,12 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 "
           ;;
           SMB )
-            run "line '$LINENO';kubectl create secret generic $csi_synology_host_name-synology-csi-smb-credentials -n kube-system --from-file=$csi_synology_host_protocol_secret_folder"
+            run "line '$LINENO';kubectl create secret generic $csi_synology_host_name-synology-csi-smb-credentials -n $csi_synology_namespace --from-file=$csi_synology_host_protocol_secret_folder"
             txt+="${separator}apiVersion: v1
 kind: Secret
 metadata:
   name: $csi_synology_host_name-synology-csi-smb-credentials
-  #namespace: $csi_synology_namespace
+  namespace: $csi_synology_namespace
 type: Opaque
 stringData:
   username: <username>  # DSM user account accessing the shared folder
@@ -540,7 +846,8 @@ kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
   name: $csi_synology_host_name-synology-csi-smb-$csi_synology_host_protocol_class_name
-  #namespace: $csi_synology_namespace
+  labels:
+    vkube/storage-type: synology-csi-smb
 provisioner: csi.san.synology.com
 parameters:
   protocol: \"smb\"
@@ -557,7 +864,8 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 kind: StorageClass
 metadata:
   name: $csi_synology_host_name-synology-csi-nfs-$csi_synology_host_protocol_class_name
-  #namespace: $csi_synology_namespace
+  labels:
+    vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com
 parameters:
   protocol: \"nfs\"
@@ -578,7 +886,7 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
       done
     done
   done
-#set +x
+  #set +x
   vlib.trace "generated storage classes=\n$txt"
   run "line '$LINENO';echo '$txt' > '$data_folder/generated-storage-classes.yaml'"
   #run "line '$LINENO';kubectl apply edit-last-applied -f '$data_folder/generated-storage-classes.yaml'"
@@ -594,10 +902,10 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
     # /etc/synology/client-info.yml
 
     #run "line '$LINENO';if ! ($(kubectl get namespace synology-csi > /dev/null )); then kubectl create namespace synology-csi; fi"
-    if kubectl get secret -n synology-csi client-info-secret > /dev/null ; then
-      run "line '$LINENO';kubectl delete secret -n synology-csi client-info-secret"
+    if kubectl get secret -n $csi_synology_namespace client-info-secret > /dev/null ; then
+      run "line '$LINENO';kubectl delete secret -n $csi_synology_namespace client-info-secret"
     fi
-    run "line '$LINENO';kubectl create secret -n synology-csi generic client-info-secret --from-file="$csi_synology_host_folder_with_dsm_secrets/client-info.yml""
+    run "line '$LINENO';kubectl create secret -n $csi_synology_namespace generic client-info-secret --from-file="$csi_synology_host_folder_with_dsm_secrets/client-info.yml""
     run "line '$LINENO';kubectl apply -f $vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version"
 
     if [ $csi_synology_snapshot_use -eq 1 ]; then
