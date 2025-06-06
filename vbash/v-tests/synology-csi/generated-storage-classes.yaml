@@ -7,7 +7,7 @@ metadata:
   labels:
     vkube/storage-type: synology-csi-iscsi
 provisioner: csi.san.synology.com
-parameters:
+parameters: # https://github.com/SynologyOpenSource/synology-csi
   fsType: btrfs
   dsm: 192.168.100.227
   location: /volume1
@@ -32,7 +32,7 @@ metadata:
   labels:
     vkube/storage-type: synology-csi-smb
 provisioner: csi.san.synology.com
-parameters:
+parameters: # https://github.com/SynologyOpenSource/synology-csi
   protocol: "smb"
   dsm: 192.168.100.227
   location: /volume1
@@ -48,7 +48,7 @@ metadata:
   labels:
     vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com
-parameters:
+parameters: # https://github.com/SynologyOpenSource/synology-csi
   protocol: "nfs"
   dsm: 192.168.100.227
   location: /volume1
@@ -65,7 +65,7 @@ metadata:
   labels:
     vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com
-parameters:
+parameters: # https://github.com/SynologyOpenSource/synology-csi
   protocol: "nfs"
   dsm: 192.168.100.223
   location: /volume1
@@ -92,7 +92,7 @@ metadata:
   labels:
     vkube/storage-type: synology-csi-smb
 provisioner: csi.san.synology.com
-parameters:
+parameters: # https://github.com/SynologyOpenSource/synology-csi
   protocol: "smb"
   dsm: 192.168.100.223
   location: /volume1

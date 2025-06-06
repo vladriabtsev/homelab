@@ -441,6 +441,61 @@ function vkube-k3s.busybox-install() {
     err_and_exit "Not implemented" ${LINENO}
   fi
 
+  local txt=""
+  local txt_deploy=""
+  local txt_deploy_vol=""
+  local txt_deploy_vol_mount=""
+  local separator=""
+
+  txt_deploy+="apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${args[name]}
+  namespace: ${args[--namespace]}
+  labels:
+    app: ${args[name]}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${args[name]}  
+  template:
+    metadata:
+      labels:
+        app: ${args[name]}
+    spec:
+      #securityContext: user for commands???
+      #  runAsUser: 1030  # Use UID of nsf_user on Synology
+      #  runAsGroup: 100  # Use GID user group on Synology
+      initContainers:
+      # https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#differences-from-regular-containers
+      - name: init
+        image: busybox:musl
+        # https://www.busybox.net/downloads/BusyBox.html
+        # https://boxmatrix.info/wiki/BusyBox-Commands
+        command: [ \"sh\", \"-c\" ]
+        args:
+        - |
+          #create archive directory
+          mkdir -p /home/mfs-csi && chown -R 999:999 /home/nfs-csi
+          mkdir -p /home/mfs-ext && chown -R 999:999 /home/nfs-ext
+          mkdir -p /home/smb-csi && chown -R 999:999 /home/smb-csi
+      containers:
+        - name: busybox
+          image: busybox:musl
+          imagePullPolicy: \"IfNotPresent\"
+          #args:
+          #- |
+            #create directory for NFS volume
+            #mkdir -p /home/nfs && chown -R 999:999 /home/nfs
+          command:
+            - \"sh\"
+            - \"-c\"
+            - 'while true; do sleep 6000; done'
+          resources:
+            limits:
+              memory: \"128Mi\"
+              cpu: \"100m\""
 
   for __s in "${_storage_classes[@]}"; do
   #local yaml
@@ -456,25 +511,99 @@ function vkube-k3s.busybox-install() {
 
     # get storage class label vkube/storage-type
     #err_and_exit "Not implemented" ${LINENO}
-
     case $__storage_type in
       iscsi )
-        err_and_exit "Not implemented" ${LINENO}
+        [[ "${access-mode}" == "ReadWriteMany" ]] && warn-and-trace "ReadWriteMany access mode is not supported for ISCSI"
+        txt+="${separator}apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${args[name]}-$__s-pvc
+  namespace: ${args[--namespace]}
+spec:
+  storageClassName: $__s
+  accessModes: 
+  - ${args[--access-mode]}
+  resources:
+    requests:
+      storage: ${args[--storage-size]}
+"
+        #err_and_exit "Not implemented" ${LINENO}
       ;;
       smb )
-        err_and_exit "Not implemented" ${LINENO}
+        txt+="${separator}apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${args[name]}-$__s-pvc
+  namespace: ${args[--namespace]}
+spec:
+  storageClassName: $__s
+  accessModes: 
+  - ${args[--access-mode]}
+  resources:
+    requests:
+      storage: ${args[--storage-size]}
+"
       ;;
       nfs )
-        err_and_exit "Not implemented" ${LINENO}
+        txt+="${separator}apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${args[name]}-$__s-pvc
+  namespace: ${args[--namespace]}
+spec:
+  storageClassName: $__s
+  accessModes: 
+  - ${args[--access-mode]}
+  resources:
+    requests:
+      storage: ${args[--storage-size]}
+"
       ;;
       synology-csi-iscsi )
-        err_and_exit "Not implemented" ${LINENO}
+        [[ "${access-mode}" == "ReadWriteMany" ]] && warn-and-trace "ReadWriteMany access mode is not supported for ISCSI"
+        txt+="${separator}apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${args[name]}-$__s-pvc
+  namespace: ${args[--namespace]}
+spec:
+  storageClassName: $__s
+  accessModes: 
+  - ${args[--access-mode]}
+  resources:
+    requests:
+      storage: ${args[--storage-size]}
+"
       ;;
       synology-csi-smb )
-        err_and_exit "Not implemented" ${LINENO}
+        txt+="${separator}apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${args[name]}-$__s-pvc
+  namespace: ${args[--namespace]}
+spec:
+  storageClassName: $__s
+  accessModes: 
+  - ${args[--access-mode]}
+  resources:
+    requests:
+      storage: ${args[--storage-size]}
+"
       ;;
       synology-csi-nfs )
-        err_and_exit "Not implemented" ${LINENO}
+        txt+="${separator}apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${args[name]}-$__s-pvc
+  namespace: ${args[--namespace]}
+spec:
+  storageClassName: $__s
+  accessModes: 
+  - ${args[--access-mode]}
+  resources:
+    requests:
+      storage: ${args[--storage-size]}
+"
       ;;
       * )
         if [[ -z $__storage_type ]]; then
@@ -483,20 +612,52 @@ function vkube-k3s.busybox-install() {
           err_and_exit "Storage class '$__s with label 'vkube/storage-type: $$__storage_type' is not supported" ${LINENO};
         fi
     esac
+        separator="---
+"
+    txt_deploy_vol+="
+      - name: ${args[name]}-$__s-vol
+        persistentVolumeClaim:
+          claimName: ${args[name]}-$__s-pvc"
+    txt_deploy_vol_mount+="
+          - name: ${args[name]}-$__s-vol
+            mountPath: /home/nfs-csi # The mountpoint inside the container"
   done
 
-  txt="apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: busybox-pvc-nfs-csi
-spec:
-  storageClassName: nfs-csi
-  accessModes: 
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Mi
-"
+  txt_deploy+="
+          volumeMounts:"
+  txt_deploy+="$txt_deploy_vol_mount"
+  txt_deploy+="
+      volumes:"
+  txt_deploy+="$txt_deploy_vol"
+  vlib.trace "generated PVCs=\n$txt"
+  if ! kubectl get namespace "${args[--namespace]}" > /dev/null ; then 
+    run "line '$LINENO';kubectl create namespace ${args[--namespace]}"
+  fi
+  run "line '$LINENO';kubectl apply -f - <<<\"${txt}\""
+
+  hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
+  run "line '$LINENO';kubectl apply -f - <<<\"${txt_deploy}\""
+  
+  err_and_exit "Not implemented" ${LINENO}
+
+
+  # ${args[--storage-class]}
+
+  # if ! [[ -e ${k3s_settings} ]]; then
+  #   err_and_exit "Cluster plan file '${k3s_settings}' is not found" ${LINENO};
+  # fi
+  # #echo $node_root_password
+  # if [[ -z $node_root_password ]]; then
+  #   node_root_password=""
+  #   vlib.read-password node_root_password "Please enter root password for cluster nodes:"
+  #   echo
+  # fi
+
+  # hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
+  # if command kubectl get deploy busybox -n busybox-system &> /dev/null; then
+  #   err_and_exit "Busybox already installed."  ${LINENO} "$0"
+  # fi
+
 txt="apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -523,30 +684,6 @@ spec:
             namespace: smb-example-namespace
 "
 txt="apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: busybox-pvc-nfs-ext
-spec:
-  storageClassName: nfs-client
-  accessModes: 
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 100Mi
-"
-txt="kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: busybox-pvc-smb-csi
-spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 100Mi
-  storageClassName: smb-csi
-"
-txt="apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: local-pv
@@ -561,100 +698,9 @@ spec:
   hostPath:
     path: /mnt/pv-data
 "
-txt="
-"
 
-  txt="apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: busybox
-  labels:
-    app: busybox
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: busybox  
-  template:
-    metadata:
-      labels:
-        app: busybox
-    spec:
-      #securityContext: user for commands???
-      #  runAsUser: 1030  # Use UID of nsf_user on Synology
-      #  runAsGroup: 100  # Use GID user group on Synology
-      initContainers:
-      # https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#differences-from-regular-containers
-      - name: init
-        image: busybox:musl
-        # https://www.busybox.net/downloads/BusyBox.html
-        # https://boxmatrix.info/wiki/BusyBox-Commands
-        command: [ \"sh\", \"-c\" ]
-        args:
-        - |
-          #create archive directory
-          mkdir -p /home/mfs-csi && chown -R 999:999 /home/nfs-csi
-          mkdir -p /home/mfs-ext && chown -R 999:999 /home/nfs-ext
-          mkdir -p /home/smb-csi && chown -R 999:999 /home/smb-csi
-      containers:
-        - name: busybox
-          image: busybox:musl
-          imagePullPolicy: \"IfNotPresent\"
-          #command: [ \"sh\", \"-c\" ]
-          #args: [\"while true; do sleep 30; done;\"]
-          #args:
-          #- |
-            #create directory for NFS volume
-            #mkdir -p /home/nfs && chown -R 999:999 /home/nfs
-          command:
-            - \"sh\"
-            - \"-c\"
-            - \"while true; do sleep 6000; done\"
-          resources:
-            limits:
-              memory: \"128Mi\"
-              cpu: \"100m\"
-          volumeMounts:
-          #  - name: nvme-vol
-          #    mountPath: /home/nvme # The mountpoint inside the container
-          - name: nfs-csi-vol
-            mountPath: /home/nfs-csi # The mountpoint inside the container
-          - name: nfs-ext-vol
-            mountPath: /home/nfs-ext # The mountpoint inside the container
-          - name: smb-csi-vol
-            mountPath: /home/smb-csi # The mountpoint inside the container
-      volumes:
-      # - name: nvme-vol
-      #   persistentVolumeClaim:
-      #     claimName: longhorn-nvme
-      - name: nfs-csi-vol
-        persistentVolumeClaim:
-          claimName: busybox-pvc-nfs-csi
-      - name: nfs-ext-vol
-        persistentVolumeClaim:
-          claimName: busybox-pvc-nfs-ext
-      - name: smb-csi-vol
-        persistentVolumeClaim:
-          claimName: busybox-pvc-smb-csi
-"
-
-  # ${args[--storage-class]}
-
-  # if ! [[ -e ${k3s_settings} ]]; then
-  #   err_and_exit "Cluster plan file '${k3s_settings}' is not found" ${LINENO};
-  # fi
-  # #echo $node_root_password
-  # if [[ -z $node_root_password ]]; then
-  #   node_root_password=""
-  #   vlib.read-password node_root_password "Please enter root password for cluster nodes:"
-  #   echo
-  # fi
-
-  hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
-  if command kubectl get deploy busybox -n busybox-system &> /dev/null; then
-    err_and_exit "Busybox already installed."  ${LINENO} "$0"
-  fi
   exit 1
+  err_and_exit "Not implemented" ${LINENO}
 }
 function vkube-k3s.busybox-uninstall() {
   hl.blue "$parent_step$((++install_step)). Uninstalling Busybox. (Line:$LINENO)"
@@ -821,7 +867,7 @@ metadata:
   labels:
     vkube/storage-type: synology-csi-iscsi
 provisioner: csi.san.synology.com
-parameters:
+parameters: # https://github.com/SynologyOpenSource/synology-csi
   fsType: '$csi_synology_host_protocol_class_fsType'
   dsm: '$csi_synology_host_dsm_ip4'
   location: '$csi_synology_host_protocol_class_location'
@@ -849,7 +895,7 @@ metadata:
   labels:
     vkube/storage-type: synology-csi-smb
 provisioner: csi.san.synology.com
-parameters:
+parameters: # https://github.com/SynologyOpenSource/synology-csi
   protocol: \"smb\"
   dsm: '$csi_synology_host_dsm_ip4'
   location: '$csi_synology_host_protocol_class_location'
@@ -867,7 +913,7 @@ metadata:
   labels:
     vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com
-parameters:
+parameters: # https://github.com/SynologyOpenSource/synology-csi
   protocol: \"nfs\"
   dsm: '$csi_synology_host_dsm_ip4'
   location: '$csi_synology_host_protocol_class_location'

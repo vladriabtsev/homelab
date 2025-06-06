@@ -35,6 +35,10 @@ function bashly_warn() {
 function echo_err() {
   echo "$(red_bold "$@")"
 }
+function warn-and-trace() {
+  echo "$(yellow_bold "$@")"
+  vlib.call-trace 1
+}
 function err_and_exit() {
   # if [ -z "$1" ]; then
   #   echo_err "Function err_and_exit is expecting error message as a first parameter"
