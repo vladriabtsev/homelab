@@ -109,7 +109,7 @@ Switch to:
 	192.168.2.121 3d0t-PC Viktor
 
 	192.168.2.200 win2022, updated BIOS TS140
-	192.168.2.221 synology downloader, admin Q1.., vladadmin Q1..
+	192.168.100.221 synology backup2, admin Q1.., vladadmin Q1..
 	192.168.2.222 synology backup, witness for office cluster
 	192.168.100.222 synology backup, witness for office cluster
 	192.168.13.222 synology backup, witness for office cluster

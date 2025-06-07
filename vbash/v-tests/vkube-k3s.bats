@@ -179,8 +179,15 @@ setup_file() {
 }
 # bats test_tags=tag:test
 @test "busybox installation integration tests" {
+  echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox-iscsi --storage-class office-synology-csi-iscsi-test-tmp" >&3
+  run ../vkube --trace busybox install test-busybox-iscsi --storage-class office-synology-csi-iscsi-test-tmp
+
+  # echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox-iscsi --storage-class office-synology-csi-iscsi-test" >&3
+  # run ../vkube --trace busybox install test-busybox-iscsi --storage-class office-synology-csi-iscsi-test
+
+
   echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox 1.37 --storage-class backup2-synology-csi-nfs-test" >&3
-  run ../vkube --trace busybox install test-busybox 1.37 --storage-class backup2-synology-csi-nfs-test
+  #run ../vkube --trace busybox install test-busybox 1.37 --storage-class backup2-synology-csi-nfs-test
   # https://github.com/bats-core/bats-assert#partial-matching
   #echo '# text' >&3
   assert_success

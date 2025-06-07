@@ -509,14 +509,14 @@ vkube_busybox_install_usage() {
     # :flag.usage
     printf "  %s\n" "$(magenta "--storage-size STORAGE-SIZE-REQUEST")"
     printf "    Storage size request for persistent volume claims for each storage class\n"
-    printf "    %s\n" "Default: 100M"
+    printf "    %s\n" "Default: 1Gi"
     printf "    %s\n" "Conflicts: --cluster-plan, --synology-csi-plan"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--access-mode ACCESS-MODE")"
     printf "    Storage access mode\n"
-    printf "    %s\n" "Allowed: ReadWriteOnce, ReadOnlyMany, ReadWriteMany"
+    printf "    %s\n" "Allowed: ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod"
     printf "    %s\n" "Default: ReadWriteOnce"
     echo
 
@@ -2699,12 +2699,12 @@ vkube_busybox_install_parse_requirements() {
   # :command.default_assignments
   [[ -n ${args['release']:-} ]] || args['release']="latest"
   [[ -n ${args['--namespace']:-} ]] || args['--namespace']="default"
-  [[ -n ${args['--storage-size']:-} ]] || args['--storage-size']="100M"
+  [[ -n ${args['--storage-size']:-} ]] || args['--storage-size']="1Gi"
   [[ -n ${args['--access-mode']:-} ]] || args['--access-mode']="ReadWriteOnce"
 
   # :command.whitelist_filter
-  if [[ ${args['--access-mode']:-} ]] && [[ ! ${args['--access-mode']:-} =~ ^(ReadWriteOnce|ReadOnlyMany|ReadWriteMany)$ ]]; then
-    printf "%s\n" "--access-mode must be one of: ReadWriteOnce, ReadOnlyMany, ReadWriteMany" >&2
+  if [[ ${args['--access-mode']:-} ]] && [[ ! ${args['--access-mode']:-} =~ ^(ReadWriteOnce|ReadOnlyMany|ReadWriteMany|ReadWriteOncePod)$ ]]; then
+    printf "%s\n" "--access-mode must be one of: ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod" >&2
     exit 1
   fi
 

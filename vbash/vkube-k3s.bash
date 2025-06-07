@@ -442,6 +442,7 @@ function vkube-k3s.busybox-install() {
   fi
 
   local txt=""
+  local txt_init_args=""
   local txt_deploy=""
   local txt_deploy_vol=""
   local txt_deploy_vol_mount=""
@@ -476,26 +477,8 @@ spec:
         command: [ \"sh\", \"-c\" ]
         args:
         - |
-          #create archive directory
-          mkdir -p /home/mfs-csi && chown -R 999:999 /home/nfs-csi
-          mkdir -p /home/mfs-ext && chown -R 999:999 /home/nfs-ext
-          mkdir -p /home/smb-csi && chown -R 999:999 /home/smb-csi
-      containers:
-        - name: busybox
-          image: busybox:musl
-          imagePullPolicy: \"IfNotPresent\"
-          #args:
-          #- |
-            #create directory for NFS volume
-            #mkdir -p /home/nfs && chown -R 999:999 /home/nfs
-          command:
-            - \"sh\"
-            - \"-c\"
-            - 'while true; do sleep 6000; done'
-          resources:
-            limits:
-              memory: \"128Mi\"
-              cpu: \"100m\""
+          #create mount directory
+          mkdir -p /usr/bin/env"
 
   for __s in "${_storage_classes[@]}"; do
   #local yaml
@@ -511,99 +494,34 @@ spec:
 
     # get storage class label vkube/storage-type
     #err_and_exit "Not implemented" ${LINENO}
+    txt+="${separator}apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${args[name]}-$__s-pvc
+  namespace: ${args[--namespace]}
+spec:
+  storageClassName: $__s
+  accessModes: 
+  - ${args[--access-mode]}
+  resources:
+    requests:
+      storage: ${args[--storage-size]}
+"
     case $__storage_type in
       iscsi )
         [[ "${access-mode}" == "ReadWriteMany" ]] && warn-and-trace "ReadWriteMany access mode is not supported for ISCSI"
-        txt+="${separator}apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ${args[name]}-$__s-pvc
-  namespace: ${args[--namespace]}
-spec:
-  storageClassName: $__s
-  accessModes: 
-  - ${args[--access-mode]}
-  resources:
-    requests:
-      storage: ${args[--storage-size]}
-"
         #err_and_exit "Not implemented" ${LINENO}
       ;;
       smb )
-        txt+="${separator}apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ${args[name]}-$__s-pvc
-  namespace: ${args[--namespace]}
-spec:
-  storageClassName: $__s
-  accessModes: 
-  - ${args[--access-mode]}
-  resources:
-    requests:
-      storage: ${args[--storage-size]}
-"
       ;;
-      nfs )
-        txt+="${separator}apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ${args[name]}-$__s-pvc
-  namespace: ${args[--namespace]}
-spec:
-  storageClassName: $__s
-  accessModes: 
-  - ${args[--access-mode]}
-  resources:
-    requests:
-      storage: ${args[--storage-size]}
-"
+      nfs ) # https://medium.com/@bastian.ohm/configuring-your-synology-nas-as-nfs-storage-for-kubernetes-cluster-5e668169e5a2
       ;;
       synology-csi-iscsi )
         [[ "${access-mode}" == "ReadWriteMany" ]] && warn-and-trace "ReadWriteMany access mode is not supported for ISCSI"
-        txt+="${separator}apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ${args[name]}-$__s-pvc
-  namespace: ${args[--namespace]}
-spec:
-  storageClassName: $__s
-  accessModes: 
-  - ${args[--access-mode]}
-  resources:
-    requests:
-      storage: ${args[--storage-size]}
-"
       ;;
       synology-csi-smb )
-        txt+="${separator}apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ${args[name]}-$__s-pvc
-  namespace: ${args[--namespace]}
-spec:
-  storageClassName: $__s
-  accessModes: 
-  - ${args[--access-mode]}
-  resources:
-    requests:
-      storage: ${args[--storage-size]}
-"
       ;;
       synology-csi-nfs )
-        txt+="${separator}apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ${args[name]}-$__s-pvc
-  namespace: ${args[--namespace]}
-spec:
-  storageClassName: $__s
-  accessModes: 
-  - ${args[--access-mode]}
-  resources:
-    requests:
-      storage: ${args[--storage-size]}
-"
       ;;
       * )
         if [[ -z $__storage_type ]]; then
@@ -614,15 +532,31 @@ spec:
     esac
         separator="---
 "
+    txt_init_args+="
+          mkdir -p /home/${args[name]}-$__s-vol && chown -R 999:999 /home/${args[name]}-$__s-vol"
     txt_deploy_vol+="
       - name: ${args[name]}-$__s-vol
         persistentVolumeClaim:
           claimName: ${args[name]}-$__s-pvc"
     txt_deploy_vol_mount+="
           - name: ${args[name]}-$__s-vol
-            mountPath: /home/nfs-csi # The mountpoint inside the container"
+            mountPath: /home/${args[name]}-$__s-vol # The mount point inside the container"
   done
 
+  txt_deploy+="$txt_init_args"
+  txt_deploy+="
+      containers:
+        - name: busybox
+          image: busybox:musl
+          imagePullPolicy: 'IfNotPresent'
+          command:
+            - 'sh'
+            - '-c'
+            - 'while true; do sleep 6000; done'
+          resources:
+            limits:
+              memory: '128Mi'
+              cpu: '100m'"
   txt_deploy+="
           volumeMounts:"
   txt_deploy+="$txt_deploy_vol_mount"
@@ -868,9 +802,10 @@ metadata:
     vkube/storage-type: synology-csi-iscsi
 provisioner: csi.san.synology.com
 parameters: # https://github.com/SynologyOpenSource/synology-csi
-  fsType: '$csi_synology_host_protocol_class_fsType'
-  dsm: '$csi_synology_host_dsm_ip4'
-  location: '$csi_synology_host_protocol_class_location'
+  # protocol: iscsi # default 'iscsi'
+  csi.storage.k8s.io/fstype: '$csi_synology_host_protocol_class_fsType'
+  dsm: \"$csi_synology_host_dsm_ip4\"
+  location: \"$csi_synology_host_protocol_class_location\"
   formatOptions: '--nodiscard'
 reclaimPolicy: $csi_synology_host_protocol_class_reclaimPolicy
 allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
@@ -879,15 +814,15 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
           SMB )
             run "line '$LINENO';kubectl create secret generic $csi_synology_host_name-synology-csi-smb-credentials -n $csi_synology_namespace --from-file=$csi_synology_host_protocol_secret_folder"
             txt+="${separator}apiVersion: v1
-kind: Secret
-metadata:
-  name: $csi_synology_host_name-synology-csi-smb-credentials
-  namespace: $csi_synology_namespace
-type: Opaque
-stringData:
-  username: <username>  # DSM user account accessing the shared folder
-  password: <password>  # DSM user password accessing the shared folder
----
+#kind: Secret
+# metadata:
+#   name: $csi_synology_host_name-synology-csi-smb-credentials
+#   namespace: $csi_synology_namespace
+# type: Opaque
+# stringData:
+#   username: <username>  # DSM user account accessing the shared folder
+#   password: <password>  # DSM user password accessing the shared folder
+# ---
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
@@ -914,15 +849,16 @@ metadata:
     vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com
 parameters: # https://github.com/SynologyOpenSource/synology-csi
-  protocol: \"nfs\"
-  dsm: '$csi_synology_host_dsm_ip4'
-  location: '$csi_synology_host_protocol_class_location'
+  protocol: nfs
+  dsm: \"$csi_synology_host_dsm_ip4\"
+  location: \"$csi_synology_host_protocol_class_location\"
   mountPermissions: \"$csi_synology_host_protocol_class_mountPermissions\"
 mountOptions:
-  - nfsvers='$csi_synology_host_protocol_class_mountOptions_nfsvers'
+  - nfsvers=$csi_synology_host_protocol_class_mountOptions_nfsvers
 reclaimPolicy: $csi_synology_host_protocol_class_reclaimPolicy
 allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 "
+            vlib.trace "csi_synology_host_protocol_class_location=$csi_synology_host_protocol_class_location"
           ;;
           * )
             err_and_exit "Unsupported storage protocol '$name'. Expected: ISCSI, SMB, NFS" ${LINENO};
@@ -943,7 +879,7 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
   #vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
   # echo $csi_synology_ver
   if [[ $(kubectl get pods -l app=controller,app.kubernetes.io/name=synology-csi -n synology-csi | wc -l) -eq 0 ]]; then # not installed yet
-    eval "csi_synology_host_folder_with_dsm_secrets=$csi_synology_host_folder_with_dsm_secrets"
+    eval "csi_synology_folder_with_dsm_secrets=$csi_synology_folder_with_dsm_secrets"
 
     # /etc/synology/client-info.yml
 
@@ -951,7 +887,7 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
     if kubectl get secret -n $csi_synology_namespace client-info-secret > /dev/null ; then
       run "line '$LINENO';kubectl delete secret -n $csi_synology_namespace client-info-secret"
     fi
-    run "line '$LINENO';kubectl create secret -n $csi_synology_namespace generic client-info-secret --from-file="$csi_synology_host_folder_with_dsm_secrets/client-info.yml""
+    run "line '$LINENO';kubectl create secret -n $csi_synology_namespace generic client-info-secret --from-file="$csi_synology_folder_with_dsm_secrets/client-info.yml""
     run "line '$LINENO';kubectl apply -f $vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version"
 
     if [ $csi_synology_snapshot_use -eq 1 ]; then
