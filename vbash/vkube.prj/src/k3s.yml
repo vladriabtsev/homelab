@@ -15,6 +15,13 @@ commands:
 
       Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command itself.
     default: k3s-HA
+  flags:
+  - long: --core
+    help: Install core cluster components. Install all if --core, --storage, and --apps flags are not set.
+  - long: --storage
+    help: All storage drivers. Install all if --core, --storage, and --apps flags are not set.
+  - long: --app
+    help: All applications. Install all if --core, --storage, and --apps flags are not set.
 
 - name: uninstall
   help: Uninstall k3s kubernetes

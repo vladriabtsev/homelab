@@ -470,8 +470,8 @@ function vlib.press-any-key() {
 }
 function vlib.check-data-for-secrets() {
   # $1 - folder path with secret data
-  [ -d "${HOME}/.ssh/k3s-HA-csi-synology-secrets" ] || err_and_exit "Can't find home folder."
-  [ -d ~/.ssh/k3s-HA-csi-synology-secrets ] || err_and_exit "Can't find home folder."
+  # [ -d "${HOME}/.ssh/k3s-HA-csi-synology-secrets" ] || err_and_exit "Can't find home folder."
+  # [ -d ~/.ssh/k3s-HA-csi-synology-secrets ] || err_and_exit "Can't find home folder."
   [ -d "$1" ] || err_and_exit "Can't find folder '$1'."
   [ -a "$1/username.txt" ] || err_and_exit "Can't find user name file '$1/username.txt'."
   [ -r "$1/username.txt" ] || err_and_exit "File '$1/username.txt' exists, but not readable."

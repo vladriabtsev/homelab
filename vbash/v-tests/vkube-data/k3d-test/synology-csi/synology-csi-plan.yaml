@@ -30,7 +30,7 @@ hosts:
   - name: NFS
     classes:
     - name: test
-      location: /volume1
+      location: /volume3
       mountPermissions: '0755'
       mountOptions_nfsvers: 4.1
       reclaimPolicy: Retain

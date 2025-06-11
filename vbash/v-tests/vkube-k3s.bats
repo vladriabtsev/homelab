@@ -30,25 +30,46 @@ setup() {
   #echo "teardown"
   #rm -f /tmp/bats-tutorial-project-ran
 #}
-setup_file() {
-  if kubectl cluster-info; then
-    echo "k3d cluster delete test" >&3
-    k3d cluster delete test
-  fi
-  if ! kubectl cluster-info; then
-    echo "k3d cluster create test --wait" >&3
-    k3d cluster create test --wait
-  fi
-}
+# setup_file() {
+#   # if kubectl cluster-info; then
+#   #   echo "k3d cluster delete test" >&3
+#   #   k3d cluster delete test
+#   # fi
+#   # if ! kubectl cluster-info; then
+#   #   echo "k3d cluster create k3d-test --wait" >&3
+#   #   k3d cluster create k3d-test --wait
+#   # fi
+# }
 #teardown_file() {
 #  k3d cluster delete test
 #}
 
+# https://bats-core.readthedocs.io/en/stable/writing-tests.html
+
+@test "k3d installation core" {
+  if kubectl cluster-info; then
+    echo "      k3d cluster delete test" >&3
+    run k3d cluster delete test
+  fi
+  echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --core" >&3
+  run ../vkube --cluster-plan k3d-test --trace k3s install --core
+  # https://github.com/bats-core/bats-assert#partial-matching
+  #echo '# text' >&3
+  assert_success
+}
+# bats test_tags=tag:test
+@test "k3d storage installation" {
+  echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage" >&3
+  run ../vkube --cluster-plan k3d-test --trace k3s install --storage
+  # https://github.com/bats-core/bats-assert#partial-matching
+  #echo '# text' >&3
+  assert_success
+}
 @test "synology-csi installation integration tests" {
   # https://bats-core.readthedocs.io/en/stable/writing-tests.html
   ##########################################################################################
-  echo "      Step $[step=$step+1]. ../vkube --trace synology-csi install ../v-tests/synology-csi/synology-csi-plan1.yaml --secret-folder ~/.ssh/k3s-HA-csi-synology-secrets" >&3
-  run ../vkube --trace synology-csi install ../v-tests/synology-csi/synology-csi-plan1.yaml --secret-folder "~/.ssh/k3s-HA-csi-synology-secrets"
+  echo "      Step $[step=$step+1]. ../vkube --trace synology-csi install ../v-tests/synology-csi/synology-csi-plan.yaml --secret-folder ~/.ssh/k3s-HA-csi-synology-secrets" >&3
+  run ../vkube --trace synology-csi install ../v-tests/synology-csi/synology-csi-plan.yaml --secret-folder "~/.ssh/k3s-HA-csi-synology-secrets"
   # https://github.com/bats-core/bats-assert#partial-matching
   #echo '# text' >&3
   assert_success
@@ -177,8 +198,13 @@ setup_file() {
   # run verify "there is 0 pod named 'snapshot-controller'"
   # assert_success
 }
-# bats test_tags=tag:test
 @test "busybox installation integration tests" {
+  echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox" >&3
+  run ../vkube --trace busybox install test-busybox
+
+  #echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox-nfs --storage-class office-synology-csi-nfs-test" >&3
+  #run ../vkube --trace busybox install test-busybox-nfs --storage-class office-synology-csi-nfs-test
+
   echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox-iscsi --storage-class office-synology-csi-iscsi-test-tmp" >&3
   run ../vkube --trace busybox install test-busybox-iscsi --storage-class office-synology-csi-iscsi-test-tmp
 
