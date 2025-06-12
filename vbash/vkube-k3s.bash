@@ -89,6 +89,9 @@ function vkube-k3s.cluster-plan-read() {
   # https://www.baeldung.com/linux/yq-utility-processing-yaml
 
   #source k3s-func.sh
+  #csi_driver_synology_csi_namespace="kube-system"
+  csi_driver_nfs_namespace="kube-system"
+  csi_driver_smb_namespace="kube-system"
 
   if [[ $(yq --exit-status 'tag == "!!map" or tag== "!!seq"' $k3s_settings > /dev/null) ]]; then
     err_and_exit "Error: Invalid format for YAML file: '$k3s_settings'." ${LINENO}
@@ -727,12 +730,14 @@ function vkube-k3s.csi-synology-install() {
   vlib.trace "data folder=$data_folder"
 
   # Defaults
-  csi_synology_namespace="synology-csi"
   # Root level scalar settings
   eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_" + key + "='\''" + . + "'\''")'  < ${synology_csi_plan})"
 
-  if ! kubectl get namespace $csi_synology_namespace > /dev/null ; then 
-    run "line '$LINENO';kubectl create namespace $csi_synology_namespace"
+  csi_driver_synology_csi_namespace="synology-csi"
+  vlib.trace "csi_driver_synology_csi_namespace=${csi_driver_synology_csi_namespace}"
+
+  if ! kubectl get namespace $csi_driver_synology_csi_namespace > /dev/null; then 
+    run "line '$LINENO';kubectl create namespace $csi_driver_synology_csi_namespace"
   fi
 
   readarray csi_synology_hosts < <(yq -o=j -I=0 ".hosts[]" "${synology_csi_plan}")
@@ -815,15 +820,15 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 "
           ;;
           SMB )
-            if kubectl get secret -n $csi_synology_namespace $csi_synology_host_name-synology-csi-smb-credentials > /dev/null ; then
-              run "line '$LINENO';kubectl delete secret -n $csi_synology_namespace $csi_synology_host_name-synology-csi-smb-credentials"
+            if kubectl get secret -n $csi_driver_synology_csi_namespace $csi_synology_host_name-synology-csi-smb-credentials > /dev/null ; then
+              run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace $csi_synology_host_name-synology-csi-smb-credentials"
             fi
-            run "line '$LINENO';kubectl create secret generic $csi_synology_host_name-synology-csi-smb-credentials -n $csi_synology_namespace --from-file=$csi_synology_host_protocol_secret_folder"
+            run "line '$LINENO';kubectl create secret generic $csi_synology_host_name-synology-csi-smb-credentials -n $csi_driver_synology_csi_namespace --from-file=$csi_synology_host_protocol_secret_folder"
             txt+="${separator}#apiVersion: v1
 #kind: Secret
 # metadata:
 #   name: $csi_synology_host_name-synology-csi-smb-credentials
-#   namespace: $csi_synology_namespace
+#   namespace: $csi_driver_synology_csi_namespace
 # type: Opaque
 # stringData:
 #   username: <username>  # DSM user account accessing the shared folder
@@ -890,10 +895,10 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
     # /etc/synology/client-info.yml
 
     #run "line '$LINENO';if ! ($(kubectl get namespace synology-csi > /dev/null )); then kubectl create namespace synology-csi; fi"
-    if kubectl get secret -n $csi_synology_namespace client-info-secret > /dev/null ; then
-      run "line '$LINENO';kubectl delete secret -n $csi_synology_namespace client-info-secret"
+    if kubectl get secret -n $csi_driver_synology_csi_namespace client-info-secret > /dev/null ; then
+      run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace client-info-secret"
     fi
-    run "line '$LINENO';kubectl create secret -n $csi_synology_namespace generic client-info-secret --from-file="$csi_synology_folder_with_dsm_secrets/client-info.yml""
+    run "line '$LINENO';kubectl create secret -n $csi_driver_synology_csi_namespace generic client-info-secret --from-file="$csi_synology_folder_with_dsm_secrets/client-info.yml""
     run "line '$LINENO';kubectl apply -f $vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version"
 
     if [ $csi_synology_snapshot_use -eq 1 ]; then
@@ -1063,17 +1068,23 @@ volumeBindingMode: WaitForFirstConsumer\""
       # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
       vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
       #echo $csi_driver_smb_ver
-      if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n kube-system | wc -l) -eq 0 ]]; then
+      if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n ${csi_driver_smb_namespace} | wc -l) -eq 0 ]]; then
+        if ! kubectl get namespace $csi_driver_smb_namespace > /dev/null; then 
+          run "line '$LINENO';kubectl create namespace $csi_driver_smb_namespace"
+        fi
         eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
         vlib.check-data-for-secrets "$csi_driver_smb_secret_folder"
         run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
-        run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb --namespace kube-system --version $csi_driver_smb_ver"
+        run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb -n ${csi_driver_smb_namespace} --version $csi_driver_smb_ver"
         # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
         # https://kubernetes.io/docs/concepts/configuration/secret/
         # https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
         # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
         run "line '$LINENO';if ! test -e $csi_driver_smb_secret_folder; then  mkdir $csi_driver_smb_secret_folder; fi"
-        run "line '$LINENO';kubectl create secret generic smb-csi-creds -n kube-system --from-file=$csi_driver_smb_secret_folder"
+        if kubectl get secret -n $csi_driver_synology_csi_namespace smb-csi-creds > /dev/null ; then
+          run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace smb-csi-creds"
+        fi
+        run "line '$LINENO';kubectl create secret generic smb-csi-creds -n ${csi_driver_smb_namespace} --from-file=$csi_driver_smb_secret_folder"
       else
         inf "... already installed. (Line:$LINENO)\n"
       fi
@@ -1087,11 +1098,14 @@ volumeBindingMode: WaitForFirstConsumer\""
       inf "csi-driver-nfs (Line:$LINENO)\n"
       vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
       #echo ${csi_driver_nfs_ver:1}
-      if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n kube-system | wc -l) -eq 0 ]]; then
+      if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n ${csi_driver_nfs_namespace} | wc -l) -eq 0 ]]; then
+        if ! kubectl get namespace $csi_driver_nfs_namespace > /dev/null; then 
+          run "line '$LINENO';kubectl create namespace $csi_driver_nfs_namespace"
+        fi
         eval "csi_driver_nfs_secret_folder=$csi_driver_nfs_secret_folder"
         vlib.check-data-for-secrets "$csi_driver_nfs_secret_folder"
         run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
-        run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs --namespace kube-system --version $csi_driver_nfs_ver"
+        run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs --namespace ${csi_driver_nfs_namespace} --version $csi_driver_nfs_ver"
         # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
       else
         inf "... already installed. (Line:$LINENO)\n"

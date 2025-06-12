@@ -25,21 +25,24 @@ local_storage_use: 1
 
 # https://github.com/SynologyOpenSource/synology-csi
 csi_synology_use: 1 # csi-synology/csi-synology-plan.yaml is expected in same folder as this file
+#csi_driver_synology_csi_namespace: csi-synology
 
 # https://github.com/kubernetes-csi/csi-driver-smb
 csi_driver_smb_use: 1
 csi_driver_smb_ver:   # auto upgrade to latest if empty
 csi_driver_smb_secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
+csi_driver_smb_namespace: csi-smb
 
 # https://github.com/kubernetes-csi/csi-driver-nfs
 csi_driver_nfs_use: 1
 csi_driver_nfs_ver:  # auto upgrade to latest if empty
 csi_driver_nfs_secret_folder: ${HOME}/.ssh/office-nfs-secrets # folder with username.txt and password.txt files
+csi_driver_nfs_namespace: csi-nfs
 
 # https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner
 # https://hbayraktar.medium.com/how-to-setup-dynamic-nfs-provisioning-in-a-kubernetes-cluster-cbf433b7de29
 # synology https://forum.huawei.com/enterprise/intl/en/thread/blog/729566720127025152?blogId=729566720127025152
-nfs_subdir_external_provisioner_use: 1
+nfs_subdir_external_provisioner_use: 0
 nfs_subdir_external_provisioner_ver:  # auto upgrade to latest if empty
 nfs_subdir_external_provisioner_server: 192.168.100.227
 nfs_subdir_external_provisioner_server_path: /volume1/k8s-nfs-ext

@@ -1,5 +1,4 @@
 # https://github.com/SynologyOpenSource/synology-csi
-namespace: synology-csi
 snapshot_use: 0
 #csi_synology_ver: v1.2.0 # auto upgrade to latest if empty
 

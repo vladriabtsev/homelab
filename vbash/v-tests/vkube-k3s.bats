@@ -18,6 +18,8 @@ setup() {
   source ../vlib.bash
   source ../vkube-k3s.bash
 
+  #vlib.bashly-init-error-handler
+
   # get the containing directory of this file
   # use $BATS_TEST_FILENAME instead of ${BASH_SOURCE[0]} or $0,
   # as those will point to the bats executable's location or the preprocessed file respectively
@@ -46,25 +48,78 @@ setup() {
 
 # https://bats-core.readthedocs.io/en/stable/writing-tests.html
 
-@test "k3d installation core" {
-  if kubectl cluster-info; then
+@test "k3d core installation" {
+  #if kubectl cluster-info; then
     echo "      k3d cluster delete test" >&3
     run k3d cluster delete test
-  fi
+  #fi
   echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --core" >&3
   run ../vkube --cluster-plan k3d-test --trace k3s install --core
+  sleep 20
+  assert_success
+
   # https://github.com/bats-core/bats-assert#partial-matching
-  #echo '# text' >&3
+  echo '      Testing...' >&3
+  sleep 60
+  DETIK_CLIENT_NAMESPACE="kube-system"
+  echo '      Testing traefik' >&3
+  run verify "there are 1 pods named '^traefik'"
+  assert_success
+  run try "at most 10 times every 30s to get pods named '^traefik' and verify that 'status' is 'running'"
+  assert_success
+  run verify "'status' is 'running' for pods named '^traefik'"
   assert_success
 }
 # bats test_tags=tag:test
 @test "k3d storage installation" {
   echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage" >&3
   run ../vkube --cluster-plan k3d-test --trace k3s install --storage
-  # https://github.com/bats-core/bats-assert#partial-matching
-  #echo '# text' >&3
+  sleep 10
   assert_success
-}
+
+  # https://github.com/bats-core/bats-assert#partial-matching
+  echo '      Testing...' >&3
+  sleep 60
+
+  DETIK_CLIENT_NAMESPACE="synology-csi"
+  echo '      Testing synology-csi-node' >&3
+  run try "at most 5 times every 30s to get pods named '^synology-csi-node' and verify that 'status' is 'running'"
+  assert_success
+  # run verify "there are 2 pods named '^synology-csi-node'"
+  # assert_success
+  echo '      Testing synology-csi-controller' >&3
+  run try "at most 5 times every 30s to get pods named '^synology-csi-controller' and verify that 'status' is 'running'"
+  assert_success
+  # run verify "there are 4 pods named '^synology-csi-controller'"
+  # assert_success
+
+  DETIK_CLIENT_NAMESPACE="csi-nfs"
+  echo '      Testing csi-nfs-node' >&3
+  run try "at most 5 times every 30s to get pods named '^csi-nfs-node' and verify that 'status' is 'running'"
+  assert_success
+  # run verify "there are 3 pods named '^csi-nfs-node'"
+  # assert_success
+  echo '      Testing csi-nfs-controller' >&3
+  run try "at most 5 times every 30s to get pods named '^csi-nfs-controller' and verify that 'status' is 'running'"
+  assert_success
+  # run verify "there are 5 pods named '^csi-nfs-controller'"
+  # assert_success
+
+  DETIK_CLIENT_NAMESPACE="csi-smb"
+  echo '      Testing csi-smb-node' >&3
+  run try "at most 5 times every 30s to get pods named '^csi-smb-node' and verify that 'status' is 'running'"
+  assert_success
+  # run verify "there are 3 pods named '^csi-smb-node'"
+  # assert_success
+  echo '      Testing csi-smb-controller' >&3
+  run try "at most 5 times every 30s to get pods named '^csi-smb-controller' and verify that 'status' is 'running'"
+  assert_success
+  # run verify "there are 4 pods named '^csi-smb-controller'"
+  # assert_success
+
+  # run try "at most 2 times every 30s to find 1 pods named 'nfs-subdir-external-provisioner' with 'status' being 'running'"
+  # assert_success
+} 
 @test "synology-csi installation integration tests" {
   # https://bats-core.readthedocs.io/en/stable/writing-tests.html
   ##########################################################################################
