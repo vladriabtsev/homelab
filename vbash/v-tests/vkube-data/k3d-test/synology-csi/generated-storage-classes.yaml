@@ -1,11 +1,11 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "false"
-  name: office-synology-csi-iscsi-test-tmp
+  name: office-synology-csi-iscsi-tmp
   labels:
     vkube/storage-type: synology-csi-iscsi
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
 provisioner: csi.san.synology.com
 parameters: # https://github.com/SynologyOpenSource/synology-csi
   # protocol: iscsi # default iscsi
@@ -19,11 +19,11 @@ allowVolumeExpansion: false
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  annotations:
-    storageclass.kubernetes.io/is-default-class: "false"
-  name: office-synology-csi-iscsi-test
+  name: office-synology-csi-iscsi-retain
   labels:
     vkube/storage-type: synology-csi-iscsi
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
 provisioner: csi.san.synology.com
 parameters: # https://github.com/SynologyOpenSource/synology-csi
   # protocol: iscsi # default iscsi
@@ -47,7 +47,7 @@ allowVolumeExpansion: false
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: office-synology-csi-smb-test
+  name: office-synology-csi-smb-tmp
   labels:
     vkube/storage-type: synology-csi-smb
 provisioner: csi.san.synology.com
@@ -63,7 +63,7 @@ allowVolumeExpansion: false
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: office-synology-csi-nfs-test
+  name: office-synology-csi-nfs-retain
   labels:
     vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com
@@ -80,7 +80,7 @@ allowVolumeExpansion: true
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: backup2-synology-csi-nfs-test
+  name: backup2-synology-csi-nfs-retain
   labels:
     vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com
@@ -107,7 +107,7 @@ allowVolumeExpansion: true
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: backup2-synology-csi-smb-test
+  name: backup2-synology-csi-smb-tmp
   labels:
     vkube/storage-type: synology-csi-smb
 provisioner: csi.san.synology.com

@@ -17,18 +17,18 @@ hosts:
   protocols:
   - name: ISCSI
     classes:
-    - name: test-tmp
+    - name: tmp
       fsType: 'btrfs'
-    - name: test
+    - name: retain
       fsType: 'ext4'
       reclaimPolicy: Retain
   - name: SMB
     secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
     classes:
-    - name: test
+    - name: tmp
   - name: NFS
     classes:
-    - name: test
+    - name: retain
       location: /volume3
       mountPermissions: '0755'
       mountOptions_nfsvers: 4.1
@@ -41,7 +41,7 @@ hosts:
   protocols:
   - name: NFS
     classes:
-    - name: test
+    - name: retain
       location: '/Volume1/csi-nfs' # 'Volume1' without spaces !!!
       mountPermissions: '0755'
       mountOptions_nfsvers: 4.1
@@ -50,5 +50,5 @@ hosts:
   - name: SMB
     secret_folder: ${HOME}/.ssh/backup2-smb-secrets # folder with username.txt and password.txt files
     classes:
-    - name: test
+    - name: tmp
       location: /volume1
