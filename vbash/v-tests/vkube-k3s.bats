@@ -27,6 +27,8 @@ setup() {
   echo $DIR
   # make executables in src/ visible to PATH
   PATH="$DIR/../src:$PATH"
+
+  data_folder="./vkube-data/k3d-test"
 }
 #teardown() {
   #echo "teardown"
@@ -211,6 +213,7 @@ setup() {
 @test "storage: smb-csi tests" {
   local storage="smb-csi"
   echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
+  #kubectl delete -f "$data_folder/generated-$2-write-read.yaml" --ignore-not-found=true
   kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
   kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
 

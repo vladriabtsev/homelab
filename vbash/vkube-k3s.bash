@@ -1032,11 +1032,14 @@ spec:
           claimName: $2-test-pvc
       restartPolicy: Never
 "
+  #endregion read and write jobs
   if ! kubectl get namespace $1 > /dev/null; then 
     kubectl create namespace $1
   fi
   vlib.trace "jobs=$txt"
-  kubectl apply -f - <<<"${txt}"
+  #kubectl apply -f - <<<"${txt}"
+  echo "$txt" > "$data_folder/storage-speed/generated-$2-write-read.yaml"
+  kubectl apply -f "$data_folder/storage-speed/generated-$2-write-read.yaml"
 }
 function vkube-k3s.csi-synology-uninstall() {
   local deploy_k8s_version="v1.20"
@@ -1488,6 +1491,9 @@ volumeBindingMode: WaitForFirstConsumer\""
     fi
     if [ $csi_driver_nfs_use -eq 1 ]; then
       inf "csi-driver-nfs (Line:$LINENO)\n"
+      # https://github.com/kubernetes-csi/csi-driver-nfs
+      # https://rudimartinsen.com/2024/01/09/nfs-csi-driver-kubernetes/
+      # https://microk8s.io/docs/how-to-nfs
       vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
       #echo ${csi_driver_nfs_ver:1}
       if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n ${csi_driver_nfs_namespace} | wc -l) -eq 0 ]]; then
