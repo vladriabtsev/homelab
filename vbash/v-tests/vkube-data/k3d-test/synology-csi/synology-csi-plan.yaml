@@ -19,6 +19,7 @@ hosts:
     classes:
     - name: tmp
       fsType: 'btrfs'
+      reclaimPolicy: Delete
     - name: retain
       fsType: 'ext4'
       reclaimPolicy: Retain

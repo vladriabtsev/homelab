@@ -871,14 +871,17 @@ metadata:
     storageclass.kubernetes.io/is-default-class: \"false\"
 provisioner: csi.san.synology.com
 parameters: # https://github.com/SynologyOpenSource/synology-csi
-  # protocol: iscsi # default 'iscsi'
-  csi.storage.k8s.io/fstype: '$csi_synology_host_protocol_class_fsType'
+  protocol: iscsi
   dsm: \"$csi_synology_host_dsm_ip4\"
-  location: \"$csi_synology_host_protocol_class_location\"
+  location: \"$csi_synology_host_protocol_class_location\" # if blank, the CSI driver will choose a volume on DSM with available storage to create the volumes
+  csi.storage.k8s.io/fstype: '$csi_synology_host_protocol_class_fsType'
   formatOptions: '--nodiscard'
 reclaimPolicy: $csi_synology_host_protocol_class_reclaimPolicy
 allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 "
+            # formatOptions
+            # https://linux.die.net/man/8/mkfs
+            # https://linux.die.net/man/8/mkfs.ext4
             #endregion
           ;;
           synology-csi-smb )
@@ -886,27 +889,12 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
             storage_class="$csi_synology_host_name-synology-csi-smb-$csi_synology_host_protocol_class_name"
 
             vlib.trace "secret_folder_name=$secret_folder_name"
-            run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace $secret_folder_name --ignore-not-found=true"
+            run "line '$LINENO';kubectl delete secret $secret_folder_name -n $csi_driver_synology_csi_namespace --ignore-not-found=true"
             # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
             run "line '$LINENO';kubectl create secret generic $secret_folder_name -n $csi_driver_synology_csi_namespace --from-file=$csi_synology_host_protocol_secret_folder"
 
-            # if kubectl get secret -n $csi_driver_synology_csi_namespace $csi_synology_host_name-synology-csi-smb-credentials > /dev/null ; then
-            #   run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace $csi_synology_host_name-synology-csi-smb-credentials"
-            # fi
-            # run "line '$LINENO';kubectl create secret generic $csi_synology_host_name-synology-csi-smb-credentials -n $csi_driver_synology_csi_namespace --from-file=$csi_synology_host_protocol_secret_folder"
-
             #region
-            txt+="${separator}#apiVersion: v1 # line:${LINENO}
-#kind: Secret
-# metadata:
-#   name: $csi_synology_host_name-synology-csi-smb-credentials
-#   namespace: $csi_driver_synology_csi_namespace
-# type: Opaque
-# stringData:
-#   username: <username>  # DSM user account accessing the shared folder
-#   password: <password>  # DSM user password accessing the shared folder
-# ---
-apiVersion: storage.k8s.io/v1
+            txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
 kind: StorageClass
 metadata:
   name: $storage_class
@@ -916,9 +904,9 @@ provisioner: csi.san.synology.com
 parameters: # https://github.com/SynologyOpenSource/synology-csi
   protocol: \"smb\"
   dsm: '$csi_synology_host_dsm_ip4'
-  location: '$csi_synology_host_protocol_class_location'
-  csi.storage.k8s.io/node-stage-secret-name: \"synology-$csi_synology_host_name-csi-smb-credentials\"
-  csi.storage.k8s.io/node-stage-secret-namespace: \"default\"
+  location: '$csi_synology_host_protocol_class_location' # if blank, the CSI driver will choose a volume on DSM with available storage to create the volumes
+  csi.storage.k8s.io/node-stage-secret-name: $secret_folder_name
+  csi.storage.k8s.io/node-stage-secret-namespace: $csi_driver_synology_csi_namespace
 reclaimPolicy: $csi_synology_host_protocol_class_reclaimPolicy
 allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 "
@@ -937,7 +925,7 @@ provisioner: csi.san.synology.com
 parameters: # https://github.com/SynologyOpenSource/synology-csi
   protocol: nfs
   dsm: \"$csi_synology_host_dsm_ip4\"
-  location: \"$csi_synology_host_protocol_class_location\"
+  location: \"$csi_synology_host_protocol_class_location\" # if blank, the CSI driver will choose a volume on DSM with available storage to create the volumes
   mountPermissions: \"$csi_synology_host_protocol_class_mountPermissions\"
 mountOptions:
   - nfsvers=$csi_synology_host_protocol_class_mountOptions_nfsvers
@@ -1294,6 +1282,7 @@ spec:
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
+  # https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
   storageClassName: local-storage
   hostPath:
     path: /mnt/pv-data

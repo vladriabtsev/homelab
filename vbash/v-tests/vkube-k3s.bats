@@ -123,6 +123,9 @@ setup() {
   # run try "at most 2 times every 30s to find 1 pods named 'nfs-subdir-external-provisioner' with 'status' being 'running'"
   # assert_success
 } 
+
+# storage
+# https://kubernetes.io/docs/concepts/storage/volumes/
 # bats test_tags=tag:speed
 @test "storage: local-path tests" {
   local storage="local-path"
@@ -147,7 +150,7 @@ setup() {
 } 
 # bats test_tags=tag:failed
 @test "storage: local-storage tests" {
-  skip
+  # https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
   local storage="local-storage"
   echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
   kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
@@ -303,6 +306,7 @@ setup() {
   assert_success
   echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
 } 
+
 @test "synology-csi installation integration tests" {
   skip
   # https://bats-core.readthedocs.io/en/stable/writing-tests.html
