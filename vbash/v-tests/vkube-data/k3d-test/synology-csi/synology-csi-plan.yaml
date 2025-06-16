@@ -15,23 +15,23 @@ hosts:
   # https://github.com/SynologyOpenSource/synology-csi # Creating a Secret
   protocol_class_location: "/volume3" # 'volume3' wiyhout spaces!!! default for all internal elements
   protocols:
-  - name: ISCSI
+  - name: synology-csi-iscsi #ISCSI
     classes:
     - name: tmp
       fsType: 'btrfs'
     - name: retain
       fsType: 'ext4'
       reclaimPolicy: Retain
-  - name: SMB
+  - name: synology-csi-smb
     secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
     classes:
     - name: tmp
-  - name: NFS
+  - name: synology-csi-nfs
     classes:
     - name: retain
       location: /volume3
       mountPermissions: '0755'
-      mountOptions_nfsvers: 4.1
+      mountOptions_nfsvers: 4.0
       reclaimPolicy: Retain
       allowVolumeExpansion: true
 - name: backup2
@@ -39,15 +39,15 @@ hosts:
   #dsm_port: 5101
   #https: false
   protocols:
-  - name: NFS
+  - name: synology-csi-nfs
     classes:
     - name: retain
       location: '/Volume1/csi-nfs' # 'Volume1' without spaces !!!
       mountPermissions: '0755'
-      mountOptions_nfsvers: 4.1
+      mountOptions_nfsvers: 4.0
       reclaimPolicy: Retain
       allowVolumeExpansion: true
-  - name: SMB
+  - name: synology-csi-smb
     secret_folder: ${HOME}/.ssh/backup2-smb-secrets # folder with username.txt and password.txt files
     classes:
     - name: tmp

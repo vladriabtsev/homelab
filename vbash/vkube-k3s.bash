@@ -364,6 +364,9 @@ function vkube-k3s.install() {
 
   vkube-k3s.cluster-plan-read
 
+  local data_folder=$(dirname "${k3s_settings}")
+  vlib.trace "data folder=$data_folder"
+
   # Amount of nodes
   if [[ $amount_nodes =~ ^[0-9]{1,3}$ && $amount_nodes -gt 0 ]]; then
     inf "               amount_nodes: '$amount_nodes'\n"
@@ -741,6 +744,7 @@ function vkube-k3s.get-storage-class-type() { # backup2-synology-csi-nfs-test
   echo "$type"
 }
 function vkube-k3s.csi-synology-install() {
+  hl.blue "$((++install_step)). Generate storage classes for synology csi driver. (Line:$LINENO)"
   # https://www.talos.dev/v1.10/kubernetes-guides/configuration/synology-csi/
   # https://www.youtube.com/watch?v=c6Qf9UeHld0
   # https://github.com/Tech-Byte-Tips/Reference-Guides/tree/main/Installing%20the%20Synology%20CSI%20Driver%20with%20the%20Snapshot%20feature%20in%20k3s
@@ -784,10 +788,11 @@ function vkube-k3s.csi-synology-install() {
   vlib.trace "storage hosts count=${#csi_synology_hosts[@]}"
   local txt=""
   local separator=""
+  local storage_class=""
   i_host=-1
 
   #vlib.trace "default reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
-  declare -A host_names=()
+  declare -A host_names_dic=()
   for csi_synology_host in "${csi_synology_hosts[@]}"; do
     i_host+=1
     vlib.trace "storage host=$csi_synology_host"
@@ -797,11 +802,11 @@ function vkube-k3s.csi-synology-install() {
     if [[ -z $csi_synology_host_name ]]; then
       err_and_exit "Empty host name. Configuration YAML file: '${synology_csi_plan}'." ${LINENO}
     fi
-    if [[ -v host_names["${csi_synology_host_name}"] ]]; then
-      vlib.trace "host names(${#host_names[@]})=" "${!host_names[@]}"
+    if [[ -v host_names_dic["${csi_synology_host_name}"] ]]; then
+      vlib.trace "host names(${#host_names_dic[@]})=" "${!host_names_dic[@]}"
       err_and_exit "Host name is not unique. Configuration YAML file: '${synology_csi_plan}'. Host name '$csi_synology_host_name'." ${LINENO}
     fi
-    host_names["${csi_synology_host_name}"]='y'
+    host_names_dic["${csi_synology_host_name}"]='y'
     readarray csi_synology_host_protocols < <(echo $csi_synology_host | yq -o=j -I=0 ".protocols[]")
     vlib.trace "storage protocols count=${#csi_synology_host_protocols[@]}"
     if [[ ${#csi_synology_host_protocols[@]} -eq 0 ]]; then
@@ -838,13 +843,28 @@ function vkube-k3s.csi-synology-install() {
         eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_host_protocol_class_" + key + "='\''" + . + "'\''")' <<<$csi_synology_host_protocol_class)"
         vlib.trace "storage class name=$csi_synology_host_protocol_class_name"
         #vlib.trace "reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
+        if [[ -z $csi_synology_host_protocol_class_location ]]; then
+          err_and_exit "Empty location. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        fi
+        if [[ -z $csi_synology_host_protocol_class_reclaimPolicy ]]; then
+          err_and_exit "Empty reclaimPolicy. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        fi
+        if [[ -z $csi_synology_host_protocol_class_allowVolumeExpansion ]]; then
+          err_and_exit "Empty allowVolumeExpansion. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        fi
+        # if [[ -z $csi_synology_host_protocol_class_mountPermissions ]]; then
+        #   err_and_exit "Empty mountPermissions. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        # fi
         case $csi_synology_host_protocol_name in
-          ISCSI )
+          synology-csi-iscsi )
+            # Not working, but see next fix
+            # https://github.com/SynologyOpenSource/synology-csi/pull/85/commits/bf76a99957e78bbb8ec6b1d640625942182d1924
+            storage_class="$csi_synology_host_name-synology-csi-iscsi-$csi_synology_host_protocol_class_name"
             #region
-            txt+="${separator}apiVersion: storage.k8s.io/v1
+            txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
 kind: StorageClass
 metadata:
-  name: $csi_synology_host_name-synology-csi-iscsi-$csi_synology_host_protocol_class_name
+  name: $storage_class
   labels:
     vkube/storage-type: synology-csi-iscsi
   annotations:
@@ -861,13 +881,22 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 "
             #endregion
           ;;
-          SMB )
-            if kubectl get secret -n $csi_driver_synology_csi_namespace $csi_synology_host_name-synology-csi-smb-credentials > /dev/null ; then
-              run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace $csi_synology_host_name-synology-csi-smb-credentials"
-            fi
-            run "line '$LINENO';kubectl create secret generic $csi_synology_host_name-synology-csi-smb-credentials -n $csi_driver_synology_csi_namespace --from-file=$csi_synology_host_protocol_secret_folder"
+          synology-csi-smb )
+            secret_folder_name=$(basename "$csi_synology_host_protocol_secret_folder")
+            storage_class="$csi_synology_host_name-synology-csi-smb-$csi_synology_host_protocol_class_name"
+
+            vlib.trace "secret_folder_name=$secret_folder_name"
+            run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace $secret_folder_name --ignore-not-found=true"
+            # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
+            run "line '$LINENO';kubectl create secret generic $secret_folder_name -n $csi_driver_synology_csi_namespace --from-file=$csi_synology_host_protocol_secret_folder"
+
+            # if kubectl get secret -n $csi_driver_synology_csi_namespace $csi_synology_host_name-synology-csi-smb-credentials > /dev/null ; then
+            #   run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace $csi_synology_host_name-synology-csi-smb-credentials"
+            # fi
+            # run "line '$LINENO';kubectl create secret generic $csi_synology_host_name-synology-csi-smb-credentials -n $csi_driver_synology_csi_namespace --from-file=$csi_synology_host_protocol_secret_folder"
+
             #region
-            txt+="${separator}#apiVersion: v1
+            txt+="${separator}#apiVersion: v1 # line:${LINENO}
 #kind: Secret
 # metadata:
 #   name: $csi_synology_host_name-synology-csi-smb-credentials
@@ -880,7 +909,7 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: $csi_synology_host_name-synology-csi-smb-$csi_synology_host_protocol_class_name
+  name: $storage_class
   labels:
     vkube/storage-type: synology-csi-smb
 provisioner: csi.san.synology.com
@@ -895,12 +924,13 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 "
             #endregion
           ;;
-          NFS )
+          synology-csi-nfs )
+            storage_class="$csi_synology_host_name-synology-csi-nfs-$csi_synology_host_protocol_class_name"
             #region
-            txt+="${separator}apiVersion: storage.k8s.io/v1
+            txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
 kind: StorageClass
 metadata:
-  name: $csi_synology_host_name-synology-csi-nfs-$csi_synology_host_protocol_class_name
+  name: $storage_class
   labels:
     vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com
@@ -924,21 +954,23 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
         separator="---
 "
         #endregion
+        run "line '$LINENO';kubectl delete storageclass $storage_class --wait --ignore-not-found=true"
       done
     done
   done
   #set +x
-  vlib.trace "generated storage classes=\n$txt"
-  run "line '$LINENO';echo '$txt' > '$data_folder/generated-storage-classes.yaml'"
+  #vlib.trace "generated storage classes=\n$txt"
+  run "line '$LINENO';echo '$txt' > '$data_folder/generated-synology-csi-storage-classes.yaml'"
   #run "line '$LINENO';kubectl apply edit-last-applied -f '$data_folder/generated-storage-classes.yaml'"
-  run "line '$LINENO';kubectl apply -f '$data_folder/generated-storage-classes.yaml'"
+  run "line '$LINENO';kubectl apply -f '$data_folder/generated-synology-csi-storage-classes.yaml'"
 
   local deploy_k8s_version="v1.20"
   inf "synology-csi (Line:$LINENO)\n"
   #vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
   # echo $csi_synology_ver
-  if [[ $(kubectl get pods -l app=controller,app.kubernetes.io/name=synology-csi -n synology-csi | wc -l) -eq 0 ]]; then # not installed yet
+  if [[ $(kubectl get pods -l app=controller,app.kubernetes.io/name=synology-csi -n $csi_driver_synology_csi_namespace | wc -l) -eq 0 ]]; then # not installed yet
     eval "csi_synology_folder_with_dsm_secrets=$csi_synology_folder_with_dsm_secrets"
+    vlib.trace "csi_synology_folder_with_dsm_secrets=$ccsi_synology_folder_with_dsm_secrets"
 
     # /etc/synology/client-info.yml
 
@@ -1038,8 +1070,8 @@ spec:
   fi
   vlib.trace "jobs=$txt"
   #kubectl apply -f - <<<"${txt}"
-  echo "$txt" > "$data_folder/storage-speed/generated-$2-write-read.yaml"
-  kubectl apply -f "$data_folder/storage-speed/generated-$2-write-read.yaml"
+  echo "$txt" > "$data_folder/storage-speed/generated-$2-write-read-job.yaml"
+  kubectl apply -f "$data_folder/storage-speed/generated-$2-write-read-job.yaml"
 }
 function vkube-k3s.csi-synology-uninstall() {
   local deploy_k8s_version="v1.20"
@@ -1416,116 +1448,317 @@ function install-k3s() {
   fi
 }
 function install-storage() {
-    hl.blue "$((++install_step)). Install the storage drivers and classes. (Line:$LINENO)"
-    # if use
-    #   if is not running
-    #     install
-    #   else
-    #     if is not ready
-    #       delete
-    #       install
-    #     else 
-    #       if need upgrade
-    #         https://stackoverflow.com/questions/59967925/kubernetes-csi-driver-upgrade
-    #         delete ???
-    #         install
+  hl.blue "$((++install_step)). Install general the csi storage drivers. (Line:$LINENO)"
+  # if use
+  #   if is not running
+  #     install
+  #   else
+  #     if is not ready
+  #       delete
+  #       install
+  #     else 
+  #       if need upgrade
+  #         https://stackoverflow.com/questions/59967925/kubernetes-csi-driver-upgrade
+  #         delete ???
+  #         install
 
-    # https://kubernetes.io/docs/tasks/access-application-cluster/list-all-running-container-images/
-    # https://kubernetes.io/docs/reference/kubectl/quick-reference/
-    # https://kubernetes.io/docs/reference/kubectl/jsonpath/
-    # kubectl get deployment csi-smb-controller -o=jsonpath='{$.spec.template.spec.containers[:1].image}' -n kube-system
-    # kubectl get pods --all-namespaces -o jsonpath="{..image}"
-    # kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec.containers[*].image}" -l app=controller,app.kubernetes.io/name=synology-csi
-    # kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec.containers[*] | select(.metadata.name | test("")).image}" -l app=controller,app.kubernetes.io/name=synology-csi
-    # kubectl get pod csi-smb-controller -o=jsonpath='{$.spec.template.spec.containers[:1].image}' -n kube-system
+  # https://kubernetes.io/docs/tasks/access-application-cluster/list-all-running-container-images/
+  # https://kubernetes.io/docs/reference/kubectl/quick-reference/
+  # https://kubernetes.io/docs/reference/kubectl/jsonpath/
+  # kubectl get deployment csi-smb-controller -o=jsonpath='{$.spec.template.spec.containers[:1].image}' -n kube-system
+  # kubectl get pods --all-namespaces -o jsonpath="{..image}"
+  # kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec.containers[*].image}" -l app=controller,app.kubernetes.io/name=synology-csi
+  # kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec.containers[*] | select(.metadata.name | test("")).image}" -l app=controller,app.kubernetes.io/name=synology-csi
+  # kubectl get pod csi-smb-controller -o=jsonpath='{$.spec.template.spec.containers[:1].image}' -n kube-system
 
-    # kubectl get pods --all-namespaces -l app=controller,app.kubernetes.io/name=synology-csi -o yaml | grep image:
+  # kubectl get pods --all-namespaces -l app=controller,app.kubernetes.io/name=synology-csi -o yaml | grep image:
 
-    if [ $local_storage_use -eq 1 ]; then
-      #region
-      run "line '$LINENO';kubectl apply -f - <<<\"apiVersion: storage.k8s.io/v1
+  local data_folder=$(dirname "${k3s_settings}")
+  vlib.trace "data folder=$data_folder"
+
+  if [ $local_storage_use -eq 1 ]; then
+    #region
+    run "line '$LINENO';kubectl apply -f - <<<\"apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: local-storage
 provisioner: kubernetes.io/no-provisioner # indicates that this StorageClass does not support automatic provisioning
 volumeBindingMode: WaitForFirstConsumer\""
-      #endregion
-    fi
+    #endregion
+  fi
 
-    if [ $csi_synology_use -eq 1 ]; then
-      vkube-k3s.csi-synology-install
-    fi
+  if [ $csi_synology_use -eq 1 ]; then
+    vkube-k3s.csi-synology-install
+  fi
 
-    if [ $csi_driver_smb_use -eq 1 ]; then
-      inf "csi-driver-smb (Line:$LINENO)\n"
-      # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/deploy/example/e2e_usage.md
-      # https://rguske.github.io/post/using-windows-smb-shares-in-kubernetes/
-      # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
-      vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
-      #echo $csi_driver_smb_ver
-      if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n ${csi_driver_smb_namespace} | wc -l) -eq 0 ]]; then
-        if ! kubectl get namespace $csi_driver_smb_namespace > /dev/null; then 
-          run "line '$LINENO';kubectl create namespace $csi_driver_smb_namespace"
-        fi
-        eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
-        vlib.check-data-for-secrets "$csi_driver_smb_secret_folder"
-        run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
-        run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb -n ${csi_driver_smb_namespace} --version $csi_driver_smb_ver"
-        # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
-        # https://kubernetes.io/docs/concepts/configuration/secret/
-        # https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
-        # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
-        run "line '$LINENO';if ! test -e $csi_driver_smb_secret_folder; then  mkdir $csi_driver_smb_secret_folder; fi"
-        if kubectl get secret -n $csi_driver_synology_csi_namespace smb-csi-creds > /dev/null ; then
-          run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace smb-csi-creds"
-        fi
-        run "line '$LINENO';kubectl create secret generic smb-csi-creds -n ${csi_driver_smb_namespace} --from-file=$csi_driver_smb_secret_folder"
-      else
-        inf "... already installed. (Line:$LINENO)\n"
+  if [ $csi_driver_smb_use -eq 1 ]; then
+    inf "csi-driver-smb (Line:$LINENO)\n"
+    # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/deploy/example/e2e_usage.md
+    # https://rguske.github.io/post/using-windows-smb-shares-in-kubernetes/
+    # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
+    vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
+    #echo $csi_driver_smb_ver
+    if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n ${csi_driver_smb_namespace} | wc -l) -eq 0 ]]; then
+      if ! kubectl get namespace $csi_driver_smb_namespace > /dev/null; then 
+        run "line '$LINENO';kubectl create namespace $csi_driver_smb_namespace"
       fi
-      # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data}'
-      # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.username}' | base64 --decode
-      # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.password}' | base64 --decode
-      # kubectl -n kube-system edit secrets smb-csi-creds
-      # kubectl delete secret smb-csi-creds -n kube-system
+      eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
+      vlib.check-data-for-secrets "$csi_driver_smb_secret_folder"
+      run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
+      run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb -n ${csi_driver_smb_namespace} --version $csi_driver_smb_ver"
+      # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
+      # https://kubernetes.io/docs/concepts/configuration/secret/
+      # https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+      # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
+      # run "line '$LINENO';if ! test -e $csi_driver_smb_secret_folder; then  mkdir $csi_driver_smb_secret_folder; fi"
+      # if kubectl get secret -n $csi_driver_synology_csi_namespace smb-csi-creds > /dev/null ; then
+      #   run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace smb-csi-creds"
+      # fi
+      # run "line '$LINENO';kubectl create secret generic smb-csi-creds -n ${csi_driver_smb_namespace} --from-file=$csi_driver_smb_secret_folder"
+    else
+      inf "... already installed. (Line:$LINENO)\n"
     fi
-    if [ $csi_driver_nfs_use -eq 1 ]; then
-      inf "csi-driver-nfs (Line:$LINENO)\n"
-      # https://github.com/kubernetes-csi/csi-driver-nfs
-      # https://rudimartinsen.com/2024/01/09/nfs-csi-driver-kubernetes/
-      # https://microk8s.io/docs/how-to-nfs
-      vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
-      #echo ${csi_driver_nfs_ver:1}
-      if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n ${csi_driver_nfs_namespace} | wc -l) -eq 0 ]]; then
-        if ! kubectl get namespace $csi_driver_nfs_namespace > /dev/null; then 
-          run "line '$LINENO';kubectl create namespace $csi_driver_nfs_namespace"
+    # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data}'
+    # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.username}' | base64 --decode
+    # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.password}' | base64 --decode
+    # kubectl -n kube-system edit secrets smb-csi-creds
+    # kubectl delete secret smb-csi-creds -n kube-system
+  fi
+  if [ $csi_driver_nfs_use -eq 1 ]; then
+    inf "csi-driver-nfs (Line:$LINENO)\n"
+    # https://github.com/kubernetes-csi/csi-driver-nfs
+    # https://rudimartinsen.com/2024/01/09/nfs-csi-driver-kubernetes/
+    # https://microk8s.io/docs/how-to-nfs
+    vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
+    #echo ${csi_driver_nfs_ver:1}
+    if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n ${csi_driver_nfs_namespace} | wc -l) -eq 0 ]]; then
+      if ! kubectl get namespace $csi_driver_nfs_namespace > /dev/null; then 
+        run "line '$LINENO';kubectl create namespace $csi_driver_nfs_namespace"
+      fi
+      eval "csi_driver_nfs_secret_folder=$csi_driver_nfs_secret_folder"
+      vlib.check-data-for-secrets "$csi_driver_nfs_secret_folder"
+      run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
+      run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs -n ${csi_driver_nfs_namespace} --version $csi_driver_nfs_ver"
+      # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
+    else
+      inf "... already installed. (Line:$LINENO)\n"
+    fi
+  fi
+  if [ $nfs_subdir_external_provisioner_use -eq 1 ]; then
+    inf "nfs-subdir-external-provisioner (Line:$LINENO)\n"
+    vlib.check-github-release-version 'nfs_subdir_external_provisioner' https://api.github.com/repos/kubernetes-sigs/nfs-subdir-external-provisioner/releases 'nfs_subdir_external_provisioner_ver'
+    #echo $nfs_subdir_external_provisioner_ver
+    #if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$nfs_subdir_external_provisioner_ver -n kube-system | wc -l) -eq 0 ]]; then
+    if [[ $(kubectl get pods -lapp=nfs-subdir-external-provisioner -n kube-system | wc -l) -eq 0 ]]; then
+      run "line '$LINENO';helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/"
+      # helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace kube-system --set image.tag=4.0.18 --set nfs.server=192.168.100.227 --set nfs.path=/volume1/k8s-nfs-ext
+      run "line '$LINENO';helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace kube-system \
+      --set nfs.server=$nfs_subdir_external_provisioner_server \
+      --set nfs.path=$nfs_subdir_external_provisioner_server_path"
+      #  --set image.tag=$nfs_subdir_external_provisioner_ver \
+      # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=nfs-subdir-external-provisioner" --watch
+    else
+      inf "... already installed. (Line:$LINENO)\n"
+    fi
+  fi
+  
+  hl.blue "$((++install_step)). Generate storage classes for general csi drivers. (Line:$LINENO)"
+  # GENERATED STORAGE CLASSES (not for synology-csi)
+  readarray storage_servers < <(yq -o=j -I=0 '.storage_servers[]' < $k3s_settings)
+  vlib.trace "storage servers count=${#storage_servers[@]}"
+  local txt=""
+  local separator=""
+  local storage_class=""
+  local secret_folder_name=""
+
+  #vlib.trace "default reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
+  declare -A host_names_dic=()
+  #declare -A folder_cred_dic=()
+  for storage_server in "${storage_servers[@]}"; do
+    vlib.trace "storage server=$storage_server"
+    # Host level scalar settings
+    eval "$( yq '.[] | ( select(kind == "scalar") | "storage_server_" + key + "='\''" + . + "'\''")' <<<$storage_server)"
+    vlib.trace "storage server name=$storage_server_name"
+    if [[ -z $storage_server_name ]]; then
+      err_and_exit "Empty host name. Configuration YAML file: '${k3s_settings}'." ${LINENO}
+    fi
+    if [[ -v host_names_dic["${storage_server_name}"] ]]; then
+      vlib.trace "host names(${#host_names_dic[@]})=" "${!host_names_dic[@]}"
+      err_and_exit "Host name is not unique. Configuration YAML file: '${k3s_settings}'. Host name '$storage_server_name'." ${LINENO}
+    fi
+    host_names_dic["${storage_server_name}"]='y'
+    readarray storage_server_protocols < <(echo $storage_server | yq -o=j -I=0 ".protocols[]")
+    vlib.trace "storage protocols count=${#storage_server_protocols[@]}"
+    if [[ ${#storage_server_protocols[@]} -eq 0 ]]; then
+      err_and_exit "There are no storage protocol for host. Configuration YAML file: '${k3s_settings}'. Host '$storage_server_name'." ${LINENO}
+    fi
+    i_protocol=-1
+    #vlib.trace "reclaimPolicy=$storage_server_protocol_class_reclaimPolicy"
+    declare -A protocol_names=()
+    for storage_server_protocol in "${storage_server_protocols[@]}"; do
+      i_protocol+=1
+      vlib.trace "storage protocol=$storage_server_protocol"
+      eval "$( yq '.[] | ( select(kind == "scalar") | "storage_server_" + key + "='\''" + . + "'\''")' <<<$storage_server)"
+      eval "$( yq '.[] | ( select(kind == "scalar") | "storage_server_protocol_" + key + "='\''" + . + "'\''")' <<<$storage_server_protocol)"
+      vlib.trace "storage protocol name=$storage_server_protocol_name"
+      if [[ -z $storage_server_protocol_name ]]; then
+        err_and_exit "Empty protocol name. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'." ${LINENO}
+      fi
+      if [[ -v protocol_names["${storage_server_protocol_name}"] ]]; then
+        #echo "${!protocol_names[@]}" "${protocol_names[@]}"
+        vlib.trace "protocol names(${#protocol_names[@]})=" "${!protocol_names[@]}"
+        #vlib.trace "storage host=$storage_server"
+        #vlib.trace "storage protocol=$storage_server_protocol"
+        err_and_exit "Storage protocol name is not unique. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol name '$storage_server_protocol_name'." ${LINENO}
+      fi
+      protocol_names["${storage_server_protocol_name}"]='y'
+      readarray storage_server_protocol_classes < <(echo $storage_server_protocol | yq -o=j -I=0 ".classes[]")
+      vlib.trace "storage classes count=${#storage_server_protocol_classes[@]}"
+      if [[ ${#storage_server_protocol_classes[@]} -eq 0 ]]; then
+        err_and_exit "There are no storage class for protocol. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'." ${LINENO}
+      fi
+      #vlib.trace "reclaimPolicy=$storage_server_protocol_class_reclaimPolicy"
+      for storage_server_protocol_class in "${storage_server_protocol_classes[@]}"; do
+        vlib.trace "storage class=$storage_server_protocol_class"
+        eval "$( yq '.[] | ( select(kind == "scalar") | "storage_server_" + key + "='\''" + . + "'\''")' <<<$storage_server)"
+        eval "$( yq '.[] | ( select(kind == "scalar") | "storage_server_protocol_" + key + "='\''" + . + "'\''")' <<<$storage_server_protocol)"
+        eval "$( yq '.[] | ( select(kind == "scalar") | "storage_server_protocol_class_" + key + "='\''" + . + "'\''")' <<<$storage_server_protocol_class)"
+        vlib.trace "storage class name=$storage_server_protocol_class_name"
+        #vlib.trace "reclaimPolicy=$storage_server_protocol_class_reclaimPolicy"
+        if [[ -z $storage_server_protocol_secret_folder ]]; then
+          err_and_exit "Empty secret_folder. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         fi
-        eval "csi_driver_nfs_secret_folder=$csi_driver_nfs_secret_folder"
-        vlib.check-data-for-secrets "$csi_driver_nfs_secret_folder"
-        run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
-        run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs -n ${csi_driver_nfs_namespace} --version $csi_driver_nfs_ver"
-        # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
-      else
-        inf "... already installed. (Line:$LINENO)\n"
-      fi
-    fi
-    if [ $nfs_subdir_external_provisioner_use -eq 1 ]; then
-      inf "nfs-subdir-external-provisioner (Line:$LINENO)\n"
-      vlib.check-github-release-version 'nfs_subdir_external_provisioner' https://api.github.com/repos/kubernetes-sigs/nfs-subdir-external-provisioner/releases 'nfs_subdir_external_provisioner_ver'
-      #echo $nfs_subdir_external_provisioner_ver
-      #if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$nfs_subdir_external_provisioner_ver -n kube-system | wc -l) -eq 0 ]]; then
-      if [[ $(kubectl get pods -lapp=nfs-subdir-external-provisioner -n kube-system | wc -l) -eq 0 ]]; then
-        run "line '$LINENO';helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/"
-        # helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace kube-system --set image.tag=4.0.18 --set nfs.server=192.168.100.227 --set nfs.path=/volume1/k8s-nfs-ext
-        run "line '$LINENO';helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace kube-system \
-        --set nfs.server=$nfs_subdir_external_provisioner_server \
-        --set nfs.path=$nfs_subdir_external_provisioner_server_path"
-        #  --set image.tag=$nfs_subdir_external_provisioner_ver \
-        # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=nfs-subdir-external-provisioner" --watch
-      else
-        inf "... already installed. (Line:$LINENO)\n"
-      fi
-    fi
-    run "line '$LINENO';kubectl apply -f $VBASH/../k3s/storage-classes.yaml"
+        if [[ -z $storage_server_protocol_class_location ]]; then
+          err_and_exit "Empty location. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        fi
+        if [[ -z $storage_server_protocol_class_reclaimPolicy ]]; then
+          err_and_exit "Empty reclaimPolicy. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        fi
+        if [[ -z $storage_server_protocol_class_allowVolumeExpansion ]]; then
+          err_and_exit "Empty allowVolumeExpansion. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        fi
+        # if [[ -z $storage_server_protocol_class_mountPermissions ]]; then
+        #   err_and_exit "Empty mountPermissions. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        # fi
+        
+        secret_folder_name=$(basename "$storage_server_protocol_secret_folder")
+        # if ! [[ -v folder_cred_dic["${secret_folder_name}"] ]]; then
+        #     vlib.trace "secret_folder_name=$secret_folder_name"
+        #     if kubectl get secret -n $csi_driver_synology_csi_namespace $secret_folder_name > /dev/null ; then
+        #       run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace $secret_folder_name"
+        #     fi
+        #     # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
+        #     run "line '$LINENO';kubectl create secret generic $secret_folder_name -n $csi_driver_synology_csi_namespace --from-file=$storage_server_protocol_secret_folder"
+        #   folder_cred_dic["${secret_folder_name}"]='y'
+        # fi
+        case $storage_server_protocol_name in
+          csi-driver-smb )
+            if [ $csi_driver_smb_use -eq 1 ]; then
+              vlib.trace "secret_folder_name=$secret_folder_name"
+              vlib.trace "storage_server_protocol_class_smb_vers=$storage_server_protocol_class_smb_vers"
+              run "line '$LINENO';kubectl delete secret -n csi-smb $secret_folder_name --ignore-not-found=true"
+              # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
+              run "line '$LINENO';kubectl create secret generic $secret_folder_name -n csi-smb --from-file=$storage_server_protocol_secret_folder"
+              storage_class="$storage_server_name-csi-driver-smb-$storage_server_protocol_class_name"
+              #region
+              txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
+kind: StorageClass
+metadata:
+  name: $storage_class
+  labels:
+    vkube/storage-type: csi-driver-smb
+provisioner: smb.csi.k8s.io # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/docs/csi-debug.md
+parameters: # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/docs/driver-parameters.md
+  source: //$storage_server_name$storage_server_protocol_class_location
+  # source: //smb-server.default.svc.cluster.local/share
+  # if csi.storage.k8s.io/provisioner-secret is provided, will create a sub directory
+  # with PV name under source
+  csi.storage.k8s.io/provisioner-secret-name: $secret_folder_name
+  csi.storage.k8s.io/provisioner-secret-namespace: csi-smb
+  csi.storage.k8s.io/node-stage-secret-name: $secret_folder_name
+  csi.storage.k8s.io/node-stage-secret-namespace: csi-smb
+reclaimPolicy: $storage_server_protocol_class_reclaimPolicy
+volumeBindingMode: Immediate
+allowVolumeExpansion: $storage_server_protocol_class_allowVolumeExpansion
+mountOptions: # https://linux.die.net/man/8/mount.cifs
+# https://www.filecloud.com/supportdocs/fcdoc/latest/server/filecloud-administrator-guide/installing-filecloud-server/mounting-cifs-and-nfs-shares/mount-a-cifs-share-on-ubuntu-for-filecloud
+  - dir_mode=0777
+  - file_mode=0777
+  - uid=1001
+  - gid=1001"
+              if [[ -n "$storage_server_ip4" ]]; then
+                txt+="
+  - ip=$storage_server_ip4"
+              fi
+              if [[ -n "$storage_server_protocol_class_smb_vers" ]]; then
+                txt+="
+  - vers=$storage_server_protocol_class_smb_vers"
+              fi
+              txt+="
+  #- noperm
+  #- mfsymlinks
+  #- cache=strict
+  #- noserverino  # required to prevent data corruption
+"
+              #endregion
+            fi
+          ;;
+          csi-driver-nfs )
+            if [ $csi_driver_nfs_use -eq 1 ]; then
+              vlib.trace "secret_folder_name=$secret_folder_name"
+              run "line '$LINENO';kubectl delete secret -n csi-nfs $secret_folder_name --ignore-not-found=true"
+              # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
+              run "line '$LINENO';kubectl create secret generic $secret_folder_name -n csi-nfs --from-file=$storage_server_protocol_secret_folder"
+              storage_class="$storage_server_name-csi-driver-nfs-$storage_server_protocol_class_name"
+              #region
+              txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
+kind: StorageClass
+metadata:
+  name: $storage_class
+  labels:
+    vkube/storage-type: csi-driver-nfs
+provisioner: nfs.csi.k8s.io
+parameters: # https://github.com/kubernetes-csi/csi-driver-nfs
+"
+              if [[ -n "$storage_server_ip4" ]]; then
+                txt+="  server: $storage_server_ip4"
+              else
+                txt+="  server: $storage_server_name"
+              fi
+              txt+="
+  share: \"$storage_server_protocol_class_location\"
+  # csi.storage.k8s.io/provisioner-secret is only needed for providing mountOptions in DeleteVolume
+  # csi.storage.k8s.io/provisioner-secret-name: \"mount-options\"
+  # csi.storage.k8s.io/provisioner-secret-namespace: \"default\"
+  # ??? mountPermissions: \"$storage_server_protocol_class_mountPermissions\"
+reclaimPolicy: $storage_server_protocol_class_reclaimPolicy
+volumeBindingMode: Immediate
+#allowVolumeExpansion: $storage_server_protocol_class_allowVolumeExpansion
+mountOptions:
+  - hard
+  - nfsvers=$storage_server_protocol_class_mountOptions_nfsvers
+"
+              #endregion
+              vlib.trace "storage_server_protocol_class_location=$storage_server_protocol_class_location"
+            fi
+          ;;
+          * )
+            err_and_exit "Unsupported storage protocol '$name'. Expected: csi-driver-smb or csi-driver-nfs" ${LINENO};
+        esac
+        #region
+        separator="---
+"
+        #endregion
+        run "line '$LINENO';kubectl delete storageclass $storage_class --wait --ignore-not-found=true"
+      done
+    done
+  done
+  #set +x
+  #vlib.trace "generated storage classes=\n$txt"
+  run "line '$LINENO';echo '$txt' > '$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
+  #run "line '$LINENO';kubectl apply edit-last-applied -f '$data_folder/generated-storage-classes.yaml'"
+  run "line '$LINENO';kubectl apply -f '$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
+
+  #run "line '$LINENO';kubectl apply -f $VBASH/../k3s/storage-classes.yaml"
 }
 #endregion legacy
