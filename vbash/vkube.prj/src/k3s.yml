@@ -19,7 +19,9 @@ commands:
   - long: --core
     help: Install core cluster components. Install all if --core, --storage, and --apps flags are not set.
   - long: --storage
-    help: All storage drivers. Install all if --core, --storage, and --apps flags are not set.
+    help: All general storage drivers. Install all if --core, --storage, and --apps flags are not set.
+  - long: --longhorn
+    help: Longhorn storage. Install all if --core, --storage, and --apps flags are not set.
   - long: --app
     help: All applications. Install all if --core, --storage, and --apps flags are not set.
 

@@ -113,6 +113,7 @@ storage_servers:
   - name: csi-driver-smb
     # https://github.com/kubernetes-csi/csi-driver-smb
     secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
+    secret_pass_folder: # secret from 'pass' password manager
     classes:
     - name: tmp
       smb_vers: "3.0"

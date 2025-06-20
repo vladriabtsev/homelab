@@ -7,6 +7,37 @@
 # https://github.com/alebcay/awesome-shell
 # https://github.com/SkypLabs/bsfl/tree/develop
 
+print_in_color() {
+  local color="$1"
+  shift
+  if [[ -z ${NO_COLOR+x} ]]; then
+    printf "$color%b\e[0m\n" "$*"
+  else
+    printf "%b\n" "$*"
+  fi
+}
+red() { print_in_color "\e[31m" "$*"; }
+green() { print_in_color "\e[32m" "$*"; }
+yellow() { print_in_color "\e[33m" "$*"; }
+blue() { print_in_color "\e[34m" "$*"; }
+magenta() { print_in_color "\e[35m" "$*"; }
+cyan() { print_in_color "\e[36m" "$*"; }
+bold() { print_in_color "\e[1m" "$*"; }
+underlined() { print_in_color "\e[4m" "$*"; }
+red_bold() { print_in_color "\e[1;31m" "$*"; }
+green_bold() { print_in_color "\e[1;32m" "$*"; }
+yellow_bold() { print_in_color "\e[1;33m" "$*"; }
+blue_bold() { print_in_color "\e[1;34m" "$*"; }
+magenta_bold() { print_in_color "\e[1;35m" "$*"; }
+cyan_bold() { print_in_color "\e[1;36m" "$*"; }
+red_underlined() { print_in_color "\e[4;31m" "$*"; }
+green_underlined() { print_in_color "\e[4;32m" "$*"; }
+yellow_underlined() { print_in_color "\e[4;33m" "$*"; }
+blue_underlined() { print_in_color "\e[4;34m" "$*"; }
+magenta_underlined() { print_in_color "\e[4;35m" "$*"; }
+cyan_underlined() { print_in_color "\e[4;36m" "$*"; }
+
+
 function h2() {
   vlib.message-box "INFO" "$@" #"$(blue_bold)"
   #echo "$(blue_bold "$@")"
@@ -235,7 +266,7 @@ function redirect-to-log-file {
   exec &> >(tee -ia "$1")
 
   # Notice no leading $
-  exec {FD}> "$1" {FD}>&1
+  exec {FD}>"$1" {FD}>&1
 
   # If you want to append instead of wiping previous logs
   #exec {FD}>> "$1" {FD}>&1
@@ -254,7 +285,7 @@ function vlib.bashly-init-command() {
 
   set -e
 
-  [[ -z $args ]] || ( echo_err "Expecting bashly script when call bashly-init-command()"; exit 1 ) 
+  [ -z $args ] && ( echo_err "Expecting bashly script when call bashly-init-command()"; exit 1 ) 
   #[[ $# -eq 1 ]] || err_and_exit "Only one parameter is expected" ${LINENO}
 
   __is_trace=0
@@ -467,17 +498,6 @@ function vlib.press-any-key() {
   # cursor.up 2
   # cursor.rewind
   echo
-}
-function vlib.check-data-for-secrets() {
-  # $1 - folder path with secret data
-  # [ -d "${HOME}/.ssh/k3s-HA-csi-synology-secrets" ] || err_and_exit "Can't find home folder."
-  # [ -d ~/.ssh/k3s-HA-csi-synology-secrets ] || err_and_exit "Can't find home folder."
-  [ -d "$1" ] || err_and_exit "Can't find folder '$1'."
-  [ -a "$1/username.txt" ] || err_and_exit "Can't find user name file '$1/username.txt'."
-  [ -r "$1/username.txt" ] || err_and_exit "File '$1/username.txt' exists, but not readable."
-  [ -a "$1/password.txt" ] || err_and_exit "Can't find user name file '$1/password.txt'."
-  [ -r "$1/password.txt" ] || err_and_exit "File '$1/password.txt' exists, but not readable."
-  return 0
 }
 function vlib.read-password() {
   local variable="$1"
@@ -819,4 +839,75 @@ function vlib.message-box() {
   fi
 
   #unset border line padding padded_line
+}
+# function vlib.exists-dir {
+#   [ -z $1 ] && err_and_exit "Function 'vlib.exists-dir' is expecting dir path parameter"
+#   [ -d "$1" ] || err_and_exit "Directory '$1' is not found"
+#   return 0
+# }
+function vlib.is-dir-exists {
+  [ -z $1 ] && err_and_exit "Function 'vlib.is-dir-exists' is expecting dir path parameter"
+  [ -d "$1" ] || return 1
+  return 0
+}
+################################################################
+#     'pass' password manager
+function vlib.is-pass-dir-exists {
+  [ -z "$1" ] && err_and_exit "Function 'vlib.is-pass-dir-exists' is expecting 'pass' password manager path parameter"
+  local _secret="$(pass "$1")"
+  [ -z $_secret ] && return 1
+  return 0
+}
+# Usage returned_value="$(vlib.pass-get-secret pass-path)"
+function vlib.pass-get-secret {
+  [ -z "$1" ] && err_and_exit "Function 'vlib.pass-get-secret' is expecting 'pass' password manager path parameter"
+  local _old_setting=${-//[^e]/}
+  set +e
+  local _error=$(pass show $1 2>&1 1>/dev/null)
+  #echo "_error=$_error" >&3
+  [[ ${#_error} -eq 0 ]] && local _secret="$(pass show $1)"
+  #echo "_secret=$_secret" >&3
+  if [[ -n "$_old_setting" ]]; then set -e; fi
+  [[ ${#_error} -gt 0 ]] && err_and_exit "$_error"
+  echo $_secret
+  #return 0
+}
+function vlib.pass-get-secret2 {
+  [ -z "$1" ] && err_and_exit "Function 'vlib.pass-get-secret' is expecting 'pass' password manager path parameter"
+
+  #local _error=$(pass show $1 2>&1 1>/dev/null)
+  local _old_setting=${-//[^e]/}
+  set +e
+  local _error=$(pass show $1 2>&1)
+  if [[ -n "$_old_setting" ]]; then set -e; fi
+#[[ $? -ne 0 ]] && err_and_exit "$_error"
+  [[ ${#_error} -gt 0 ]] && err_and_exit "$_error"
+  #[[ $_error == *"Error"* ]] && err_and_exit "$_error"
+
+  local _secret="$(pass show $1)"
+  echo $_secret
+  return 0
+}
+# https://unix.stackexchange.com/questions/444946/how-can-we-run-a-command-stored-in-a-variable
+# Usage: vlib.exec-command ls ~
+function vlib.exec-command {
+  [[ $# -eq 0 ]] && err_and_exit "Function 'vlib.exec-command' is expecting 'command' parameter to try execute"
+  local _old_setting=${-//[^e]/}
+  set +e
+  "$@"
+  [[ $? -ne 0 ]] && local _failed=1
+  if [[ -n "$_old_setting" ]]; then set -e; fi
+  [[ $_failed -eq 1 ]] && return 1
+  return 0
+}
+# Execute command and print call stack on error
+function vlib.exec-command-and-trace {
+  [[ $# -eq 0 ]] && err_and_exit "Function 'vlib.exec-command-and-trace' is expecting 'command' parameter to try execute"
+  local _old_setting=${-//[^e]/}
+  set +e
+  "$@"
+  [[ $? -ne 0 ]] && local _failed=1
+  if [[ -n "$_old_setting" ]]; then set -e; fi
+  [[ $_failed -eq 1 ]] && err_and_exit "Error while executing command '$@'"
+  return 0
 }

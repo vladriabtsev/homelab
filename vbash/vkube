@@ -235,7 +235,12 @@ vkube_k3s_install_usage() {
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--storage")"
-    printf "    All storage drivers. Install all if --core, --storage, and --apps flags are\n    not set.\n"
+    printf "    All general storage drivers. Install all if --core, --storage, and --apps\n    flags are not set.\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--longhorn")"
+    printf "    Longhorn storage. Install all if --core, --storage, and --apps flags are not\n    set.\n"
     echo
 
     # :flag.usage
@@ -540,7 +545,6 @@ vkube_k3s_install_command() {
 
   # shellcheck source=/dev/null
   source "${VBASH}/vkube-k3s.bash"
-  vkube-k3s.check-cluster-plan-path
   vkube-k3s.install
 
 }
@@ -1772,6 +1776,14 @@ vkube_k3s_install_parse_requirements() {
 
         # :flag.case_no_arg
         args['--storage']=1
+        shift
+        ;;
+
+      # :flag.case
+      --longhorn)
+
+        # :flag.case_no_arg
+        args['--longhorn']=1
         shift
         ;;
 

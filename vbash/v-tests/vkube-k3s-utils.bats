@@ -35,23 +35,70 @@ setup() {
 #  k3d cluster delete test
 #}
 
-# bats test_tags=tag:test
-# @test "bash -s EOF failed" {
-#   run vkube-k3s.get-pod-image-version << EOF
-# kuku
-# EOF
-#   echo "output=$output"
-#   assert_failure
-#   assert_output --partial "kuku: command not found"
-#   refute_output --partial "delimited by end-of-file"
-# }
-# @test "bash -s EOF failed" {
-#   bats_require_minimum_version 1.5.0
-#   run -127 bash -s << EOF
-# kuku
-# EOF
-#   echo "output=$output"
-#   assert_failure
-#   assert_output --partial "kuku: command not found"
-#   refute_output --partial "delimited by end-of-file"
-# }
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: without namespace" {
+  run vkube-k3s.secret-create
+  #echo "output=$output"
+  assert_failure
+  assert_output --partial "Missing namespace \$1 parameter"
+  assert_output --partial "## C A L L   T R A C E ##"
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: without secret name" {
+  run vkube-k3s.secret-create test
+  #echo "output=$output"
+  assert_failure
+  assert_output --partial "Missing secret name \$2 parameter"
+  assert_output --partial "## C A L L   T R A C E ##"
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: without secret folder" {
+  run vkube-k3s.secret-create test test-secret
+  #echo "output=$output"
+  assert_failure
+  assert_output --partial "Missing secret folder path \$3 parameter"
+  assert_output --partial "## C A L L   T R A C E ##"
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: from not existing path in 'pass' password store" {
+  run vkube-k3s.secret-create test test-secret not-existing-store-folder
+  #echo "output=$output" >&3
+  assert_failure
+  assert_output --partial "Can't find 'not-existing-store-folder/username.txt' record in 'pass' password store"
+  assert_output --partial "## C A L L   T R A C E ##"
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: from path in 'pass' password store" {
+  # Required:
+  # pass insert test/username.txt # enter password 'test-user'
+  # pass insert test/password.txt # enter password 'test-password'
+  run vkube-k3s.secret-create test test-secret test
+  #echo "output=$output" >&3
+  assert_success
+}
+
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: from not existing disk folder" {
+  run vkube-k3s.secret-create test test-secret ~/.test-not-exists
+  #echo "output=$output" >&3
+  assert_failure
+  assert_output --partial "Can't find folder '/home/vlad/.test-not-exists'"
+  assert_output --partial "## C A L L   T R A C E ##"
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: from empty disk folder" {
+  run vkube-k3s.secret-create test test-secret ~
+  #echo "output=$output" >&3
+  assert_failure
+  assert_output --partial "Can't find user name file"
+  assert_output --partial "## C A L L   T R A C E ##"
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: from disk folder with username and password" {
+  # Required:
+  # ~/.test/username.txt # with line 'username=test-user'
+  # ~/.test/password.txt # with line 'password=test-password'
+  run vkube-k3s.secret-create test test-secret ~/.test
+  #echo "output=$output" >&3
+  assert_success
+}

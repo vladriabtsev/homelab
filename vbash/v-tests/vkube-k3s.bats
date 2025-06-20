@@ -122,6 +122,44 @@ setup() {
 
   # run try "at most 2 times every 30s to find 1 pods named 'nfs-subdir-external-provisioner' with 'status' being 'running'"
   # assert_success
+}
+
+# bats test_tags=tag:longhorn
+@test "k3d longhorn installation" {
+  echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --longhorn" >&3
+
+  node_root_password="kuku"
+  # vlib.read-password node_root_password "Please enter root password for cluster nodes:"
+  # echo
+  longhorn_ui_admin_name="kuku"
+  # vlib.read-password longhorn_ui_admin_name "Please enter Longhorn UI admin name:"
+  # echo
+  longhorn_ui_admin_password="kuku"
+  # vlib.read-password longhorn_ui_admin_password "Please enter Longhorn UI admin password:"
+  # echo
+
+  run ../vkube --cluster-plan k3d-test --trace k3s install --longhorn
+  assert_success
+
+  sleep 10
+
+  # https://github.com/bats-core/bats-assert#partial-matching
+  echo '      Testing...' >&3
+  sleep 60
+
+  assert_failure
+
+  DETIK_CLIENT_NAMESPACE="synology-csi"
+  echo '      Testing synology-csi-node' >&3
+  run try "at most 5 times every 30s to get pods named '^synology-csi-node' and verify that 'status' is 'running'"
+  assert_success
+  # run verify "there are 2 pods named '^synology-csi-node'"
+  # assert_success
+  echo '      Testing synology-csi-controller' >&3
+  run try "at most 5 times every 30s to get pods named '^synology-csi-controller' and verify that 'status' is 'running'"
+  assert_success
+  # run verify "there are 4 pods named '^synology-csi-controller'"
+  # assert_success
 } 
 
 # storage
