@@ -1157,7 +1157,7 @@ spec:
       restartPolicy: Never
 "
   #endregion read and write jobs
-  run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $1"
+  vkube-k3s.is-namespace-exist-or-create $1
   vlib.trace "jobs=$txt"
   #kubectl apply -f - <<<"${txt}"
   echo "$txt" > "$data_folder/storage-speed/generated-$2-write-read-job.yaml"

@@ -410,6 +410,7 @@ setup() {
     echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
   } 
 #endregion general storage tests
+
 # bats test_tags=tag:longhorn
 @test "k3d longhorn installation" {
   echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --longhorn" >&3
