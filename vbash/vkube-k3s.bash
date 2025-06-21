@@ -548,6 +548,7 @@ function vkube-k3s.install() {
     ;;
   esac
 
+  return 0
   err_and_exit "exit" ${LINENO}
 
 
