@@ -90,28 +90,40 @@ function vkube-k3s.cluster-plan-read() {
 
   if ! test -e ~/tmp; then  mkdir ~/tmp;  fi
 }
+function vkube-k3s.is-namespace-exist-or-create {
+  [ -z "$1" ] && err_and_exit "Missing namespace name \$1 parameter."
+  if ! (kubectl get namespace "$1" > /dev/null ); then 
+    kubectl create namespace "$1"; 
+    sleep 10
+  fi
+}
 function vkube-k3s.check-dir-data-for-secrets-with-trace() {
   [ -z "$1" ] && err_and_exit "Missing folder path \$1 parameter."
-  # $1 - folder path with secret data
-  # [ -d "${HOME}/.ssh/k3s-HA-csi-synology-secrets" ] || err_and_exit "Can't find home folder."
-  # [ -d ~/.ssh/k3s-HA-csi-synology-secrets ] || err_and_exit "Can't find home folder."
-  [ -d "$1" ] || err_and_exit "Can't find folder '$1'."
-  [ -a "$1/username.txt" ] || err_and_exit "Can't find user name file '$1/username.txt'."
-  [ -r "$1/username.txt" ] || err_and_exit "File '$1/username.txt' exists, but not readable."
-  [ -a "$1/password.txt" ] || err_and_exit "Can't find user name file '$1/password.txt'."
-  [ -r "$1/password.txt" ] || err_and_exit "File '$1/password.txt' exists, but not readable."
+  #echo "1=$1" >&3
+  if [ -d "$1" ]; then
+    [ -a "$1/username.txt" ] || err_and_exit "Can't find user name file '$1/username.txt'."
+    [ -r "$1/username.txt" ] || err_and_exit "File '$1/username.txt' exists, but not readable."
+    [ -a "$1/password.txt" ] || err_and_exit "Can't find user name file '$1/password.txt'."
+    [ -r "$1/password.txt" ] || err_and_exit "File '$1/password.txt' exists, but not readable."
+  elif [ -a "$1" ]; then
+    return 0
+  else
+    err_and_exit "Can't find folder or file '$1'."
+  fi
   return 0
 }
 function vkube-k3s.check-dir-data-for-secrets() {
   [ -z "$1" ] && err_and_exit "Missing folder path \$1 parameter."
-  # $1 - folder path with secret data
-  # [ -d "${HOME}/.ssh/k3s-HA-csi-synology-secrets" ] || err_and_exit "Can't find home folder."
-  # [ -d ~/.ssh/k3s-HA-csi-synology-secrets ] || err_and_exit "Can't find home folder."
-  [ -d "$1" ] || return 1
-  [ -a "$1/username.txt" ] || return 1
-  [ -r "$1/username.txt" ] || return 1
-  [ -a "$1/password.txt" ] || return 1
-  [ -r "$1/password.txt" ] || return 1
+  if [ -d "$1" ]; then
+    [ -a "$1/username.txt" ] || return 1
+    [ -r "$1/username.txt" ] || return 1
+    [ -a "$1/password.txt" ] || return 1
+    [ -r "$1/password.txt" ] || return 1
+  elif [ -a "$1" ]; then
+    return 0
+  else
+    return 1
+  fi
   return 0
 }
 function vkube-k3s.check-pass-data-for-secrets-with-trace() {
@@ -143,9 +155,21 @@ function vkube-k3s.secret-create {
   local first_char="${3:0:1}"
   #echo "first_char='$first_char'" >&3
   if [[ "$first_char" = "." || "$first_char" = "~" || "$first_char" = "/" ]]; then
-    vkube-k3s.check-dir-data-for-secrets-with-trace "$3"
+    eval local path=\"\$3\"
+    #echo "path=$path" >&3
+    vkube-k3s.check-dir-data-for-secrets-with-trace "$path"
+    vkube-k3s.is-namespace-exist-or-create $1
+    kubectl delete secret $2 -n $1 --ignore-not-found=true
+    kubectl create secret generic $2 -n $1 --from-file=$path
   else
     vkube-k3s.check-pass-data-for-secrets-with-trace "$3"
+    local username
+    username="$(vlib.pass-get-secret $3/username.txt)"
+    local password
+    password="$(vlib.pass-get-secret $3/password.txt)"
+    vkube-k3s.is-namespace-exist-or-create $1
+    kubectl delete secret $2 -n $1 --ignore-not-found=true
+    kubectl create secret generic $2 -n $1 --from-literal=username=$username --from-literal=password=$password
   fi
 }
 function vkube-k3s.install_tools() {
@@ -577,7 +601,7 @@ function vkube-k3s.install() {
   if [ -z $argo_cd_ver ]; then
   argo_cd_ver=$argo_cd_latest
   fi
-  if ! ($(kubectl get namespace argocd > /dev/null )); then kubectl create namespace argocd; fi
+  run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create argocd"
   kubectl "line '$LINENO';kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/$argo_cd_ver/manifests/install.yaml"
   kubectl "line '$LINENO';kubectl apply -f ./argocd/svc.yaml"
 
@@ -598,7 +622,7 @@ function vkube-k3s.install() {
   #if ! [ "$rancher_latest" == "$rancher_ver" ]; then
   #  warn "Latest version of Rancher: '$rancher_latest', but installing: '$rancher_ver'\n"
   #fi
-  if ! ($(kubectl get namespace cattle-system > /dev/null )); then kubectl create namespace cattle-system; fi
+  run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create cattle-system"
   # helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
   #run kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml
 
@@ -861,10 +885,7 @@ function vkube-k3s.csi-synology-install() {
 
   csi_driver_synology_csi_namespace="synology-csi"
   vlib.trace "csi_driver_synology_csi_namespace=${csi_driver_synology_csi_namespace}"
-
-  if ! kubectl get namespace $csi_driver_synology_csi_namespace > /dev/null; then 
-    run "line '$LINENO';kubectl create namespace $csi_driver_synology_csi_namespace"
-  fi
+  run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $csi_driver_synology_csi_namespace"
 
   readarray csi_synology_hosts < <(yq -o=j -I=0 ".hosts[]" "${synology_csi_plan}")
   vlib.trace "storage hosts count=${#csi_synology_hosts[@]}"
@@ -973,7 +994,7 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
             vlib.trace "secret_folder_name=$secret_folder_name"
             run "line '$LINENO';kubectl delete secret $secret_folder_name -n $csi_driver_synology_csi_namespace --ignore-not-found=true"
             # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
-            run "line '$LINENO';kubectl create secret generic $secret_folder_name -n $csi_driver_synology_csi_namespace --from-file=$csi_synology_host_protocol_secret_folder"
+            run "line '$LINENO';vkube-k3s.secret-create $csi_driver_synology_csi_namespace $secret_folder_name $csi_synology_host_protocol_secret_folder"
 
             #region
             txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
@@ -1044,11 +1065,11 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 
     # /etc/synology/client-info.yml
 
-    #run "line '$LINENO';if ! ($(kubectl get namespace synology-csi > /dev/null )); then kubectl create namespace synology-csi; fi"
     if kubectl get secret -n $csi_driver_synology_csi_namespace client-info-secret > /dev/null ; then
       run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace client-info-secret"
     fi
-    run "line '$LINENO';kubectl create secret -n $csi_driver_synology_csi_namespace generic client-info-secret --from-file="$csi_synology_folder_with_dsm_secrets/client-info.yml""
+    #run "line '$LINENO';kubectl create secret -n $csi_driver_synology_csi_namespace generic client-info-secret --from-file="$csi_synology_folder_with_dsm_secrets/client-info.yml""
+    run "line '$LINENO';vkube-k3s.secret-create $csi_driver_synology_csi_namespace client-info-secret $csi_synology_folder_with_dsm_secrets/client-info.yml"
     run "line '$LINENO';kubectl apply -f $vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version"
 
     if [ $csi_synology_snapshot_use -eq 1 ]; then
@@ -1135,9 +1156,7 @@ spec:
       restartPolicy: Never
 "
   #endregion read and write jobs
-  if ! kubectl get namespace $1 > /dev/null; then 
-    kubectl create namespace $1
-  fi
+  run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $1"
   vlib.trace "jobs=$txt"
   #kubectl apply -f - <<<"${txt}"
   echo "$txt" > "$data_folder/storage-speed/generated-$2-write-read-job.yaml"
@@ -1298,10 +1317,7 @@ spec:
   #endregion
   txt_deploy+="$txt_deploy_vol"
   vlib.trace "generated PVCs=\n$txt"
-  if ! kubectl get namespace "${args[--namespace]}" > /dev/null ; then 
-    run "line '$LINENO';kubectl create namespace ${args[--namespace]}"
-    sleep 10
-  fi
+  run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create ${args[--namespace]}"
   run "line '$LINENO';kubectl apply -f - <<<\"${txt}\""
 
   hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
@@ -1766,7 +1782,8 @@ longhorn-install()
 
   # https://longhorn.io/docs/1.7.3/deploy/accessing-the-ui/longhorn-ingress/
   run "line '$LINENO';echo \"${longhorn_ui_admin_name}:$(openssl passwd -stdin -apr1 <<< ${longhorn_ui_admin_password})\" > ${HOME}/tmp/auth"
-  run "line '$LINENO';kubectl -n longhorn-system create secret generic longhorn-ui-auth-basic --from-file=${HOME}/tmp/auth"
+  #run "line '$LINENO';kubectl -n longhorn-system create secret generic longhorn-ui-auth-basic --from-file=${HOME}/tmp/auth"
+  run "line '$LINENO';vkube-k3s.secret-create longhorn-system longhorn-ui-auth-basic ${HOME}/tmp/auth"
   run "line '$LINENO';rm ${HOME}/tmp/auth"
   run "line '$LINENO';kubectl -n longhorn-system apply -f ./101-longhorn/longhorn-ui-auth-basic.yaml"
 
@@ -1955,9 +1972,7 @@ volumeBindingMode: WaitForFirstConsumer\""
     vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
     #echo $csi_driver_smb_ver
     if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n ${csi_driver_smb_namespace} | wc -l) -eq 0 ]]; then
-      if ! kubectl get namespace $csi_driver_smb_namespace > /dev/null; then 
-        run "line '$LINENO';kubectl create namespace $csi_driver_smb_namespace"
-      fi
+      run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $csi_driver_smb_namespace"
       eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
       vkube-k3s.check-data-dir-for-secrets "$csi_driver_smb_secret_folder"
       run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
@@ -1988,9 +2003,7 @@ volumeBindingMode: WaitForFirstConsumer\""
     vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
     #echo ${csi_driver_nfs_ver:1}
     if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n ${csi_driver_nfs_namespace} | wc -l) -eq 0 ]]; then
-      if ! kubectl get namespace $csi_driver_nfs_namespace > /dev/null; then 
-        run "line '$LINENO';kubectl create namespace $csi_driver_nfs_namespace"
-      fi
+      run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $csi_driver_nfs_namespace"
       eval "csi_driver_nfs_secret_folder=$csi_driver_nfs_secret_folder"
       vkube-k3s.check-data-dir-for-secrets "$csi_driver_nfs_secret_folder"
       run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
@@ -2114,7 +2127,8 @@ volumeBindingMode: WaitForFirstConsumer\""
               vlib.trace "storage_server_protocol_class_smb_vers=$storage_server_protocol_class_smb_vers"
               run "line '$LINENO';kubectl delete secret -n csi-smb $secret_folder_name --ignore-not-found=true"
               # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
-              run "line '$LINENO';kubectl create secret generic $secret_folder_name -n csi-smb --from-file=$storage_server_protocol_secret_folder"
+              #run "line '$LINENO';kubectl create secret generic $secret_folder_name -n csi-smb --from-file=$storage_server_protocol_secret_folder"
+              run "line '$LINENO';vkube-k3s.secret-create csi-smb $secret_folder_name $storage_server_protocol_secret_folder"
               storage_class="$storage_server_name-csi-driver-smb-$storage_server_protocol_class_name"
               #region
               txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
@@ -2164,7 +2178,8 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
               vlib.trace "secret_folder_name=$secret_folder_name"
               run "line '$LINENO';kubectl delete secret -n csi-nfs $secret_folder_name --ignore-not-found=true"
               # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
-              run "line '$LINENO';kubectl create secret generic $secret_folder_name -n csi-nfs --from-file=$storage_server_protocol_secret_folder"
+              #run "line '$LINENO';kubectl create secret generic $secret_folder_name -n csi-nfs --from-file=$storage_server_protocol_secret_folder"
+              run "line '$LINENO';vkube-k3s.secret-create csi-nfs $secret_folder_name $storage_server_protocol_secret_folder"
               storage_class="$storage_server_name-csi-driver-nfs-$storage_server_protocol_class_name"
               #region
               txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}

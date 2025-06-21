@@ -93,7 +93,6 @@ vkube_usage() {
     # :flag.usage
     printf "  %s\n" "$(magenta "--cluster-plan CLUSTER-PLAN")"
     printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder or subfolder \n      in a current folder. Expecting to find cluster plan \n      YAML file with same name as subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
-    printf "    %s\n" "Default: k3s-HA"
     echo
 
     # :command.usage_fixed_flags
@@ -204,8 +203,8 @@ vkube_k3s_usage() {
     # :command.usage_examples
     printf "%s\n" "$(bold "Examples:")"
     printf "  ./vkube --help\n"
-    printf "  ./vkube --data k3s-HA k3s install\n"
-    printf "  ./vkube --data ../k3s-HA.yaml k3s install\n"
+    printf "  ./vkube --cluster-plan k3s-HA k3s install\n"
+    printf "  ./vkube --cluster-plan ../k3s-HA.yaml k3s install\n"
     printf "  ./vkube k3s upgrade\n"
     printf "  ./vkube k3s backup\n"
     printf "  ./vkube k3s restore\n"
@@ -219,7 +218,7 @@ vkube_k3s_install_usage() {
   printf "vkube k3s install - Install k3s kubernetes\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s install [CLUSTER_PLAN] [OPTIONS]\n"
+  printf "  vkube k3s install [OPTIONS]\n"
   printf "  vkube k3s install --help | -h\n"
   echo
 
@@ -253,15 +252,6 @@ vkube_k3s_install_usage() {
     printf "    Show this help\n"
     echo
 
-    # :command.usage_args
-    printf "%s\n" "$(bold "Arguments:")"
-
-    # :argument.usage
-    printf "  %s\n" "$(blue "CLUSTER_PLAN")"
-    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder or subfolder \n      in a current folder. Expecting to find cluster plan \n      YAML file with same name as subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
-    printf "    %s\n" "Default: k3s-HA"
-    echo
-
   fi
 }
 
@@ -270,7 +260,7 @@ vkube_k3s_uninstall_usage() {
   printf "vkube k3s uninstall - Uninstall k3s kubernetes\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s uninstall [CLUSTER_PLAN]\n"
+  printf "  vkube k3s uninstall\n"
   printf "  vkube k3s uninstall --help | -h\n"
   echo
 
@@ -283,15 +273,6 @@ vkube_k3s_uninstall_usage() {
     printf "    Show this help\n"
     echo
 
-    # :command.usage_args
-    printf "%s\n" "$(bold "Arguments:")"
-
-    # :argument.usage
-    printf "  %s\n" "$(blue "CLUSTER_PLAN")"
-    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder or subfolder \n      in a current folder. Expecting to find cluster plan \n      YAML file with same name as subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
-    printf "    %s\n" "Default: k3s-HA"
-    echo
-
   fi
 }
 
@@ -300,7 +281,7 @@ vkube_k3s_upgrade_usage() {
   printf "vkube k3s upgrade - Upgrade k3s kubernetes\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s upgrade [CLUSTER_PLAN]\n"
+  printf "  vkube k3s upgrade\n"
   printf "  vkube k3s upgrade --help | -h\n"
   echo
 
@@ -311,15 +292,6 @@ vkube_k3s_upgrade_usage() {
     # :command.usage_fixed_flags
     printf "  %s\n" "$(magenta "--help, -h")"
     printf "    Show this help\n"
-    echo
-
-    # :command.usage_args
-    printf "%s\n" "$(bold "Arguments:")"
-
-    # :argument.usage
-    printf "  %s\n" "$(blue "CLUSTER_PLAN")"
-    printf "    Cluster plan:\n    - Explicit path to cluster plan Yaml file.\n    - Subfolder name of 'vkube-data' folder or subfolder \n      in a current folder. Expecting to find cluster plan \n      YAML file with same name as subfolder.\n    \n    Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command\n    itself.\n"
-    printf "    %s\n" "Default: k3s-HA"
     echo
 
   fi
@@ -527,6 +499,8 @@ vkube_cluster_install_command() {
 
   # shellcheck source=/dev/null
   source "${VBASH}/vlib.bash"
+  vlib.trace "$(inspect_args)"
+
   vlib.bashly-init-command
   # shellcheck source=/dev/null
   source "${VBASH}/vkube-k3s.bash"
@@ -540,8 +514,10 @@ vkube_k3s_install_command() {
 
   # src/k3s_install_command.sh
   #!/usr/bin/env bash
+  #inspect_args
 
   vlib.bashly-init-command
+  vlib.trace "$(inspect_args)"
 
   # shellcheck source=/dev/null
   source "${VBASH}/vkube-k3s.bash"
@@ -1538,7 +1514,6 @@ parse_requirements() {
 
   # :command.default_assignments
   [[ -n ${args['--framework']:-} ]] || args['--framework']="bashmatic"
-  [[ -n ${args['--cluster-plan']:-} ]] || args['--cluster-plan']="k3s-HA"
 
 }
 
@@ -1803,22 +1778,13 @@ vkube_k3s_install_parse_requirements() {
       *)
         # :command.parse_requirements_case
         # :command.parse_requirements_case_simple
-        # :argument.case
-        if [[ -z ${args['cluster_plan']+x} ]]; then
-          args['cluster_plan']=$1
-          shift
-        else
-          printf "invalid argument: %s\n" "$key" >&2
-          exit 1
-        fi
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
 
         ;;
 
     esac
   done
-
-  # :command.default_assignments
-  [[ -n ${args['cluster_plan']:-} ]] || args['cluster_plan']="k3s-HA"
 
 }
 
@@ -1857,22 +1823,13 @@ vkube_k3s_uninstall_parse_requirements() {
       *)
         # :command.parse_requirements_case
         # :command.parse_requirements_case_simple
-        # :argument.case
-        if [[ -z ${args['cluster_plan']+x} ]]; then
-          args['cluster_plan']=$1
-          shift
-        else
-          printf "invalid argument: %s\n" "$key" >&2
-          exit 1
-        fi
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
 
         ;;
 
     esac
   done
-
-  # :command.default_assignments
-  [[ -n ${args['cluster_plan']:-} ]] || args['cluster_plan']="k3s-HA"
 
 }
 
@@ -1911,22 +1868,13 @@ vkube_k3s_upgrade_parse_requirements() {
       *)
         # :command.parse_requirements_case
         # :command.parse_requirements_case_simple
-        # :argument.case
-        if [[ -z ${args['cluster_plan']+x} ]]; then
-          args['cluster_plan']=$1
-          shift
-        else
-          printf "invalid argument: %s\n" "$key" >&2
-          exit 1
-        fi
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
 
         ;;
 
     esac
   done
-
-  # :command.default_assignments
-  [[ -n ${args['cluster_plan']:-} ]] || args['cluster_plan']="k3s-HA"
 
 }
 

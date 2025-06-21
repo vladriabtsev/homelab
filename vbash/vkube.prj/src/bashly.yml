@@ -66,7 +66,7 @@ flags:
 
     Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command itself.
   arg: cluster-plan
-  default: k3s-HA
+  #default: k3s-HA
 
 commands:
 - name: exec

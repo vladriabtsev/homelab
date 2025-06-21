@@ -243,8 +243,10 @@ function vlib.bashly-init-error-handler() {
 
 }
 function redirect-to-log-file {
-  [[ $# -eq 1 ]] || ( echo_err "Only one parameter is expected" ${LINENO}; exit 1 )
-  [ -z "$1" ] && ( echo_err "Expecting log file path as a parameter"; exit 1 )
+  #[[ $# -eq 1 ]] || ( echo_err "Only one parameter is expected" ${LINENO}; exit 1 )
+  #[ -z "$1" ] && ( echo_err "Expecting log file path as a parameter"; exit 1 )
+  [[ $# -eq 1 ]] || err_and_exit "Only one parameter is expected"
+  [ -z "$1" ] && err_and_exit "Expecting log file path as a parameter"
 
   # https://tldp.org/LDP/abs/html/io-redirection.html
   # https://tldp.org/LDP/abs/html/ioredirintro.html
@@ -285,7 +287,8 @@ function vlib.bashly-init-command() {
 
   set -e
 
-  [ -z $args ] && ( echo_err "Expecting bashly script when call bashly-init-command()"; exit 1 ) 
+  [ -n $args ] || err_and_exit "Expecting bashly script when call bashly-init-command()" 
+  #[ -z $args ] && ( echo_err "Expecting bashly script when call bashly-init-command()"; exit 1 ) 
   #[[ $# -eq 1 ]] || err_and_exit "Only one parameter is expected" ${LINENO}
 
   __is_trace=0

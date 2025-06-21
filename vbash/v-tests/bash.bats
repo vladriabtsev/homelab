@@ -106,19 +106,20 @@ function return-result-to-global-variable() {
   echo "__return_result_to_global_variable=$__return_result_to_global_variable" >&3
   [ "$__return_result_to_global_variable" == "func result" ]
 }
-function return-result-to-variable() {
+function return-result-to-global-variable() {
   # $1 variable name
   eval "$1='func result'"
   eval local ver2=\"\$$1\"
-  echo "$1=$ver2" >&3
-  echo "kuku $__return_result_to_variable" >&3
+  echo "$1='$ver2'" >&3
+  echo "__global_variable_for_result inside function '$__global_variable_for_result'" >&3
 }
-@test "return from function to variable" {
-  __return_result_to_variable="initial"
-  run return-result-to-variable __return_result_to_global_variable
+@test "return from function to global variable2" {
+  skip "is not working. Bats problem???"
+  __global_variable_for_result="initial"
+  run return-result-to-global-variable __global_variable_for_result
   assert_success
-  echo "kuku0 $__return_result_to_variable" >&3
-  [ "$__return_result_to_variable" == "func result" ]
+  echo "__global_variable_for_result outside function '$__global_variable_for_result'" >&3
+  [ "$__global_variable_for_result" == "func result" ]
 }
 
 

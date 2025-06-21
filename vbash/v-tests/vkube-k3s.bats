@@ -73,6 +73,107 @@ setup() {
   run verify "'status' is 'running' for pods named '^traefik'"
   assert_success
 }
+
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: without namespace" {
+  run vkube-k3s.secret-create
+  #echo "output=$output"
+  assert_failure
+  assert_output --partial "Missing namespace \$1 parameter"
+  assert_output --partial "## C A L L   T R A C E ##"
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: without secret name" {
+  run vkube-k3s.secret-create test
+  #echo "output=$output"
+  assert_failure
+  assert_output --partial "Missing secret name \$2 parameter"
+  assert_output --partial "## C A L L   T R A C E ##"
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: without secret folder" {
+  run vkube-k3s.secret-create test test-secret
+  #echo "output=$output"
+  assert_failure
+  assert_output --partial "Missing secret folder path \$3 parameter"
+  assert_output --partial "## C A L L   T R A C E ##"
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: from not existing path in 'pass' password store" {
+  run vkube-k3s.secret-create test test-secret not-existing-store-folder
+  #echo "output=$output" >&3
+  assert_failure
+  assert_output --partial "Can't find 'not-existing-store-folder/username.txt' record in 'pass' password store"
+  assert_output --partial "## C A L L   T R A C E ##"
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: from path in 'pass' password store" {
+  # Required:
+  # pass insert test/username.txt # enter password 'test-user'
+  # pass insert test/password.txt # enter password 'test-password'
+  run vkube-k3s.secret-create test test-secret test
+  #echo "output=$output" >&3
+  assert_success
+}
+
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: from not existing disk folder" {
+  run vkube-k3s.secret-create test test-secret ~/.test-not-exists
+  #echo "output=$output" >&3
+  assert_failure
+  assert_output --partial "Can't find folder"
+  assert_output --partial "## C A L L   T R A C E ##"
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: from empty disk folder" {
+  run vkube-k3s.secret-create test test-secret ~
+  #echo "output=$output" >&3
+  assert_failure
+  assert_output --partial "Can't find user name file"
+  assert_output --partial "## C A L L   T R A C E ##"
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: from disk folder with username and password" {
+  # Required:
+  # ~/.test/username.txt # with line 'username=test-user'
+  # ~/.test/password.txt # with line 'password=test-password'
+  run vkube-k3s.secret-create test test-secret ~/.test
+  #echo "output=$output" >&3
+  assert_success
+  assert_output --partial "secret/test-secret created"
+}
+
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: from disk folder" {
+  # Required:
+  # ~/.test/username.txt # with line 'username=test-user'
+  # ~/.test/password.txt # with line 'password=test-password'
+  run kubectl delete secret test-secret -n test --ignore-not-found=true
+  assert_success
+
+  run vkube-k3s.secret-create test test-secret ~/.test
+  #echo "output=$output" >&3
+  assert_success
+
+  run kubectl get secret test-secret -n test
+  assert_success
+}
+#bats test_tags=tag:secret
+@test "vkube-k3s.secret-create: from password manager" {
+  # Required:
+  # ~/.test/username.txt # with line 'username=test-user'
+  # ~/.test/password.txt # with line 'password=test-password'
+  run kubectl delete secret test-secret -n test --ignore-not-found=true
+  assert_success
+
+  run vkube-k3s.secret-create test test-secret test
+  #echo "output=$output" >&3
+  assert_success
+
+  run kubectl get secret test-secret -n test
+  assert_success
+}
+
 # bats test_tags=tag:storage
 @test "k3d storage installation" {
   echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage" >&3
@@ -519,3 +620,4 @@ setup() {
   #run ../vkube --trace busybox install mybusybox --storage-class backup2-synology-csi-iscsi-test
 
 }
+
