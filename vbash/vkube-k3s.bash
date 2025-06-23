@@ -2171,6 +2171,7 @@ volumeBindingMode: WaitForFirstConsumer\""
               #run "line '$LINENO';kubectl create secret generic $secret_folder_name -n csi-smb --from-file=$storage_server_protocol_secret_folder"
               run "line '$LINENO';vkube-k3s.secret-create csi-smb $secret_folder_name $storage_server_protocol_secret_folder"
               storage_class="$storage_server_name-csi-driver-smb-$storage_server_protocol_class_name"
+              [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$k3s_settings'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
               #region
               txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
 kind: StorageClass
@@ -2212,6 +2213,8 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
   #- noserverino  # required to prevent data corruption
 "
               #endregion
+            else
+              continue
             fi
           ;;
           csi-driver-nfs )
@@ -2222,6 +2225,7 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
               #run "line '$LINENO';kubectl create secret generic $secret_folder_name -n csi-nfs --from-file=$storage_server_protocol_secret_folder"
               run "line '$LINENO';vkube-k3s.secret-create csi-nfs $secret_folder_name $storage_server_protocol_secret_folder"
               storage_class="$storage_server_name-csi-driver-nfs-$storage_server_protocol_class_name"
+              [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$k3s_settings'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
               #region
               txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
 kind: StorageClass
@@ -2252,6 +2256,8 @@ mountOptions:
 "
               #endregion
               vlib.trace "storage_server_protocol_class_location=$storage_server_protocol_class_location"
+            else
+              continue
             fi
           ;;
           * )
@@ -2261,16 +2267,18 @@ mountOptions:
         separator="---
 "
         #endregion
+        [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$k3s_settings'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
         run "line '$LINENO';kubectl delete storageclass $storage_class --wait --ignore-not-found=true"
       done
     done
   done
   #set +x
-  #vlib.trace "generated storage classes=\n$txt"
-  run "line '$LINENO';echo '$txt' > '$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
-  #run "line '$LINENO';kubectl apply edit-last-applied -f '$data_folder/generated-storage-classes.yaml'"
-  run "line '$LINENO';kubectl apply -f '$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
-
+  if [[ ${#txt} -gt 0 ]]; then
+    #vlib.trace "generated storage classes=\n$txt"
+    run "line '$LINENO';echo '$txt' > '$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
+    #run "line '$LINENO';kubectl apply edit-last-applied -f '$data_folder/generated-storage-classes.yaml'"
+    run "line '$LINENO';kubectl apply -f '$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
+  fi
   #run "line '$LINENO';kubectl apply -f $VBASH/../k3s/storage-classes.yaml"
   case $kubernetes_type in
     k3s )
