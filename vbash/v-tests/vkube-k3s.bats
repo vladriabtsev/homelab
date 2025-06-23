@@ -187,7 +187,7 @@ setup() {
 #endregion secret
 
 #region storage install and uninstall
-  # bats test_tags=tag:storage-one
+  # bats test_tags=tag:storage-separate
   @test "storage: install-uninstall local" {
     echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-local" >&3
     run ../vkube --cluster-plan k3d-test --trace k3s install --storage-local
@@ -204,8 +204,8 @@ setup() {
   }
   # bats test_tags=tag:storage-separate
   @test "storage: install-uninstall nfs" {
-    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-nfs" >&3
-    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-nfs
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-nfs" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-nfs
 
     echo '      Testing...' >&3
     sleep 60
@@ -228,8 +228,8 @@ setup() {
   }
   # bats test_tags=tag:storage-separate
   @test "storage: install-uninstall smb" {
-    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-smb" >&3
-    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-smb
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-smb" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-smb
 
     echo '      Testing...' >&3
     sleep 60
@@ -275,7 +275,7 @@ setup() {
     # sleep 10
     # assert_success
   }
-  # bats test_tags=tag:storage-separate
+  # bats test_tags=tag:storage-one
   @test "storage: install-uninstall longhorn" {
     echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-longhorn" >&3
     run ../vkube --cluster-plan k3d-test --trace k3s install --storage-longhorn

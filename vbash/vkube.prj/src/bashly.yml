@@ -79,9 +79,6 @@ commands:
     help: Bash command to execute
     default: "ls"
 
-- name: cluster-install
-  help: Kubernetes and all services as described in cluster plan YAML file
-
 - import: src/k3s.yml
 #- import: src/local-storage.yml
 #- import: src/nfs-storage.yml

@@ -455,7 +455,7 @@ function vkube-k3s.install() {
     install_storage_at_least_one=1
     install_storage=1
     __install_all=0
-  elif [[ -n ${args[--storage-local]} || -n ${args[--storage-nfs]} || -n ${args[--storage-smb]} || -n ${args[--storage-synology]} || -n ${args[--storage-longhorn]} ]]; then
+  elif [[ -n ${args[--storage-local]} || -n ${args[--storage-csi-driver-nfs]} || -n ${args[--storage-csi-driver-smb]} || -n ${args[--storage-synology]} || -n ${args[--storage-longhorn]} ]]; then
     install_storage_at_least_one=1
     local_storage_use=0
     csi_driver_nfs_use=0
@@ -469,12 +469,12 @@ function vkube-k3s.install() {
     local_storage_use=1
     __install_all=0
   fi
-  if [[ -n ${args[--storage-nfs]} ]]; then
+  if [[ -n ${args[--storage-csi-driver-nfs]} ]]; then
     install_storage_at_least_one=1
     csi_driver_nfs_use=1
     __install_all=0
   fi
-  if [[ -n ${args[--storage-smb]} ]]; then
+  if [[ -n ${args[--storage-csi-driver-smb]} ]]; then
     install_storage_at_least_one=1
     csi_driver_smb_use=1
     __install_all=0
@@ -507,6 +507,12 @@ function vkube-k3s.install() {
     csi_synology_use=1
     longhorn_use=1
   fi
+  echo "      local_storage_use=$local_storage_use" >&3
+  echo "      csi_driver_nfs_use=$csi_driver_nfs_use" >&3
+  echo "      csi_driver_smb_use=$csi_driver_smb_use" >&3
+  echo "      csi_synology_use=$csi_synology_use" >&3
+  echo "      longhorn_use=$longhorn_use" >&3
+  echo "      install_storage_at_least_one=$install_storage_at_least_one" >&3
 
   local data_folder=$(dirname "${k3s_settings}")
   vlib.trace "data folder=$data_folder"

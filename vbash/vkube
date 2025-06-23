@@ -26,8 +26,7 @@ vkube_usage() {
   echo
   # :command.usage_commands
   printf "%s\n" "$(bold "Commands:")"
-  printf "  %s   Kubernetes and all services as described in cluster plan YAML file\n" "$(green "cluster-install")"
-  printf "  %s   k3s kubernetes\n" "$(green "k3s")            "
+  printf "  %s   k3s kubernetes\n" "$(green "k3s") "
   echo
 
   # :command.long_usage
@@ -148,27 +147,6 @@ vkube_exec_usage() {
     printf "  %s\n" "$(blue "COMMAND")"
     printf "    Bash command to execute\n"
     printf "    %s\n" "Default: ls"
-    echo
-
-  fi
-}
-
-# :command.usage
-vkube_cluster_install_usage() {
-  printf "vkube cluster-install - Kubernetes and all services as described in cluster plan YAML file\n\n"
-
-  printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube cluster-install\n"
-  printf "  vkube cluster-install --help | -h\n"
-  echo
-
-  # :command.long_usage
-  if [[ -n "$long_usage" ]]; then
-    printf "%s\n" "$(bold "Options:")"
-
-    # :command.usage_fixed_flags
-    printf "  %s\n" "$(magenta "--help, -h")"
-    printf "    Show this help\n"
     echo
 
   fi
@@ -494,36 +472,19 @@ vkube_exec_command() {
 }
 
 # :command.function
-vkube_cluster_install_command() {
-
-  # src/cluster_install_command.sh
-  #!/usr/bin/env bash
-  #inspect_args
-
-  # shellcheck source=/dev/null
-  source "${VBASH}/vlib.bash"
-  vlib.trace "$(inspect_args)"
-
-  vlib.bashly-init-command
-  # shellcheck source=/dev/null
-  source "${VBASH}/vkube-k3s.bash"
-
-  vkube-k3s.csi-synology-install
-
-}
-
-# :command.function
 vkube_k3s_install_command() {
 
   # src/k3s_install_command.sh
   #!/usr/bin/env bash
   #inspect_args
+  #echo "$(inspect_args)" >&3
 
   vlib.bashly-init-command
   vlib.trace "$(inspect_args)"
 
   # shellcheck source=/dev/null
   source "${VBASH}/vkube-k3s.bash"
+  #echo "      vkube-k3s.install()" >&3
   vkube-k3s.install
 
 }
@@ -730,13 +691,6 @@ parse_requirements() {
       shift $#
       ;;
 
-    cluster-install)
-      action="cluster-install"
-      shift
-      vkube_cluster_install_parse_requirements "$@"
-      shift $#
-      ;;
-
     k3s)
       action="k3s"
       shift
@@ -834,51 +788,6 @@ vkube_exec_parse_requirements() {
 
   # :command.default_assignments
   [[ -n ${args['command']:-} ]] || args['command']="ls"
-
-}
-
-# :command.parse_requirements
-vkube_cluster_install_parse_requirements() {
-  # :command.fixed_flags_filter
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-      --help | -h)
-        long_usage=yes
-        vkube_cluster_install_usage
-        exit
-        ;;
-
-      *)
-        break
-        ;;
-
-    esac
-  done
-
-  # :command.command_filter
-  action="cluster-install"
-
-  # :command.parse_requirements_while
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-
-      -?*)
-        printf "invalid option: %s\n" "$key" >&2
-        exit 1
-        ;;
-
-      *)
-        # :command.parse_requirements_case
-        # :command.parse_requirements_case_simple
-        printf "invalid argument: %s\n" "$key" >&2
-        exit 1
-
-        ;;
-
-    esac
-  done
 
 }
 
@@ -1275,7 +1184,6 @@ bashly-run() {
 
   case "$action" in
     "exec") vkube_exec_command ;;
-    "cluster-install") vkube_cluster_install_command ;;
     "k3s") vkube_k3s_command ;;
     "k3s install") vkube_k3s_install_command ;;
     "k3s upgrade") vkube_k3s_upgrade_command ;;
