@@ -24,12 +24,17 @@ kube_vip_lb_range: 192.168.100.101-192.168.100.200
 kubernetes_reflector_use: 1
 kubernetes_reflector_ver: # auto upgrade to latest if empty
 
+# all nodes settings
+# all nodes admin user name and password from secret folder, will be used if $node_secret_folder is empty
+nodes_admin_secret_folder: test-nodes-admin 
 # node settings
 node:
 - node_id: 1
   node_name: k3s1
   node_ip4: 192.168.100.51
   kube_vip_interface: eth1
+  # node admin user name and password from secret folder if need different account for node
+  node_admin_secret_folder:
   node_user: vlad
   node_is_control_plane: 1
   node_is_worker: 1
@@ -79,6 +84,7 @@ local_storage_use: 1
 
 # https://github.com/longhorn/longhorn
 longhorn_ver: v1.8.1 # auto upgrade to latest if empty
+longhorn_use: 1
 
 # https://github.com/kubernetes/examples/blob/master/volumes/iscsi/iscsi.yaml
 

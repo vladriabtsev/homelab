@@ -72,6 +72,16 @@ setup() {
   assert_success
   run verify "'status' is 'running' for pods named '^traefik'"
   assert_success
+
+  run verify "there is 1 storageclass named 'local-path'"
+  [ "$status" -eq 0 ]
+
+  run vkube-k3s.is-namespace-exist "csi-nfs"
+  [ "$status" -eq 1 ]
+  run vkube-k3s.is-namespace-exist "csi-smb"
+  [ "$status" -eq 1 ]
+  run vkube-k3s.is-namespace-exist "synology-csi"
+  [ "$status" -eq 1 ]
 }
 
 #region secret
@@ -175,6 +185,110 @@ setup() {
     assert_success
   }
 #endregion secret
+
+#region storage install and uninstall
+  # bats test_tags=tag:storage-one
+  @test "storage: install-uninstall local" {
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-local" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-local
+    sleep 10
+    assert_success
+
+    run verify "there is 1 storageclass named 'local-storage'"
+	  [ "$status" -eq 0 ]
+
+    # echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-local" >&3
+    # run ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-local
+    # sleep 10
+    # assert_success
+  }
+  # bats test_tags=tag:storage-separate
+  @test "storage: install-uninstall nfs" {
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-nfs" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-nfs
+
+    echo '      Testing...' >&3
+    sleep 60
+    DETIK_CLIENT_NAMESPACE="csi-nfs"
+    echo '      Testing csi-nfs-node' >&3
+    run try "at most 5 times every 30s to get pods named '^csi-nfs-node' and verify that 'status' is 'running'"
+    assert_success
+    # run verify "there are 3 pods named '^csi-nfs-node'"
+    # assert_success
+    echo '      Testing csi-nfs-controller' >&3
+    run try "at most 5 times every 30s to get pods named '^csi-nfs-controller' and verify that 'status' is 'running'"
+    assert_success
+    # run verify "there are 5 pods named '^csi-nfs-controller'"
+    # assert_success
+
+    # echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-nfs" >&3
+    # run ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-nfs
+    # sleep 10
+    # assert_success
+  }
+  # bats test_tags=tag:storage-separate
+  @test "storage: install-uninstall smb" {
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-smb" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-smb
+
+    echo '      Testing...' >&3
+    sleep 60
+    DETIK_CLIENT_NAMESPACE="csi-smb"
+    echo '      Testing csi-smb-node' >&3
+    run try "at most 5 times every 30s to get pods named '^csi-smb-node' and verify that 'status' is 'running'"
+    assert_success
+    # run verify "there are 3 pods named '^csi-smb-node'"
+    # assert_success
+    echo '      Testing csi-smb-controller' >&3
+    run try "at most 5 times every 30s to get pods named '^csi-smb-controller' and verify that 'status' is 'running'"
+    assert_success
+    # run verify "there are 4 pods named '^csi-smb-controller'"
+    # assert_success
+
+    # echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-smb" >&3
+    # run ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-smb
+    # sleep 10
+    # assert_success
+  }
+  # bats test_tags=tag:storage-separate
+  @test "storage: install-uninstall synology" {
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-synology" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-synology
+
+    echo '      Testing...' >&3
+    sleep 60
+
+    DETIK_CLIENT_NAMESPACE="synology-csi"
+    echo '      Testing synology-csi-node' >&3
+    run try "at most 5 times every 30s to get pods named '^synology-csi-node' and verify that 'status' is 'running'"
+    assert_success
+    # run verify "there are 2 pods named '^synology-csi-node'"
+    # assert_success
+    echo '      Testing synology-csi-controller' >&3
+    run try "at most 5 times every 30s to get pods named '^synology-csi-controller' and verify that 'status' is 'running'"
+    assert_success
+    # run verify "there are 4 pods named '^synology-csi-controller'"
+    # assert_success
+
+    # echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-synology" >&3
+    # run ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-synology
+    # sleep 10
+    # assert_success
+  }
+  # bats test_tags=tag:storage-separate
+  @test "storage: install-uninstall longhorn" {
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-longhorn" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-longhorn
+
+    echo '      Testing...' >&3
+    sleep 60
+
+    # echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-longhorn" >&3
+    # run ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-longhorn
+    # sleep 10
+    # assert_success
+  }
+#endregion storage install and uninstall
 
 # bats test_tags=tag:storage
 @test "k3d general storage installation" {

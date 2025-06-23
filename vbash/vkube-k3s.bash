@@ -90,6 +90,22 @@ function vkube-k3s.cluster-plan-read() {
 
   if ! test -e ~/tmp; then  mkdir ~/tmp;  fi
 }
+function vkube-k3s.get-node-admin-password() {
+  local password
+  if ! [[ -z $node_secret_folder ]]; then
+    vlib.is-pass-dir-exists-with-trace "$node_secret_folder"
+    password="$(vlib.pass-get-secret $node_secret_folder)"
+  elif ! [[ -z $nodes_secret_folder ]]; then
+    vlib.is-pass-dir-exists-with-trace "$nodes_secret_folder"
+    password="$(vlib.pass-get-secret $nodes_secret_folder)"
+  else
+    err_and_exit "Node admin secret folder setting are missing. Both 'nodes_admin_secret_folder' and 'node_admin_secret_folder' are empty."
+  fi
+}
+function vkube-k3s.is-namespace-exist {
+  [ -z "$1" ] && err_and_exit "Missing namespace name \$1 parameter."
+  if ! (kubectl get namespace "$1" > /dev/null ); then return 1; fi
+}
 function vkube-k3s.is-namespace-exist-or-create {
   [ -z "$1" ] && err_and_exit "Missing namespace name \$1 parameter."
   if ! (kubectl get namespace "$1" > /dev/null ); then 
@@ -138,16 +154,16 @@ function vkube-k3s.check-pass-data-for-secrets() {
   (vlib.is-pass-dir-exists "$1/password.txt") || return 1
   return 0
 }
-#############################
-# Create kubernetes secret
-# vkube-k3s.secret-create $1 $2
-#  $1 - kubernetes namespace where secret will be created
-#  $2 - kubernetes secret name
-#  $3 - folder path for secret data (username and password)
-#       Folder path type is recognized by first character in $3 parameter.
-#       Disk folder path recognized by first character '.' or '/'. Two files (username.txt and password.txt) are expected inside folder.
-#       For 'pass' password manager path two secret files (username.txt and password.txt) are expected inside path.
 function vkube-k3s.secret-create {
+  #############################
+  # Create kubernetes secret
+  # vkube-k3s.secret-create $1 $2
+  #  $1 - kubernetes namespace where secret will be created
+  #  $2 - kubernetes secret name
+  #  $3 - folder path for secret data (username and password)
+  #       Folder path type is recognized by first character in $3 parameter.
+  #       Disk folder path recognized by first character '.' or '/'. Two files (username.txt and password.txt) are expected inside folder.
+  #       For 'pass' password manager path two secret files (username.txt and password.txt) are expected inside path.
   [ -z "$1" ] && err_and_exit "Missing namespace \$1 parameter."
   [ -z "$2" ] && err_and_exit "Missing secret name \$2 parameter."
   [ -z "$3" ] && err_and_exit "Missing secret folder path \$3 parameter."
@@ -427,17 +443,50 @@ function vkube-k3s.install() {
 
   vkube-k3s.check-cluster-plan-path
 
+  vkube-k3s.cluster-plan-read
+
   local __install_all=1
+  install_storage_at_least_one=0
   if [[ -n ${args[--core]} ]]; then
     install_core=1
     __install_all=0
   fi
   if [[ -n ${args[--storage]} ]]; then
+    install_storage_at_least_one=1
     install_storage=1
     __install_all=0
+  elif [[ -n ${args[--storage-local]} || -n ${args[--storage-nfs]} || -n ${args[--storage-smb]} || -n ${args[--storage-synology]} || -n ${args[--storage-longhorn]} ]]; then
+    install_storage_at_least_one=1
+    local_storage_use=0
+    csi_driver_nfs_use=0
+    csi_driver_smb_use=0
+    csi_synology_use=0
+    longhorn_use=0
+    __install_all=0
   fi
-  if [[ -n ${args[--longhorn]} ]]; then
-    install_longhorn=1
+  if [[ -n ${args[--storage-local]} ]]; then
+    install_storage_at_least_one=1
+    local_storage_use=1
+    __install_all=0
+  fi
+  if [[ -n ${args[--storage-nfs]} ]]; then
+    install_storage_at_least_one=1
+    csi_driver_nfs_use=1
+    __install_all=0
+  fi
+  if [[ -n ${args[--storage-smb]} ]]; then
+    install_storage_at_least_one=1
+    csi_driver_smb_use=1
+    __install_all=0
+  fi
+  if [[ -n ${args[--storage-synology]} ]]; then
+    install_storage_at_least_one=1
+    csi_synology_use=1
+    __install_all=0
+  fi
+  if [[ -n ${args[--storage-longhorn]} ]]; then
+    install_storage_at_least_one=1
+    longhorn_use=1
     __install_all=0
   fi
   if [[ -n ${args[--apps]} ]]; then
@@ -447,11 +496,17 @@ function vkube-k3s.install() {
   if [[ ${__install_all} -eq 1 ]]; then
     install_core=1
     install_storage=1
-    install_longhorn=1
     install_apps=1
   fi
-
-  vkube-k3s.cluster-plan-read
+  if [[ ${__install_storage} -eq 1 ]]; then
+    install_storage_at_least_one=1
+    install_storage=1
+    local_storage_use=1
+    csi_driver_nfs_use=1
+    csi_driver_smb_use=1
+    csi_synology_use=1
+    longhorn_use=1
+  fi
 
   local data_folder=$(dirname "${k3s_settings}")
   vlib.trace "data folder=$data_folder"
@@ -529,24 +584,9 @@ function vkube-k3s.install() {
   # if [[ $p_skip -eq 0 ]]; then
   # fi
 
-  if [[ -n  $install_storage ]]; then
+  if [[ $install_storage_at_least_one -eq 1 ]]; then
     install-storage
   fi
-
-  case $kubernetes_type in
-    k3s )
-      if [[ -n  $install_longhorn ]]; then
-        longhorn-install
-      fi
-    ;;
-    k3d )
-      if [[ -n  $install_longhorn ]]; then
-        longhorn-install
-      fi
-    ;;
-    * )
-    ;;
-  esac
 
   return 0
   err_and_exit "exit" ${LINENO}
@@ -1100,6 +1140,16 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
     inf "... already installed. (Line:$LINENO)\n"
   fi
 }
+function vkube-k3s.csi-synology-uninstall() {
+  local deploy_k8s_version="v1.20"
+  inf "Uninstall synology-csi (Line:$LINENO)\n"
+  run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version' --ignore-not-found"
+  if [ $csi_synology_snapshot_use -eq 1 ]; then
+    run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version/snapshotter/volume-snapshot-class.yml' --ignore-not-found"
+    run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version/snapshotter/snapshotter.yaml' --ignore-not-found"
+    run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/synology CRDs' --ignore-not-found"
+  fi
+}
 function vkube-k3s.storage-speedtest-job-create() {
   [[ -z $1 ]] && vlib.error-printf "Missing \$1 namespace parameter"
   [[ -z $2 ]] && vlib.error-printf "Missing \$2 storage class name parameter"
@@ -1162,16 +1212,6 @@ spec:
   #kubectl apply -f - <<<"${txt}"
   echo "$txt" > "$data_folder/storage-speed/generated-$2-write-read-job.yaml"
   kubectl apply -f "$data_folder/storage-speed/generated-$2-write-read-job.yaml"
-}
-function vkube-k3s.csi-synology-uninstall() {
-  local deploy_k8s_version="v1.20"
-  inf "Uninstall synology-csi (Line:$LINENO)\n"
-  run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version' --ignore-not-found"
-  if [ $csi_synology_snapshot_use -eq 1 ]; then
-    run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version/snapshotter/volume-snapshot-class.yml' --ignore-not-found"
-    run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version/snapshotter/snapshotter.yaml' --ignore-not-found"
-    run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/synology CRDs' --ignore-not-found"
-  fi
 }
 function vkube-k3s.busybox-install() {
   declare _storage_classes=()
@@ -1664,6 +1704,9 @@ longhorn-install()
     err_and_exit "Cluster plan file '${k3s_settings}' is not found" ${LINENO};
   fi
   #echo $node_root_password
+
+  get passwod from 'pass' !!!
+
   if [[ -z $node_root_password ]]; then
   err_and_exit "exit" ${LINENO}
     node_root_password=""
@@ -1951,20 +1994,17 @@ function install-storage() {
   vlib.trace "data folder=$data_folder"
 
   if [ $local_storage_use -eq 1 ]; then
-    #region
+    inf "local (Line:$LINENO)\n"
     run "line '$LINENO';kubectl apply -f - <<<\"apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: local-storage
 provisioner: kubernetes.io/no-provisioner # indicates that this StorageClass does not support automatic provisioning
 volumeBindingMode: WaitForFirstConsumer\""
-    #endregion
   fi
-
   if [ $csi_synology_use -eq 1 ]; then
     vkube-k3s.csi-synology-install
   fi
-
   if [ $csi_driver_smb_use -eq 1 ]; then
     inf "csi-driver-smb (Line:$LINENO)\n"
     # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/deploy/example/e2e_usage.md
@@ -2232,5 +2272,19 @@ mountOptions:
   run "line '$LINENO';kubectl apply -f '$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
 
   #run "line '$LINENO';kubectl apply -f $VBASH/../k3s/storage-classes.yaml"
+  case $kubernetes_type in
+    k3s )
+      if [[ $longhorn_use -eq 1 ]]; then
+        longhorn-install
+      fi
+    ;;
+    k3d )
+      if [[ $longhorn_use -eq 1 ]]; then
+        longhorn-install
+      fi
+    ;;
+    * )
+    ;;
+  esac
 }
 #endregion legacy

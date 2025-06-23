@@ -853,10 +853,25 @@ function vlib.is-dir-exists {
   [ -d "$1" ] || return 1
   return 0
 }
-################################################################
-#     'pass' password manager
+function vlib.is-dir-exists-with-trace {
+  [ -z $1 ] && err_and_exit "Function 'vlib.is-dir-exists' is expecting dir path parameter"
+  [ -d "$1" ] || err_and_exit "Can't find '$1' directory."
+  return 0
+}
 function vlib.is-pass-dir-exists {
+  ################################################################
+  #     'pass' password manager
   [ -z "$1" ] && err_and_exit "Function 'vlib.is-pass-dir-exists' is expecting 'pass' password manager path parameter"
+  (vlib.is-pass-dir-exists "$1") || return 1
+  local _secret="$(pass "$1")"
+  [ -z $_secret ] && return 1
+  return 0
+}
+function vlib.is-pass-dir-exists-with-trace {
+  ################################################################
+  #     'pass' password manager
+  [ -z "$1" ] && err_and_exit "Function 'vlib.is-pass-dir-exists' is expecting 'pass' password manager path parameter"
+  (vlib.is-pass-dir-exists "$1") || err_and_exit "Can't find '$1' record in 'pass' password store."
   local _secret="$(pass "$1")"
   [ -z $_secret ] && return 1
   return 0
@@ -874,22 +889,6 @@ function vlib.pass-get-secret {
   [[ ${#_error} -gt 0 ]] && err_and_exit "$_error"
   echo $_secret
   #return 0
-}
-function vlib.pass-get-secret2 {
-  [ -z "$1" ] && err_and_exit "Function 'vlib.pass-get-secret' is expecting 'pass' password manager path parameter"
-
-  #local _error=$(pass show $1 2>&1 1>/dev/null)
-  local _old_setting=${-//[^e]/}
-  set +e
-  local _error=$(pass show $1 2>&1)
-  if [[ -n "$_old_setting" ]]; then set -e; fi
-#[[ $? -ne 0 ]] && err_and_exit "$_error"
-  [[ ${#_error} -gt 0 ]] && err_and_exit "$_error"
-  #[[ $_error == *"Error"* ]] && err_and_exit "$_error"
-
-  local _secret="$(pass show $1)"
-  echo $_secret
-  return 0
 }
 # https://unix.stackexchange.com/questions/444946/how-can-we-run-a-command-stored-in-a-variable
 # Usage: vlib.exec-command ls ~

@@ -19,14 +19,27 @@ commands:
   - long: --core
     help: Install core cluster components. Install all if --core, --storage, and --apps flags are not set.
   - long: --storage
-    help: All general storage drivers. Install all if --core, --storage, and --apps flags are not set.
-  - long: --longhorn
-    help: Longhorn storage. Install all if --core, --storage, and --apps flags are not set.
+    help: All general storage drivers. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
+  - long: --storage-local
+    help: Local storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
+    conflicts: [--storage]
+  - long: --storage-csi-driver-nfs
+    help: CSI driver NFS storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
+    conflicts: [--storage]
+  - long: --storage-csi-driver-smb
+    help: CSI driver SMB storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
+    conflicts: [--storage]
+  - long: --storage-synology
+    help: Synology CSI storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
+    conflicts: [--storage]
+  - long: --storage-longhorn
+    help: Longhorn storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
+    conflicts: [--storage]
   - long: --app
-    help: All applications. Install all if --core, --storage, and --apps flags are not set.
+    help: All applications. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
 
-- name: uninstall
-  help: Uninstall k3s kubernetes
+# - name: uninstall
+#   help: Uninstall k3s kubernetes
   #args: *cluster_plan
 
 - name: upgrade
