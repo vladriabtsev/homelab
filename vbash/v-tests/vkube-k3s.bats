@@ -110,24 +110,6 @@ setup() {
     assert_output --partial "## C A L L   T R A C E ##"
   }
   #bats test_tags=tag:secret
-  @test "vkube-k3s.secret-create: from not existing path in 'pass' password store" {
-    run vkube-k3s.secret-create test test-secret not-existing-store-folder
-    #echo "output=$output" >&3
-    assert_failure
-    assert_output --partial "Can't find 'not-existing-store-folder/username.txt' record in 'pass' password store"
-    assert_output --partial "## C A L L   T R A C E ##"
-  }
-  #bats test_tags=tag:secret
-  @test "vkube-k3s.secret-create: from path in 'pass' password store" {
-    # Required:
-    # pass insert test/username.txt # enter password 'test-user'
-    # pass insert test/password.txt # enter password 'test-password'
-    run vkube-k3s.secret-create test test-secret test
-    #echo "output=$output" >&3
-    assert_success
-  }
-
-  #bats test_tags=tag:secret
   @test "vkube-k3s.secret-create: from not existing disk folder" {
     run vkube-k3s.secret-create test test-secret ~/.test-not-exists
     #echo "output=$output" >&3
@@ -167,6 +149,23 @@ setup() {
     assert_success
 
     run kubectl get secret test-secret -n test
+    assert_success
+  }
+  #bats test_tags=tag:secret
+  @test "vkube-k3s.secret-create: from not existing path in 'pass' password store" {
+    run vkube-k3s.secret-create test test-secret not-existing-store-folder
+    #echo "output=$output" >&3
+    assert_failure
+    assert_output --partial "Can't find 'not-existing-store-folder/username.txt' record in 'pass' password store"
+    assert_output --partial "## C A L L   T R A C E ##"
+  }
+  #bats test_tags=tag:secret
+  @test "vkube-k3s.secret-create: from path in 'pass' password store" {
+    # Required:
+    # pass insert test/username.txt # enter password 'test-user'
+    # pass insert test/password.txt # enter password 'test-password'
+    run vkube-k3s.secret-create test test-secret test
+    #echo "output=$output" >&3
     assert_success
   }
   #bats test_tags=tag:secret

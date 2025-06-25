@@ -167,6 +167,7 @@ testvercomp() {
 #endregion wait-for 
 
 #region dir
+  # bats test_tags=tag:dir
   @test "vlib.is-dir-exists: error without parameters" {
     run vlib.is-dir-exists
     #echo "output=$output" >&3
@@ -175,17 +176,65 @@ testvercomp() {
     [ "$status" -eq 1 ]
     assert_output --partial "Function 'vlib.is-dir-exists' is expecting dir path parameter"
   }
+  # bats test_tags=tag:dir
   @test "vlib.is-dir-exists: existing path" {
     run vlib.is-dir-exists "${HOME}"
     assert_success
     [ "$status" -eq 0 ]
     [ "$output" = "" ]
   }
+  # bats test_tags=tag:dir
   @test "vlib.is-dir-exists: not existing path" {
     run vlib.is-dir-exists "${HOME}tmp"
     assert_failure
     [ "$status" -eq 1 ]
     [ "$output" = "" ]
+  }
+  # bats test_tags=tag:dir
+  @test "vlib.get-secret-string: not existing path" {
+    run vlib.get-secret-string "~/not-exist"
+    assert_failure
+    #echo "output=$output" >&3
+    [ "$status" -eq 1 ]
+    assert_output --partial "Can't find file '~/not-exist'"
+  }
+  # bats test_tags=tag:dir
+  @test "vlib.get-secret-string: existing dir path without file (~)" {
+    run vlib.get-secret-string "~"
+    #echo "output=$output" >&3
+    assert_failure
+    [ "$status" -eq 1 ]
+    assert_output --partial "Can't find file '~'"
+  }
+  # bats test_tags=tag:dir
+  @test "vlib.get-secret-string: existing dir path without file (\$HOME)" {
+    run vlib.get-secret-string "\${HOME}"
+    #echo "output=$output" >&3
+    assert_failure
+    [ "$status" -eq 1 ]
+    assert_output --partial "'\${HOME}' is a directory (full path: '${HOME}')"
+  }
+  # bats test_tags=tag:dir
+  @test "vlib.get-secret-string: existing dir path without file (HOME)" {
+    run vlib.get-secret-string "${HOME}"
+    #echo "output=$output" >&3
+    assert_failure
+    [ "$status" -eq 1 ]
+    assert_output --partial "'${HOME}' is a directory (full path: '${HOME}')"
+  }
+  # bats test_tags=tag:dir
+  @test "vlib.get-secret-string: existing empty file" {
+    run vlib.get-secret-string "./test-empty-file.txt"
+    #echo "output=$output" >&3
+    assert_failure
+    assert_output --partial "v-tests/test-empty-file.txt') is empty"
+  }
+  # bats test_tags=tag:dir
+  @test "vlib.get-secret-string: existing not empty file" {
+    run vlib.get-secret-string "./test-not-empty-file.txt"
+    #echo "output=$output" >&3
+    assert_success
+    [ "$output" = "test-secret-from-file" ]
   }
 #endregion dir
 
@@ -202,8 +251,8 @@ testvercomp() {
   @test "vlib.is-pass-dir-exists: existing path" {
     # pass insert test/exists-pass-dir-test # enter password 'test-password'
     run vlib.is-pass-dir-exists test/exists-pass-dir-test
+    #echo "output=$output" >&3
     assert_success
-    [ "$status" -eq 0 ]
     [ "$output" = "" ]
   }
   # bats test_tags=tag:pass
@@ -246,7 +295,6 @@ testvercomp() {
     # echo "status=$status" >&3
     # echo "_secret=$_secret" >&3
     assert_success
-    [ "$status" -eq 0 ]
     [ "$output" = "test-password" ]
   }
   # bats test_tags=tag:pass

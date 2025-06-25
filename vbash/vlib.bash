@@ -862,7 +862,7 @@ function vlib.is-pass-dir-exists {
   ################################################################
   #     'pass' password manager
   [ -z "$1" ] && err_and_exit "Function 'vlib.is-pass-dir-exists' is expecting 'pass' password manager path parameter"
-  (vlib.is-pass-dir-exists "$1") || return 1
+  (pass "$1" > /dev/null ) || return 1
   local _secret="$(pass "$1")"
   [ -z $_secret ] && return 1
   return 0
@@ -876,23 +876,39 @@ function vlib.is-pass-dir-exists-with-trace {
   [ -z $_secret ] && return 1
   return 0
 }
-# Usage returned_value="$(vlib.pass-get-secret pass-path)"
 function vlib.pass-get-secret {
+  # Usage returned_value="$(vlib.pass-get-secret pass-path)"
   [ -z "$1" ] && err_and_exit "Function 'vlib.pass-get-secret' is expecting 'pass' password manager path parameter"
+  local _secret
   local _old_setting=${-//[^e]/}
   set +e
   local _error=$(pass show $1 2>&1 1>/dev/null)
   #echo "_error=$_error" >&3
-  [[ ${#_error} -eq 0 ]] && local _secret="$(pass show $1)"
+  [[ ${#_error} -eq 0 ]] && _secret="$(pass show $1)"
   #echo "_secret=$_secret" >&3
   if [[ -n "$_old_setting" ]]; then set -e; fi
   [[ ${#_error} -gt 0 ]] && err_and_exit "$_error"
   echo $_secret
-  #return 0
 }
-# https://unix.stackexchange.com/questions/444946/how-can-we-run-a-command-stored-in-a-variable
-# Usage: vlib.exec-command ls ~
+function vlib.get-secret-string {
+  [ -z "$1" ] && err_and_exit "Missing \$1 parameter with path to file with secret text."
+  local _secret
+  local _path
+  #echo "_path=$1" >&3
+  eval "_path=\"$1\""
+  #echo "_path=$_path" >&3
+  _path=$(realpath "$_path")
+  #echo "_path=$_path" >&3
+  [ -a "$_path" ] || err_and_exit "Can't find file '$1' (full path: '$_path')."
+  [ -d "$_path" ] && err_and_exit "Path '$1' is a directory (full path: '$_path')."
+  [ -r "$_path" ] || err_and_exit "File '$1' ('$_path') exists, but not readable."
+  _secret=$(<"$_path")
+  [[ ${#_secret} -gt 0 ]] || err_and_exit "File '$1' ('$_path') is empty."
+  echo $_secret
+}
 function vlib.exec-command {
+  # Usage: vlib.exec-command ls ~
+  # https://unix.stackexchange.com/questions/444946/how-can-we-run-a-command-stored-in-a-variable
   [[ $# -eq 0 ]] && err_and_exit "Function 'vlib.exec-command' is expecting 'command' parameter to try execute"
   local _old_setting=${-//[^e]/}
   set +e
@@ -902,8 +918,8 @@ function vlib.exec-command {
   [[ $_failed -eq 1 ]] && return 1
   return 0
 }
-# Execute command and print call stack on error
 function vlib.exec-command-and-trace {
+  # Execute command and print call stack on error
   [[ $# -eq 0 ]] && err_and_exit "Function 'vlib.exec-command-and-trace' is expecting 'command' parameter to try execute"
   local _old_setting=${-//[^e]/}
   set +e

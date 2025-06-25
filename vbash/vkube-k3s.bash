@@ -92,14 +92,20 @@ function vkube-k3s.cluster-plan-read() {
 }
 function vkube-k3s.get-node-admin-password() {
   local password
-  if ! [[ -z $node_secret_folder ]]; then
-    vlib.is-pass-dir-exists-with-trace "$node_secret_folder"
-    password="$(vlib.pass-get-secret $node_secret_folder)"
-  elif ! [[ -z $nodes_secret_folder ]]; then
-    vlib.is-pass-dir-exists-with-trace "$nodes_secret_folder"
-    password="$(vlib.pass-get-secret $nodes_secret_folder)"
+  if [[ -n $node_admin_password_secret_text ]]; then
+    vlib.is-dir-exists-with-trace "$node_admin_password_secret_text"
+    password="$(vlib.get-secret-string $node_admin_password_secret_text)"
+  elif [[ -n $nodes_admin_password_secret_text ]]; then
+    vlib.is-dir-exists-with-trace "$nodes_admin_password_secret_text"
+    password="$(vlib.get-secret-string $nodes_admin_password_secret_text)"
+  elif [[ -n $node_admin_password_secret_pass_text ]]; then
+    vlib.is-pass-dir-exists-with-trace "$node_admin_password_secret_pass_text"
+    password="$(vlib.pass-get-secret $node_admin_password_secret_pass_text)"
+  elif [[ -n $nodes_admin_password_secret_pass_text ]]; then
+    vlib.is-pass-dir-exists-with-trace "$nodes_admin_password_secret_pass_text"
+    password="$(vlib.pass-get-secret $nodes_admin_password_secret_pass_text)"
   else
-    err_and_exit "Node admin secret folder setting are missing. Both 'nodes_admin_secret_folder' and 'node_admin_secret_folder' are empty."
+    err_and_exit "Node admin secret folder setting are missing. Both 'nodes_admin_password_secret_text' and 'node_admin_password_secret_text' are empty."
   fi
 }
 function vkube-k3s.is-namespace-exist {
@@ -154,7 +160,41 @@ function vkube-k3s.check-pass-data-for-secrets() {
   (vlib.is-pass-dir-exists "$1/password.txt") || return 1
   return 0
 }
-function vkube-k3s.secret-create {
+# function vkube-k3s.secret-create {
+#   #############################
+#   # Create kubernetes secret
+#   # vkube-k3s.secret-create $1 $2
+#   #  $1 - kubernetes namespace where secret will be created
+#   #  $2 - kubernetes secret name
+#   #  $3 - folder path for secret data (username and password)
+#   #       Folder path type is recognized by first character in $3 parameter.
+#   #       Disk folder path recognized by first character '.', '~' or '/'. Two files (username.txt and password.txt) are expected inside folder.
+#   #       For 'pass' password manager path two secret files (username.txt and password.txt) are expected inside path.
+#   [ -z "$1" ] && err_and_exit "Missing namespace \$1 parameter."
+#   [ -z "$2" ] && err_and_exit "Missing secret name \$2 parameter."
+#   [ -z "$3" ] && err_and_exit "Missing secret folder path \$3 parameter."
+#   #echo "1='$1' 2='$2' 3='$3'" >&3
+#   local first_char="${3:0:1}"
+#   #echo "first_char='$first_char'" >&3
+#   if [[ "$first_char" = "." || "$first_char" = "~" || "$first_char" = "/" ]]; then
+#     eval local path=\"\$3\"
+#     #echo "path=$path" >&3
+#     vkube-k3s.check-dir-data-for-secrets-with-trace "$path"
+#     vkube-k3s.is-namespace-exist-or-create $1
+#     kubectl delete secret $2 -n $1 --ignore-not-found=true
+#     kubectl create secret generic $2 -n $1 --from-file=$path
+#   else
+#     vkube-k3s.check-pass-data-for-secrets-with-trace "$3"
+#     local username
+#     username="$(vlib.pass-get-secret $3/username.txt)"
+#     local password
+#     password="$(vlib.pass-get-secret $3/password.txt)"
+#     vkube-k3s.is-namespace-exist-or-create $1
+#     kubectl delete secret $2 -n $1 --ignore-not-found=true
+#     kubectl create secret generic $2 -n $1 --from-literal=username=$username --from-literal=password=$password
+#   fi
+# }
+function vkube-k3s.secret-create-from-folder {
   #############################
   # Create kubernetes secret
   # vkube-k3s.secret-create $1 $2
@@ -162,31 +202,40 @@ function vkube-k3s.secret-create {
   #  $2 - kubernetes secret name
   #  $3 - folder path for secret data (username and password)
   #       Folder path type is recognized by first character in $3 parameter.
-  #       Disk folder path recognized by first character '.' or '/'. Two files (username.txt and password.txt) are expected inside folder.
+  #       Disk folder path recognized by first character '.', '~' or '/'. Two files (username.txt and password.txt) are expected inside folder.
   #       For 'pass' password manager path two secret files (username.txt and password.txt) are expected inside path.
   [ -z "$1" ] && err_and_exit "Missing namespace \$1 parameter."
   [ -z "$2" ] && err_and_exit "Missing secret name \$2 parameter."
   [ -z "$3" ] && err_and_exit "Missing secret folder path \$3 parameter."
   #echo "1='$1' 2='$2' 3='$3'" >&3
-  local first_char="${3:0:1}"
-  #echo "first_char='$first_char'" >&3
-  if [[ "$first_char" = "." || "$first_char" = "~" || "$first_char" = "/" ]]; then
-    eval local path=\"\$3\"
-    #echo "path=$path" >&3
-    vkube-k3s.check-dir-data-for-secrets-with-trace "$path"
-    vkube-k3s.is-namespace-exist-or-create $1
-    kubectl delete secret $2 -n $1 --ignore-not-found=true
-    kubectl create secret generic $2 -n $1 --from-file=$path
-  else
-    vkube-k3s.check-pass-data-for-secrets-with-trace "$3"
-    local username
-    username="$(vlib.pass-get-secret $3/username.txt)"
-    local password
-    password="$(vlib.pass-get-secret $3/password.txt)"
-    vkube-k3s.is-namespace-exist-or-create $1
-    kubectl delete secret $2 -n $1 --ignore-not-found=true
-    kubectl create secret generic $2 -n $1 --from-literal=username=$username --from-literal=password=$password
-  fi
+  eval local path=\"\$3\"
+  #echo "path=$path" >&3
+  vkube-k3s.check-dir-data-for-secrets-with-trace "$path"
+  vkube-k3s.is-namespace-exist-or-create $1
+  kubectl delete secret $2 -n $1 --ignore-not-found=true
+  kubectl create secret generic $2 -n $1 --from-file=$path
+}
+function vkube-k3s.secret-create-from-pass-folder {
+  #############################
+  # Create kubernetes secret
+  # vkube-k3s.secret-create $1 $2
+  #  $1 - kubernetes namespace where secret will be created
+  #  $2 - kubernetes secret name
+  #  $3 - folder path for secret data (username and password)
+  #       Folder path type is recognized by first character in $3 parameter.
+  #       Disk folder path recognized by first character '.', '~' or '/'. Two files (username.txt and password.txt) are expected inside folder.
+  #       For 'pass' password manager path two secret files (username.txt and password.txt) are expected inside path.
+  [ -z "$1" ] && err_and_exit "Missing namespace \$1 parameter."
+  [ -z "$2" ] && err_and_exit "Missing secret name \$2 parameter."
+  [ -z "$3" ] && err_and_exit "Missing secret folder path \$3 parameter."
+  vkube-k3s.check-pass-data-for-secrets-with-trace "$3"
+  local username
+  username="$(vlib.pass-get-secret $3/username.txt)"
+  local password
+  password="$(vlib.pass-get-secret $3/password.txt)"
+  vkube-k3s.is-namespace-exist-or-create $1
+  kubectl delete secret $2 -n $1 --ignore-not-found=true
+  kubectl create secret generic $2 -n $1 --from-literal=username=$username --from-literal=password=$password
 }
 function vkube-k3s.install_tools() {
     # For testing purposes - in case time is wrong due to VM snapshots
@@ -507,12 +556,12 @@ function vkube-k3s.install() {
     csi_synology_use=1
     longhorn_use=1
   fi
-  echo "      local_storage_use=$local_storage_use" >&3
-  echo "      csi_driver_nfs_use=$csi_driver_nfs_use" >&3
-  echo "      csi_driver_smb_use=$csi_driver_smb_use" >&3
-  echo "      csi_synology_use=$csi_synology_use" >&3
-  echo "      longhorn_use=$longhorn_use" >&3
-  echo "      install_storage_at_least_one=$install_storage_at_least_one" >&3
+  # echo "      local_storage_use=$local_storage_use" >&3
+  # echo "      csi_driver_nfs_use=$csi_driver_nfs_use" >&3
+  # echo "      csi_driver_smb_use=$csi_driver_smb_use" >&3
+  # echo "      csi_synology_use=$csi_synology_use" >&3
+  # echo "      longhorn_use=$longhorn_use" >&3
+  # echo "      install_storage_at_least_one=$install_storage_at_least_one" >&3
 
   local data_folder=$(dirname "${k3s_settings}")
   vlib.trace "data folder=$data_folder"
@@ -1704,14 +1753,26 @@ node_disks()
   esac
 }
 
-longhorn-install()
-{
+longhorn-install() {
   if ! [[ -e ${k3s_settings} ]]; then
     err_and_exit "Cluster plan file '${k3s_settings}' is not found" ${LINENO};
   fi
+
+  err_and_exit "not implemented yet"
+
   #echo $node_root_password
 
-  get passwod from 'pass' !!!
+  # get passwod from 'pass' !!!
+
+  # if ! [[ -z $node_secret_folder ]]; then
+  #   vlib.is-pass-dir-exists-with-trace "$node_secret_folder"
+  #   password="$(vlib.pass-get-secret $node_secret_folder)"
+  # fi
+
+  # if ! [[ -z $node_secret_folder ]]; then
+  #   vlib.is-pass-dir-exists-with-trace "$node_secret_folder"
+  #   password="$(vlib.pass-get-secret $node_secret_folder)"
+  # fi
 
   if [[ -z $node_root_password ]]; then
   err_and_exit "exit" ${LINENO}
@@ -2020,8 +2081,15 @@ volumeBindingMode: WaitForFirstConsumer\""
     #echo $csi_driver_smb_ver
     if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n ${csi_driver_smb_namespace} | wc -l) -eq 0 ]]; then
       run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $csi_driver_smb_namespace"
-      eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
-      vkube-k3s.check-data-dir-for-secrets "$csi_driver_smb_secret_folder"
+      if [[ -n $csi_driver_smb_secret_folder ]]; then
+        eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
+        vkube-k3s.vkube-k3s.check-dir-data-for-secrets "$csi_driver_smb_secret_folder"
+        run "line '$LINENO';kubectl create secret generic smb-csi-creds -n ${csi_driver_smb_namespace} --from-file=$csi_driver_smb_secret_folder"
+      elif [[ -n $csi_driver_smb_secret_pass_folder ]]; then
+        vkube-k3s.secret-create-from-pass-folder "$csi_driver_smb_secret_folder"
+      else
+        err_and_exit "Both 'csi_driver_smb_secret_folder' and 'csi_driver_smb_secret_pass_folder' are empty in cluster plan '$k3s_settings'"
+      fi
       run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
       run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb -n ${csi_driver_smb_namespace} --version $csi_driver_smb_ver"
       # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
@@ -2141,8 +2209,11 @@ volumeBindingMode: WaitForFirstConsumer\""
         eval "$( yq '.[] | ( select(kind == "scalar") | "storage_server_protocol_class_" + key + "='\''" + . + "'\''")' <<<$storage_server_protocol_class)"
         vlib.trace "storage class name=$storage_server_protocol_class_name"
         #vlib.trace "reclaimPolicy=$storage_server_protocol_class_reclaimPolicy"
-        if [[ -z $storage_server_protocol_secret_folder ]]; then
-          err_and_exit "Empty secret_folder. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        if [[ -z $storage_server_protocol_secret_folder && -z $storage_server_protocol_secret_pass_folder ]]; then
+          err_and_exit "Both 'secret_folder' and 'secret_pass_folder' are empty. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        fi
+        if [[ -n $storage_server_protocol_secret_folder && -n $storage_server_protocol_secret_pass_folder ]]; then
+          err_and_exit "Both 'secret_folder' and 'secret_pass_folder' are not empty. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         fi
         if [[ -z $storage_server_protocol_class_location ]]; then
           err_and_exit "Empty location. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
@@ -2157,7 +2228,6 @@ volumeBindingMode: WaitForFirstConsumer\""
         #   err_and_exit "Empty mountPermissions. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         # fi
         
-        secret_folder_name=$(basename "$storage_server_protocol_secret_folder")
         # if ! [[ -v folder_cred_dic["${secret_folder_name}"] ]]; then
         #     vlib.trace "secret_folder_name=$secret_folder_name"
         #     if kubectl get secret -n $csi_driver_synology_csi_namespace $secret_folder_name > /dev/null ; then
@@ -2174,8 +2244,12 @@ volumeBindingMode: WaitForFirstConsumer\""
               vlib.trace "storage_server_protocol_class_smb_vers=$storage_server_protocol_class_smb_vers"
               run "line '$LINENO';kubectl delete secret -n csi-smb $secret_folder_name --ignore-not-found=true"
               # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
-              #run "line '$LINENO';kubectl create secret generic $secret_folder_name -n csi-smb --from-file=$storage_server_protocol_secret_folder"
-              run "line '$LINENO';vkube-k3s.secret-create csi-smb $secret_folder_name $storage_server_protocol_secret_folder"
+              if [[ -z $storage_server_protocol_secret_folder ]]; then
+                secret_folder_name=$(basename "$storage_server_protocol_secret_folder")
+                run "line '$LINENO';vkube-k3s.secret-create-from-folder csi-smb $secret_folder_name $storage_server_protocol_secret_folder"
+              elif [[ -z $storage_server_protocol_secret_pass_folder ]]; then
+                run "line '$LINENO';vkube-k3s.secret-create-from-pass csi-smb $storage_server_protocol_secret_pass_folder $storage_server_protocol_secret_pass_folder"
+              fi
               storage_class="$storage_server_name-csi-driver-smb-$storage_server_protocol_class_name"
               [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$k3s_settings'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
               #region
@@ -2228,8 +2302,14 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
               vlib.trace "secret_folder_name=$secret_folder_name"
               run "line '$LINENO';kubectl delete secret -n csi-nfs $secret_folder_name --ignore-not-found=true"
               # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
+              if [[ -z $storage_server_protocol_secret_folder ]]; then
+                secret_folder_name=$(basename "$storage_server_protocol_secret_folder")
+                run "line '$LINENO';vkube-k3s.secret-create-from-folder csi-nfs $secret_folder_name $storage_server_protocol_secret_folder"
+              elif [[ -z $storage_server_protocol_secret_pass_folder ]]; then
+                run "line '$LINENO';vkube-k3s.secret-create-from-pass csi-nfs $storage_server_protocol_secret_pass_folder $storage_server_protocol_secret_pass_folder"
+              fi
               #run "line '$LINENO';kubectl create secret generic $secret_folder_name -n csi-nfs --from-file=$storage_server_protocol_secret_folder"
-              run "line '$LINENO';vkube-k3s.secret-create csi-nfs $secret_folder_name $storage_server_protocol_secret_folder"
+              #run "line '$LINENO';vkube-k3s.secret-create csi-nfs $secret_folder_name $storage_server_protocol_secret_folder"
               storage_class="$storage_server_name-csi-driver-nfs-$storage_server_protocol_class_name"
               [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$k3s_settings'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
               #region
