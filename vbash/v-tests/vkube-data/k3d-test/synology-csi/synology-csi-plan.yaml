@@ -25,6 +25,7 @@ hosts:
       reclaimPolicy: Retain
   - name: synology-csi-smb
     secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
+    secret_pass_folder: # secret from 'pass' password manager folder with username.txt and password.txt secrets
     classes:
     - name: tmp
   - name: synology-csi-nfs
@@ -50,6 +51,7 @@ hosts:
       allowVolumeExpansion: true
   - name: synology-csi-smb
     secret_folder: ${HOME}/.ssh/backup2-smb-secrets # folder with username.txt and password.txt files
+    secret_pass_folder: # secret from 'pass' password manager folder with username.txt and password.txt secrets
     classes:
     - name: tmp
       location: /volume1

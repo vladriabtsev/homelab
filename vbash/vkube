@@ -233,7 +233,7 @@ vkube_k3s_install_usage() {
     echo
 
     # :flag.usage
-    printf "  %s\n" "$(magenta "--storage-synology")"
+    printf "  %s\n" "$(magenta "--storage-csi-synology")"
     printf "    Synology CSI storage. Overriding storage use in cluster plan. Install all if\n    --core, --storage, and --apps flags are not set.\n"
     printf "    %s\n" "Conflicts: --storage"
     echo
@@ -962,7 +962,7 @@ vkube_k3s_install_parse_requirements() {
         ;;
 
       # :flag.case
-      --storage-synology)
+      --storage-csi-synology)
         # :flag.conflicts
         if [[ -n "${args['--storage']:-}" ]]; then
           printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
@@ -970,7 +970,7 @@ vkube_k3s_install_parse_requirements() {
         fi
 
         # :flag.case_no_arg
-        args['--storage-synology']=1
+        args['--storage-csi-synology']=1
         shift
         ;;
 

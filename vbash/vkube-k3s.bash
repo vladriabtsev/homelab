@@ -74,7 +74,6 @@ function vkube-k3s.cluster-plan-read() {
   # https://www.baeldung.com/linux/yq-utility-processing-yaml
 
   #source k3s-func.sh
-  #csi_driver_synology_csi_namespace="kube-system"
   csi_driver_nfs_namespace="kube-system"
   csi_driver_smb_namespace="kube-system"
 
@@ -194,16 +193,30 @@ function vkube-k3s.check-pass-data-for-secrets() {
 #     kubectl create secret generic $2 -n $1 --from-literal=username=$username --from-literal=password=$password
 #   fi
 # }
-function vkube-k3s.secret-create-from-folder {
-  #############################
+function vkube-k3s.secret-create {
   # Create kubernetes secret
-  # vkube-k3s.secret-create $1 $2
   #  $1 - kubernetes namespace where secret will be created
   #  $2 - kubernetes secret name
   #  $3 - folder path for secret data (username and password)
-  #       Folder path type is recognized by first character in $3 parameter.
-  #       Disk folder path recognized by first character '.', '~' or '/'. Two files (username.txt and password.txt) are expected inside folder.
-  #       For 'pass' password manager path two secret files (username.txt and password.txt) are expected inside path.
+  #  $4 - folder of 'pass' password manager with two secret files (username.txt and password.txt) are expected inside path.
+  if [[ -z $3 && -z $4 ]]; then
+    err_and_exit "Both dir folder path '\$3' and 'pass' password manager path '\$' are empty. Expecting only one path."
+  fi
+  if [[ -n $3 && -n $4 ]]; then
+    err_and_exit "Both dir folder path '\$3' and 'pass' password manager path '\$' are not empty. Expecting only one path."
+  fi
+  if [[ -n $3 ]]; then
+    vkube-k3s.secret-create-from-folder $1 $2 $3
+  else
+    vkube-k3s.secret-create-from-pass-folder $1 $2 $4
+  fi
+}
+function vkube-k3s.secret-create-from-folder {
+  #############################
+  # Create kubernetes secret
+  #  $1 - kubernetes namespace where secret will be created
+  #  $2 - kubernetes secret name
+  #  $3 - folder path for secret data (username and password)
   [ -z "$1" ] && err_and_exit "Missing namespace \$1 parameter."
   [ -z "$2" ] && err_and_exit "Missing secret name \$2 parameter."
   [ -z "$3" ] && err_and_exit "Missing secret folder path \$3 parameter."
@@ -218,13 +231,9 @@ function vkube-k3s.secret-create-from-folder {
 function vkube-k3s.secret-create-from-pass-folder {
   #############################
   # Create kubernetes secret
-  # vkube-k3s.secret-create $1 $2
   #  $1 - kubernetes namespace where secret will be created
   #  $2 - kubernetes secret name
-  #  $3 - folder path for secret data (username and password)
-  #       Folder path type is recognized by first character in $3 parameter.
-  #       Disk folder path recognized by first character '.', '~' or '/'. Two files (username.txt and password.txt) are expected inside folder.
-  #       For 'pass' password manager path two secret files (username.txt and password.txt) are expected inside path.
+  #  $3 - folder of 'pass' password manager with two secret files (username.txt and password.txt) are expected inside path.
   [ -z "$1" ] && err_and_exit "Missing namespace \$1 parameter."
   [ -z "$2" ] && err_and_exit "Missing secret name \$2 parameter."
   [ -z "$3" ] && err_and_exit "Missing secret folder path \$3 parameter."
@@ -504,7 +513,7 @@ function vkube-k3s.install() {
     install_storage_at_least_one=1
     install_storage=1
     __install_all=0
-  elif [[ -n ${args[--storage-local]} || -n ${args[--storage-csi-driver-nfs]} || -n ${args[--storage-csi-driver-smb]} || -n ${args[--storage-synology]} || -n ${args[--storage-longhorn]} ]]; then
+  elif [[ -n ${args[--storage-local]} || -n ${args[--storage-csi-driver-nfs]} || -n ${args[--storage-csi-driver-smb]} || -n ${args[--storage-csi-synology]} || -n ${args[--storage-longhorn]} ]]; then
     install_storage_at_least_one=1
     local_storage_use=0
     csi_driver_nfs_use=0
@@ -528,7 +537,7 @@ function vkube-k3s.install() {
     csi_driver_smb_use=1
     __install_all=0
   fi
-  if [[ -n ${args[--storage-synology]} ]]; then
+  if [[ -n ${args[--storage-csi-synology]} ]]; then
     install_storage_at_least_one=1
     csi_synology_use=1
     __install_all=0
@@ -556,12 +565,12 @@ function vkube-k3s.install() {
     csi_synology_use=1
     longhorn_use=1
   fi
-  # echo "      local_storage_use=$local_storage_use" >&3
-  # echo "      csi_driver_nfs_use=$csi_driver_nfs_use" >&3
-  # echo "      csi_driver_smb_use=$csi_driver_smb_use" >&3
-  # echo "      csi_synology_use=$csi_synology_use" >&3
-  # echo "      longhorn_use=$longhorn_use" >&3
-  # echo "      install_storage_at_least_one=$install_storage_at_least_one" >&3
+  echo "      local_storage_use=$local_storage_use" >&3
+  echo "      csi_driver_nfs_use=$csi_driver_nfs_use" >&3
+  echo "      csi_driver_smb_use=$csi_driver_smb_use" >&3
+  echo "      csi_synology_use=$csi_synology_use" >&3
+  echo "      longhorn_use=$longhorn_use" >&3
+  echo "      install_storage_at_least_one=$install_storage_at_least_one" >&3
 
   local data_folder=$(dirname "${k3s_settings}")
   vlib.trace "data folder=$data_folder"
@@ -947,7 +956,6 @@ function vkube-k3s.get-storage-class-type() { # backup2-synology-csi-nfs-test
 function vkube-k3s.csi-synology-install() {
   vkube-k3s.check-cluster-plan-path
   hl.blue "$((++install_step)). Generate storage classes for synology csi driver. (Line:$LINENO)"
-  # https://www.talos.dev/v1.10/kubernetes-guides/configuration/synology-csi/
   # https://www.youtube.com/watch?v=c6Qf9UeHld0
   # https://github.com/Tech-Byte-Tips/Reference-Guides/tree/main/Installing%20the%20Synology%20CSI%20Driver%20with%20the%20Snapshot%20feature%20in%20k3s
   # https://github.com/christian-schlichtherle/synology-csi-chart
@@ -979,9 +987,9 @@ function vkube-k3s.csi-synology-install() {
   # Root level scalar settings
   eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_" + key + "='\''" + . + "'\''")'  < ${synology_csi_plan})"
 
-  csi_driver_synology_csi_namespace="synology-csi"
-  vlib.trace "csi_driver_synology_csi_namespace=${csi_driver_synology_csi_namespace}"
-  run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $csi_driver_synology_csi_namespace"
+  csi_synology_namespace="synology-csi"
+  vlib.trace "csi_synology_namespace=${csi_synology_namespace}"
+  run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $csi_synology_namespace"
 
   readarray csi_synology_hosts < <(yq -o=j -I=0 ".hosts[]" "${synology_csi_plan}")
   vlib.trace "storage hosts count=${#csi_synology_hosts[@]}"
@@ -1086,12 +1094,10 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
           synology-csi-smb )
             secret_folder_name=$(basename "$csi_synology_host_protocol_secret_folder")
             storage_class="$csi_synology_host_name-synology-csi-smb-$csi_synology_host_protocol_class_name"
-
             vlib.trace "secret_folder_name=$secret_folder_name"
-            run "line '$LINENO';kubectl delete secret $secret_folder_name -n $csi_driver_synology_csi_namespace --ignore-not-found=true"
+            run "line '$LINENO';kubectl delete secret $secret_folder_name -n $csi_synology_namespace --ignore-not-found=true"
             # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
-            run "line '$LINENO';vkube-k3s.secret-create $csi_driver_synology_csi_namespace $secret_folder_name $csi_synology_host_protocol_secret_folder"
-
+            run "line '$LINENO';vkube-k3s.secret-create $csi_synology_namespace $secret_folder_name $csi_synology_host_protocol_secret_folder $csi_synology_host_protocol_secret_pass_folder"
             #region
             txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
 kind: StorageClass
@@ -1105,7 +1111,7 @@ parameters: # https://github.com/SynologyOpenSource/synology-csi
   dsm: '$csi_synology_host_dsm_ip4'
   location: '$csi_synology_host_protocol_class_location' # if blank, the CSI driver will choose a volume on DSM with available storage to create the volumes
   csi.storage.k8s.io/node-stage-secret-name: $secret_folder_name
-  csi.storage.k8s.io/node-stage-secret-namespace: $csi_driver_synology_csi_namespace
+  csi.storage.k8s.io/node-stage-secret-namespace: $csi_synology_namespace
 reclaimPolicy: $csi_synology_host_protocol_class_reclaimPolicy
 allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 "
@@ -1155,17 +1161,17 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
   inf "synology-csi (Line:$LINENO)\n"
   #vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
   # echo $csi_synology_ver
-  if [[ $(kubectl get pods -l app=controller,app.kubernetes.io/name=synology-csi -n $csi_driver_synology_csi_namespace | wc -l) -eq 0 ]]; then # not installed yet
+  if [[ $(kubectl get pods -l app=controller,app.kubernetes.io/name=synology-csi -n $csi_synology_namespace | wc -l) -eq 0 ]]; then # not installed yet
     eval "csi_synology_folder_with_dsm_secrets=$csi_synology_folder_with_dsm_secrets"
     vlib.trace "csi_synology_folder_with_dsm_secrets=$ccsi_synology_folder_with_dsm_secrets"
 
     # /etc/synology/client-info.yml
 
-    if kubectl get secret -n $csi_driver_synology_csi_namespace client-info-secret > /dev/null ; then
-      run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace client-info-secret"
+    if kubectl get secret -n $csi_synology_namespace client-info-secret > /dev/null ; then
+      run "line '$LINENO';kubectl delete secret -n $csi_synology_namespace client-info-secret"
     fi
-    #run "line '$LINENO';kubectl create secret -n $csi_driver_synology_csi_namespace generic client-info-secret --from-file="$csi_synology_folder_with_dsm_secrets/client-info.yml""
-    run "line '$LINENO';vkube-k3s.secret-create $csi_driver_synology_csi_namespace client-info-secret $csi_synology_folder_with_dsm_secrets/client-info.yml"
+    #run "line '$LINENO';kubectl create secret -n $csi_synology_namespace generic client-info-secret --from-file="$csi_synology_folder_with_dsm_secrets/client-info.yml""
+    run "line '$LINENO';vkube-k3s.secret-create $csi_synology_namespace client-info-secret $csi_synology_folder_with_dsm_secrets/client-info.yml"
     run "line '$LINENO';kubectl apply -f $vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version"
 
     if [ $csi_synology_snapshot_use -eq 1 ]; then
@@ -2069,47 +2075,6 @@ metadata:
 provisioner: kubernetes.io/no-provisioner # indicates that this StorageClass does not support automatic provisioning
 volumeBindingMode: WaitForFirstConsumer\""
   fi
-  if [ $csi_synology_use -eq 1 ]; then
-    vkube-k3s.csi-synology-install
-  fi
-  if [ $csi_driver_smb_use -eq 1 ]; then
-    inf "csi-driver-smb (Line:$LINENO)\n"
-    # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/deploy/example/e2e_usage.md
-    # https://rguske.github.io/post/using-windows-smb-shares-in-kubernetes/
-    # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
-    vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
-    #echo $csi_driver_smb_ver
-    if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n ${csi_driver_smb_namespace} | wc -l) -eq 0 ]]; then
-      run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $csi_driver_smb_namespace"
-      if [[ -n $csi_driver_smb_secret_folder ]]; then
-        eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
-        vkube-k3s.vkube-k3s.check-dir-data-for-secrets "$csi_driver_smb_secret_folder"
-        run "line '$LINENO';kubectl create secret generic smb-csi-creds -n ${csi_driver_smb_namespace} --from-file=$csi_driver_smb_secret_folder"
-      elif [[ -n $csi_driver_smb_secret_pass_folder ]]; then
-        vkube-k3s.secret-create-from-pass-folder "$csi_driver_smb_secret_folder"
-      else
-        err_and_exit "Both 'csi_driver_smb_secret_folder' and 'csi_driver_smb_secret_pass_folder' are empty in cluster plan '$k3s_settings'"
-      fi
-      run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
-      run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb -n ${csi_driver_smb_namespace} --version $csi_driver_smb_ver"
-      # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
-      # https://kubernetes.io/docs/concepts/configuration/secret/
-      # https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
-      # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
-      # run "line '$LINENO';if ! test -e $csi_driver_smb_secret_folder; then  mkdir $csi_driver_smb_secret_folder; fi"
-      # if kubectl get secret -n $csi_driver_synology_csi_namespace smb-csi-creds > /dev/null ; then
-      #   run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace smb-csi-creds"
-      # fi
-      # run "line '$LINENO';kubectl create secret generic smb-csi-creds -n ${csi_driver_smb_namespace} --from-file=$csi_driver_smb_secret_folder"
-    else
-      inf "... already installed. (Line:$LINENO)\n"
-    fi
-    # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data}'
-    # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.username}' | base64 --decode
-    # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.password}' | base64 --decode
-    # kubectl -n kube-system edit secrets smb-csi-creds
-    # kubectl delete secret smb-csi-creds -n kube-system
-  fi
   if [ $csi_driver_nfs_use -eq 1 ]; then
     inf "csi-driver-nfs (Line:$LINENO)\n"
     # https://github.com/kubernetes-csi/csi-driver-nfs
@@ -2127,6 +2092,47 @@ volumeBindingMode: WaitForFirstConsumer\""
     else
       inf "... already installed. (Line:$LINENO)\n"
     fi
+  fi
+  if [ $csi_driver_smb_use -eq 1 ]; then
+    inf "csi-driver-smb (Line:$LINENO)\n"
+    # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/deploy/example/e2e_usage.md
+    # https://rguske.github.io/post/using-windows-smb-shares-in-kubernetes/
+    # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
+    vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
+    #echo $csi_driver_smb_ver
+    if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n ${csi_driver_smb_namespace} | wc -l) -eq 0 ]]; then
+      run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $csi_driver_smb_namespace"
+      #       if [[ -n $csi_driver_smb_secret_folder ]]; then
+      #         eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
+      #         vkube-k3s.vkube-k3s.check-dir-data-for-secrets "$csi_driver_smb_secret_folder"
+      #         run "line '$LINENO';kubectl create secret generic smb-csi-creds -n ${csi_driver_smb_namespace} --from-file=$csi_driver_smb_secret_folder"
+      #       elif [[ -n $csi_driver_smb_secret_pass_folder ]]; then
+      #         vkube-k3s.secret-create-from-pass-folder "$csi_driver_smb_secret_folder"
+      #       else
+      #         err_and_exit "Both 'csi_driver_smb_secret_folder' and 'csi_driver_smb_secret_pass_folder' are empty in cluster plan '$k3s_settings'"
+      #       fi
+      run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
+      run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb -n ${csi_driver_smb_namespace} --version $csi_driver_smb_ver"
+      # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
+      # https://kubernetes.io/docs/concepts/configuration/secret/
+      # https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+      # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
+      # run "line '$LINENO';if ! test -e $csi_driver_smb_secret_folder; then  mkdir $csi_driver_smb_secret_folder; fi"
+      # if kubectl get secret -n $csi_synology_namespace smb-csi-creds > /dev/null ; then
+      #   run "line '$LINENO';kubectl delete secret -n $csi_synology_namespace smb-csi-creds"
+      # fi
+      # run "line '$LINENO';kubectl create secret generic smb-csi-creds -n ${csi_driver_smb_namespace} --from-file=$csi_driver_smb_secret_folder"
+    else
+      inf "... already installed. (Line:$LINENO)\n"
+    fi
+    # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data}'
+    # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.username}' | base64 --decode
+    # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data.password}' | base64 --decode
+    # kubectl -n kube-system edit secrets smb-csi-creds
+    # kubectl delete secret smb-csi-creds -n kube-system
+  fi
+  if [ $csi_synology_use -eq 1 ]; then
+    vkube-k3s.csi-synology-install
   fi
   if [ $nfs_subdir_external_provisioner_use -eq 1 ]; then
     inf "nfs-subdir-external-provisioner (Line:$LINENO)\n"
@@ -2147,9 +2153,7 @@ volumeBindingMode: WaitForFirstConsumer\""
   fi
   
   hl.blue "$((++install_step)). Generate storage classes for general csi drivers. (Line:$LINENO)"
-  # GENERATED STORAGE CLASSES (not for synology-csi)
-  readarray storage_servers < <(yq -o=j -I=0 '.storage_servers[]' < $k3s_settings)
-  vlib.trace "storage servers count=${#storage_servers[@]}"
+  # GENERATED STORAGE CLASSES AND INSTALL PROPER DRIVERS
   local txt=""
   local separator=""
   local storage_class=""
@@ -2158,8 +2162,9 @@ volumeBindingMode: WaitForFirstConsumer\""
   #vlib.trace "default reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
   declare -A host_names_dic=()
   #declare -A folder_cred_dic=()
+  readarray storage_servers < <(yq -o=j -I=0 '.storage_servers[]' < $k3s_settings)
+  vlib.trace "storage servers count=${#storage_servers[@]}"
   for storage_server in "${storage_servers[@]}"; do
-    vlib.trace "storage server=$storage_server"
     # Host level scalar settings
     eval "$( yq '.[] | ( select(kind == "scalar") | "storage_server_" + key + "='\''" + . + "'\''")' <<<$storage_server)"
     vlib.trace "storage server name=$storage_server_name"
@@ -2230,14 +2235,63 @@ volumeBindingMode: WaitForFirstConsumer\""
         
         # if ! [[ -v folder_cred_dic["${secret_folder_name}"] ]]; then
         #     vlib.trace "secret_folder_name=$secret_folder_name"
-        #     if kubectl get secret -n $csi_driver_synology_csi_namespace $secret_folder_name > /dev/null ; then
-        #       run "line '$LINENO';kubectl delete secret -n $csi_driver_synology_csi_namespace $secret_folder_name"
+        #     if kubectl get secret -n $csi_synology_namespace $secret_folder_name > /dev/null ; then
+        #       run "line '$LINENO';kubectl delete secret -n $csi_synology_namespace $secret_folder_name"
         #     fi
         #     # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
-        #     run "line '$LINENO';kubectl create secret generic $secret_folder_name -n $csi_driver_synology_csi_namespace --from-file=$storage_server_protocol_secret_folder"
+        #     run "line '$LINENO';kubectl create secret generic $secret_folder_name -n $csi_synology_namespace --from-file=$storage_server_protocol_secret_folder"
         #   folder_cred_dic["${secret_folder_name}"]='y'
         # fi
         case $storage_server_protocol_name in
+          csi-driver-nfs )
+            if [ $csi_driver_nfs_use -eq 1 ]; then
+              vlib.trace "secret_folder_name=$secret_folder_name"
+              run "line '$LINENO';kubectl delete secret -n csi-nfs $secret_folder_name --ignore-not-found=true"
+              # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
+              if [[ -z $storage_server_protocol_secret_folder ]]; then
+                secret_folder_name=$(basename "$storage_server_protocol_secret_folder")
+                run "line '$LINENO';vkube-k3s.secret-create-from-folder csi-nfs $secret_folder_name $storage_server_protocol_secret_folder"
+              elif [[ -z $storage_server_protocol_secret_pass_folder ]]; then
+                run "line '$LINENO';vkube-k3s.secret-create-from-pass csi-nfs $storage_server_protocol_secret_pass_folder $storage_server_protocol_secret_pass_folder"
+              fi
+              #run "line '$LINENO';kubectl create secret generic $secret_folder_name -n csi-nfs --from-file=$storage_server_protocol_secret_folder"
+              #run "line '$LINENO';vkube-k3s.secret-create csi-nfs $secret_folder_name $storage_server_protocol_secret_folder"
+              storage_class="$storage_server_name-csi-driver-nfs-$storage_server_protocol_class_name"
+              [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$k3s_settings'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
+              #region
+              txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
+kind: StorageClass
+metadata:
+  name: $storage_class
+  labels:
+    vkube/storage-type: csi-driver-nfs
+provisioner: nfs.csi.k8s.io
+parameters: # https://github.com/kubernetes-csi/csi-driver-nfs
+"
+              if [[ -n "$storage_server_ip4" ]]; then
+                txt+="  server: $storage_server_ip4"
+              else
+                txt+="  server: $storage_server_name"
+              fi
+              txt+="
+  share: \"$storage_server_protocol_class_location\"
+  # csi.storage.k8s.io/provisioner-secret is only needed for providing mountOptions in DeleteVolume
+  # csi.storage.k8s.io/provisioner-secret-name: \"mount-options\"
+  # csi.storage.k8s.io/provisioner-secret-namespace: \"default\"
+  # ??? mountPermissions: \"$storage_server_protocol_class_mountPermissions\"
+reclaimPolicy: $storage_server_protocol_class_reclaimPolicy
+volumeBindingMode: Immediate
+#allowVolumeExpansion: $storage_server_protocol_class_allowVolumeExpansion
+mountOptions:
+  - hard
+  - nfsvers=$storage_server_protocol_class_mountOptions_nfsvers
+"
+              #endregion
+              vlib.trace "storage_server_protocol_class_location=$storage_server_protocol_class_location"
+            else
+              continue
+            fi
+          ;;
           csi-driver-smb )
             if [ $csi_driver_smb_use -eq 1 ]; then
               vlib.trace "secret_folder_name=$secret_folder_name"
@@ -2293,55 +2347,6 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
   #- noserverino  # required to prevent data corruption
 "
               #endregion
-            else
-              continue
-            fi
-          ;;
-          csi-driver-nfs )
-            if [ $csi_driver_nfs_use -eq 1 ]; then
-              vlib.trace "secret_folder_name=$secret_folder_name"
-              run "line '$LINENO';kubectl delete secret -n csi-nfs $secret_folder_name --ignore-not-found=true"
-              # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
-              if [[ -z $storage_server_protocol_secret_folder ]]; then
-                secret_folder_name=$(basename "$storage_server_protocol_secret_folder")
-                run "line '$LINENO';vkube-k3s.secret-create-from-folder csi-nfs $secret_folder_name $storage_server_protocol_secret_folder"
-              elif [[ -z $storage_server_protocol_secret_pass_folder ]]; then
-                run "line '$LINENO';vkube-k3s.secret-create-from-pass csi-nfs $storage_server_protocol_secret_pass_folder $storage_server_protocol_secret_pass_folder"
-              fi
-              #run "line '$LINENO';kubectl create secret generic $secret_folder_name -n csi-nfs --from-file=$storage_server_protocol_secret_folder"
-              #run "line '$LINENO';vkube-k3s.secret-create csi-nfs $secret_folder_name $storage_server_protocol_secret_folder"
-              storage_class="$storage_server_name-csi-driver-nfs-$storage_server_protocol_class_name"
-              [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$k3s_settings'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
-              #region
-              txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
-kind: StorageClass
-metadata:
-  name: $storage_class
-  labels:
-    vkube/storage-type: csi-driver-nfs
-provisioner: nfs.csi.k8s.io
-parameters: # https://github.com/kubernetes-csi/csi-driver-nfs
-"
-              if [[ -n "$storage_server_ip4" ]]; then
-                txt+="  server: $storage_server_ip4"
-              else
-                txt+="  server: $storage_server_name"
-              fi
-              txt+="
-  share: \"$storage_server_protocol_class_location\"
-  # csi.storage.k8s.io/provisioner-secret is only needed for providing mountOptions in DeleteVolume
-  # csi.storage.k8s.io/provisioner-secret-name: \"mount-options\"
-  # csi.storage.k8s.io/provisioner-secret-namespace: \"default\"
-  # ??? mountPermissions: \"$storage_server_protocol_class_mountPermissions\"
-reclaimPolicy: $storage_server_protocol_class_reclaimPolicy
-volumeBindingMode: Immediate
-#allowVolumeExpansion: $storage_server_protocol_class_allowVolumeExpansion
-mountOptions:
-  - hard
-  - nfsvers=$storage_server_protocol_class_mountOptions_nfsvers
-"
-              #endregion
-              vlib.trace "storage_server_protocol_class_location=$storage_server_protocol_class_location"
             else
               continue
             fi

@@ -29,7 +29,7 @@ commands:
   - long: --storage-csi-driver-smb
     help: CSI driver SMB storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
     conflicts: [--storage]
-  - long: --storage-synology
+  - long: --storage-csi-synology
     help: Synology CSI storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
     conflicts: [--storage]
   - long: --storage-longhorn

@@ -251,8 +251,8 @@ setup() {
   }
   # bats test_tags=tag:storage-separate
   @test "storage: install-uninstall synology" {
-    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-synology" >&3
-    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-synology
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-synology" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-synology
 
     echo '      Testing...' >&3
     sleep 60
@@ -269,8 +269,8 @@ setup() {
     # run verify "there are 4 pods named '^synology-csi-controller'"
     # assert_success
 
-    # echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-synology" >&3
-    # run ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-synology
+    # echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-csi-synology" >&3
+    # run ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-csi-synology
     # sleep 10
     # assert_success
   }

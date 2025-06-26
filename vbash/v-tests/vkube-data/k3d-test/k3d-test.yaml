@@ -91,20 +91,20 @@ longhorn_use: 1
 
 # https://github.com/SynologyOpenSource/synology-csi
 csi_synology_use: 1 # csi-synology/csi-synology-plan.yaml is expected in same folder as this file
-#csi_driver_synology_csi_namespace: csi-synology
+csi_synology_namespace: csi-synology
 
 # # https://github.com/kubernetes-csi/csi-driver-smb
-# csi_driver_smb_use: 1
-# csi_driver_smb_ver:   # auto upgrade to latest if empty
+csi_driver_smb_use: 1
+csi_driver_smb_ver:   # auto upgrade to latest if empty
 # csi_driver_smb_secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
 # csi_driver_smb_secret_pass_folder: # 'pass' password manager folder with username.txt and password.txt
-# csi_driver_smb_namespace: csi-smb
+csi_driver_smb_namespace: csi-smb
 
 # # https://github.com/kubernetes-csi/csi-driver-nfs
-# csi_driver_nfs_use: 1
-# csi_driver_nfs_ver:  # auto upgrade to latest if empty
-# csi_driver_nfs_secret_folder: ${HOME}/.ssh/office-nfs-secrets # folder with username.txt and password.txt files
-# csi_driver_nfs_namespace: csi-nfs
+csi_driver_nfs_use: 1
+csi_driver_nfs_ver:  # auto upgrade to latest if empty
+#csi_driver_nfs_secret_folder: ${HOME}/.ssh/office-nfs-secrets # folder with username.txt and password.txt files
+csi_driver_nfs_namespace: csi-nfs
 
 # # https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner
 # # https://hbayraktar.medium.com/how-to-setup-dynamic-nfs-provisioning-in-a-kubernetes-cluster-cbf433b7de29
@@ -118,11 +118,14 @@ storage_servers:
 - name: office
   ip4: 192.168.100.227
   protocols:
+  # - name: csi-synology
+  #   classes:
+  #   - name: tmp
+  #     reclaimPolicy: Delete
+  #     allowVolumeExpansion: true
   - name: csi-driver-smb
     # https://github.com/kubernetes-csi/csi-driver-smb
     secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
-# text from 'pass' password manager store (<password manager folder>/<secret name>)
-#   or directory name with username.txt and password files
     secret_pass_folder: # secret from 'pass' password manager folder with username.txt and password.txt secrets
     classes:
     - name: tmp
