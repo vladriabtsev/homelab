@@ -25,8 +25,8 @@ kubernetes_reflector_use: 1
 kubernetes_reflector_ver: # auto upgrade to latest if empty
 
 # all nodes settings
-nodes_admin_password_secret_text: # text file path
-nodes_admin_password_secret_pass_text: test-nodes-admin/password.txt # text from 'pass' password manager store (<password manager folder>/<secret name>)
+nodes_admin_password_secret_file_path: # text file path
+nodes_admin_password_secret_pass_path: test-nodes-admin/password.txt # text from 'pass' password manager store (<password manager folder>/<secret name>)
 # node settings
 node:
 - node_id: 1
@@ -34,8 +34,8 @@ node:
   node_ip4: 192.168.100.51
   kube_vip_interface: eth1
   # node admin user name and password from secret folder if need different account for node
-  node_admin_password_secret_text: # text file path
-  node_admin_password_secret_pass_text: # text from 'pass' password manager store (<password manager folder>/<secret name>)
+  node_admin_password_secret_file_path: # text file path
+  node_admin_password_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
   node_user: vlad
   node_is_control_plane: 1
   node_is_worker: 1
@@ -85,7 +85,11 @@ local_storage_use: 1
 
 # https://github.com/longhorn/longhorn
 longhorn_ver: v1.8.1 # auto upgrade to latest if empty
-longhorn_use: 1
+longhorn_use: 0
+longhorn_ui_admin_name_secret_file_path: ${HOME}/.ssh/test-longhorn/username.txt # text file path
+longhorn_ui_admin_name_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
+longhorn_ui_admin_password_secret_file_path: ${HOME}/.ssh/test-longhorn/password.txt # text file path
+longhorn_ui_admin_password_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
 
 # https://github.com/kubernetes/examples/blob/master/volumes/iscsi/iscsi.yaml
 

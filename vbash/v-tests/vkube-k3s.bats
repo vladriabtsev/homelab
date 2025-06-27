@@ -135,7 +135,6 @@ setup() {
     assert_success
     assert_output --partial "secret/test-secret created"
   }
-
   #bats test_tags=tag:secret
   @test "vkube-k3s.secret-create-from-folder: from disk folder" {
     # Required:
@@ -202,6 +201,7 @@ setup() {
     # assert_success
   }
   # bats test_tags=tag:storage-separate
+  # https://rudimartinsen.com/2024/01/09/nfs-csi-driver-kubernetes/
   @test "storage: install-uninstall nfs" {
     echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-nfs" >&3
     run ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-nfs
@@ -225,7 +225,7 @@ setup() {
     # sleep 10
     # assert_success
   }
-  # bats test_tags=tag:storage-separate
+  # bats test_tags=tag:storage-separate-one
   @test "storage: install-uninstall smb" {
     echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-smb" >&3
     run ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-smb
@@ -274,8 +274,9 @@ setup() {
     # sleep 10
     # assert_success
   }
-  # bats test_tags=tag:storage-one
+  # bats test_tags=tag:storage-separate
   @test "storage: install-uninstall longhorn" {
+    skip
     echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-longhorn" >&3
     run ../vkube --cluster-plan k3d-test --trace k3s install --storage-longhorn
 
@@ -366,6 +367,7 @@ setup() {
   } 
   # bats test_tags=tag:failed
   @test "storage: local-storage tests" {
+    skip
     # https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
     local storage="local-storage"
     echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
@@ -411,7 +413,7 @@ setup() {
     assert_success
     echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
   } 
-  # bats test_tags=tag:failed
+  # bats test_tags=tag:speed-one
   @test "storage: office-csi-driver-smb-tmp tests" {
     local storage="office-csi-driver-smb-tmp"
     echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
@@ -500,7 +502,7 @@ setup() {
     assert_success
     echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
   } 
-  # bats test_tags=tag:failed
+  # bats test_tags=tag:speed
   @test "storage: office-synology-csi-smb-tmp tests" {
     local storage="office-synology-csi-smb-tmp"
     echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3

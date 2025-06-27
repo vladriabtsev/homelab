@@ -191,47 +191,47 @@ testvercomp() {
     [ "$output" = "" ]
   }
   # bats test_tags=tag:dir
-  @test "vlib.get-secret-string: not existing path" {
-    run vlib.get-secret-string "~/not-exist"
+  @test "vlib.secret-get-text-from-file: not existing path" {
+    run vlib.secret-get-text-from-file "~/not-exist"
     assert_failure
     #echo "output=$output" >&3
     [ "$status" -eq 1 ]
     assert_output --partial "Can't find file '~/not-exist'"
   }
   # bats test_tags=tag:dir
-  @test "vlib.get-secret-string: existing dir path without file (~)" {
-    run vlib.get-secret-string "~"
+  @test "vlib.secret-get-text-from-file: existing dir path without file (~)" {
+    run vlib.secret-get-text-from-file "~"
     #echo "output=$output" >&3
     assert_failure
     [ "$status" -eq 1 ]
     assert_output --partial "Can't find file '~'"
   }
   # bats test_tags=tag:dir
-  @test "vlib.get-secret-string: existing dir path without file (\$HOME)" {
-    run vlib.get-secret-string "\${HOME}"
+  @test "vlib.secret-get-text-from-file: existing dir path without file (\$HOME)" {
+    run vlib.secret-get-text-from-file "\${HOME}"
     #echo "output=$output" >&3
     assert_failure
     [ "$status" -eq 1 ]
     assert_output --partial "'\${HOME}' is a directory (full path: '${HOME}')"
   }
   # bats test_tags=tag:dir
-  @test "vlib.get-secret-string: existing dir path without file (HOME)" {
-    run vlib.get-secret-string "${HOME}"
+  @test "vlib.secret-get-text-from-file: existing dir path without file (HOME)" {
+    run vlib.secret-get-text-from-file "${HOME}"
     #echo "output=$output" >&3
     assert_failure
     [ "$status" -eq 1 ]
     assert_output --partial "'${HOME}' is a directory (full path: '${HOME}')"
   }
   # bats test_tags=tag:dir
-  @test "vlib.get-secret-string: existing empty file" {
-    run vlib.get-secret-string "./test-empty-file.txt"
+  @test "vlib.secret-get-text-from-file: existing empty file" {
+    run vlib.secret-get-text-from-file "./test-empty-file.txt"
     #echo "output=$output" >&3
     assert_failure
     assert_output --partial "v-tests/test-empty-file.txt') is empty"
   }
   # bats test_tags=tag:dir
-  @test "vlib.get-secret-string: existing not empty file" {
-    run vlib.get-secret-string "./test-not-empty-file.txt"
+  @test "vlib.secret-get-text-from-file: existing not empty file" {
+    run vlib.secret-get-text-from-file "./test-not-empty-file.txt"
     #echo "output=$output" >&3
     assert_success
     [ "$output" = "test-secret-from-file" ]
@@ -264,8 +264,8 @@ testvercomp() {
     assert_output --partial "Error: test/exists-pass-dir-test-tmp is not in the password store."
   }
   # bats test_tags=tag:pass
-  @test "vlib.pass-get-secret: get secret for not existing path" {
-    run vlib.pass-get-secret test/exists-pass-dir-test-tmp
+  @test "vlib.secret-get-text-from-pass: get secret for not existing path" {
+    run vlib.secret-get-text-from-pass test/exists-pass-dir-test-tmp
     # echo "_secret=$_secret" >&3
     # echo "output=$output" >&3
     # echo "status=$status" >&3
@@ -275,10 +275,10 @@ testvercomp() {
     assert_output --partial "## C A L L   T R A C E ##"
   }
   # bats test_tags=tag:pass
-  @test "vlib.pass-get-secret: get secret for not existing path into variable" {
+  @test "vlib.secret-get-text-from-pass: get secret for not existing path into variable" {
     local _secret
     bats_require_minimum_version 1.5.0
-    run -127 "_secret=\"$(vlib.pass-get-secret test/exists-pass-dir-test-tmp)\""
+    run -127 "_secret=\"$(vlib.secret-get-text-from-pass test/exists-pass-dir-test-tmp)\""
     # echo "_secret=$_secret" >&3
     # echo "output=$output" >&3
     # echo "status=$status" >&3
@@ -288,9 +288,9 @@ testvercomp() {
     assert_output --partial "## C A L L   T R A C E ##"
   }
   # bats test_tags=tag:pass
-  @test "vlib.pass-get-secret: get secret for existing path" {
+  @test "vlib.secret-get-text-from-pass: get secret for existing path" {
     local _secret
-    run vlib.pass-get-secret test/exists-pass-dir-test
+    run vlib.secret-get-text-from-pass test/exists-pass-dir-test
     # echo "output=$output" >&3
     # echo "status=$status" >&3
     # echo "_secret=$_secret" >&3
@@ -298,9 +298,9 @@ testvercomp() {
     [ "$output" = "test-password" ]
   }
   # bats test_tags=tag:pass
-  @test "vlib.pass-get-secret: get secret for existing path into variable" {
+  @test "vlib.secret-get-text-from-pass: get secret for existing path into variable" {
     local _secret
-    _secret="$(vlib.pass-get-secret test/exists-pass-dir-test)"
+    _secret="$(vlib.secret-get-text-from-pass test/exists-pass-dir-test)"
     # echo "output=$output" >&3
     # echo "status=$status" >&3
     # echo "_secret=$_secret" >&3

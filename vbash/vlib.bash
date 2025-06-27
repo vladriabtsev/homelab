@@ -876,9 +876,9 @@ function vlib.is-pass-dir-exists-with-trace {
   [ -z $_secret ] && return 1
   return 0
 }
-function vlib.pass-get-secret {
-  # Usage returned_value="$(vlib.pass-get-secret pass-path)"
-  [ -z "$1" ] && err_and_exit "Function 'vlib.pass-get-secret' is expecting 'pass' password manager path parameter"
+function vlib.secret-get-text-from-pass {
+  # Usage returned_value="$(vlib.secret-get-text-from-pass pass-path)"
+  [ -z "$1" ] && err_and_exit "Function 'vlib.secret-get-text-from-pass' is expecting 'pass' password manager path parameter"
   local _secret
   local _old_setting=${-//[^e]/}
   set +e
@@ -890,7 +890,7 @@ function vlib.pass-get-secret {
   [[ ${#_error} -gt 0 ]] && err_and_exit "$_error"
   echo $_secret
 }
-function vlib.get-secret-string {
+function vlib.secret-get-text-from-file {
   [ -z "$1" ] && err_and_exit "Missing \$1 parameter with path to file with secret text."
   local _secret
   local _path
@@ -905,6 +905,21 @@ function vlib.get-secret-string {
   _secret=$(<"$_path")
   [[ ${#_secret} -gt 0 ]] || err_and_exit "File '$1' ('$_path') is empty."
   echo $_secret
+}
+function vlib.secret-get-text {
+  #  $1 - file path for secret text
+  #  $2 - path of 'pass' password manager with secret text.
+  if [[ -z $1 && -z $2 ]]; then
+    err_and_exit "Both file path '\$1' and 'pass' password manager path '\$2' are empty. Expecting only one path."
+  fi
+  if [[ -n $1 && -n $2 ]]; then
+    err_and_exit "Both file path '\$1' and 'pass' password manager path '\$2' are not empty. Expecting only one path."
+  fi
+  if [[ -n $3 ]]; then
+    vlib.secret-get-text-from-file $1
+  else
+    vlib.secret-get-text-from-pass $2
+  fi
 }
 function vlib.exec-command {
   # Usage: vlib.exec-command ls ~
