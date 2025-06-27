@@ -202,52 +202,93 @@ setup() {
   }
   # bats test_tags=tag:storage-separate
   # https://rudimartinsen.com/2024/01/09/nfs-csi-driver-kubernetes/
+  # https://github.com/kubernetes-csi/csi-driver-nfs
   @test "storage: install-uninstall nfs" {
     echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-nfs" >&3
     run ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-nfs
-
-    echo '      Testing...' >&3
+    echo '         Testing...' >&3
     sleep 60
     DETIK_CLIENT_NAMESPACE="csi-nfs"
-    echo '      Testing csi-nfs-node' >&3
+    echo '         Testing csi-nfs-node' >&3
     run try "at most 5 times every 30s to get pods named '^csi-nfs-node' and verify that 'status' is 'running'"
     assert_success
     # run verify "there are 3 pods named '^csi-nfs-node'"
     # assert_success
-    echo '      Testing csi-nfs-controller' >&3
+    echo '         Testing csi-nfs-controller' >&3
     run try "at most 5 times every 30s to get pods named '^csi-nfs-controller' and verify that 'status' is 'running'"
     assert_success
     # run verify "there are 5 pods named '^csi-nfs-controller'"
     # assert_success
 
-    # echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-nfs" >&3
-    # run ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-nfs
-    # sleep 10
-    # assert_success
+    local storage="office-csi-driver-nfs-retain"
+    echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
+    kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
+    kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
+    run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
+    assert_success
+    echo '         Testing...' >&3
+    sleep 15
+    DETIK_CLIENT_NAMESPACE="storage-speedtest"
+    run try "at most 5 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
+    assert_success
+
+    # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
+    kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
+    assert_success
+    echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
+    echo "      Step $[step=$step+1]. helm uninstall csi-driver-nfs -n csi-nfs" >&3
+    run helm uninstall csi-driver-nfs -n csi-nfs
+    sleep 10
+    assert_success
+    echo "      Step $[step=$step+1]. kubectl delete ns csi-nfs" >&3
+    run kubectl delete ns csi-nfs
+    sleep 10
+    assert_success
   }
   # bats test_tags=tag:storage-separate-one
+  # https://github.com/kubernetes-csi/csi-driver-nfs/tree/master/charts
   @test "storage: install-uninstall smb" {
     echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-smb" >&3
     run ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-smb
-
-    echo '      Testing...' >&3
+    echo '         Testing...' >&3
     sleep 60
     DETIK_CLIENT_NAMESPACE="csi-smb"
-    echo '      Testing csi-smb-node' >&3
+    echo '         Testing csi-smb-node' >&3
     run try "at most 5 times every 30s to get pods named '^csi-smb-node' and verify that 'status' is 'running'"
     assert_success
     # run verify "there are 3 pods named '^csi-smb-node'"
     # assert_success
-    echo '      Testing csi-smb-controller' >&3
+    echo '         Testing csi-smb-controller' >&3
     run try "at most 5 times every 30s to get pods named '^csi-smb-controller' and verify that 'status' is 'running'"
     assert_success
     # run verify "there are 4 pods named '^csi-smb-controller'"
     # assert_success
 
-    # echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-smb" >&3
-    # run ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-smb
-    # sleep 10
-    # assert_success
+    local storage="office-csi-driver-smb-tmp"
+    echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
+    #kubectl delete -f "$data_folder/generated-$2-write-read.yaml" --ignore-not-found=true
+    kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
+    kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
+    run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
+    assert_success
+    echo '         Testing...' >&3
+    sleep 15
+    DETIK_CLIENT_NAMESPACE="storage-speedtest"
+    run try "at most 5 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
+    assert_success
+    # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
+    kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
+    assert_success
+    echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
+
+    echo "      Step $[step=$step+1]. helm uninstall csi-driver-smb -n csi-smb" >&3
+    run helm uninstall csi-driver-smb -n csi-smb
+    sleep 10
+    assert_success
+    echo "      Step $[step=$step+1]. kubectl delete ns csi-smb" >&3
+    run kubectl delete ns csi-smb
+    sleep 10
+    assert_success
   }
   # bats test_tags=tag:storage-separate
   @test "storage: install-uninstall synology" {
@@ -391,51 +432,51 @@ setup() {
 
     echo "output=$output" >&3
   } 
-  # bats test_tags=tag:speed
-  @test "storage: office-csi-driver-nfs-retain tests" {
-    local storage="office-csi-driver-nfs-retain"
-    echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
-    kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
-    kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
+  # # bats test_tags=tag:speed-one
+  # @test "storage: office-csi-driver-nfs-retain tests" {
+  #   local storage="office-csi-driver-nfs-retain"
+  #   echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
+  #   kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
+  #   kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
 
-    run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
-    assert_success
+  #   run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
+  #   assert_success
 
-    echo '      Testing...' >&3
-    sleep 15
+  #   echo '      Testing...' >&3
+  #   sleep 15
 
-    DETIK_CLIENT_NAMESPACE="storage-speedtest"
-    run try "at most 5 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
-    assert_success
+  #   DETIK_CLIENT_NAMESPACE="storage-speedtest"
+  #   run try "at most 5 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
+  #   assert_success
 
-    # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
-    kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
-    assert_success
-    echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
-  } 
-  # bats test_tags=tag:speed-one
-  @test "storage: office-csi-driver-smb-tmp tests" {
-    local storage="office-csi-driver-smb-tmp"
-    echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
-    #kubectl delete -f "$data_folder/generated-$2-write-read.yaml" --ignore-not-found=true
-    kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
-    kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
+  #   # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
+  #   kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
+  #   assert_success
+  #   echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
+  # } 
+  # # bats test_tags=tag:speed
+  # @test "storage: office-csi-driver-smb-tmp tests" {
+  #   local storage="office-csi-driver-smb-tmp"
+  #   echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
+  #   #kubectl delete -f "$data_folder/generated-$2-write-read.yaml" --ignore-not-found=true
+  #   kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
+  #   kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
 
-    run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
-    assert_success
+  #   run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
+  #   assert_success
 
-    echo '      Testing...' >&3
-    sleep 15
+  #   echo '      Testing...' >&3
+  #   sleep 15
 
-    DETIK_CLIENT_NAMESPACE="storage-speedtest"
-    run try "at most 5 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
-    assert_success
+  #   DETIK_CLIENT_NAMESPACE="storage-speedtest"
+  #   run try "at most 5 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
+  #   assert_success
 
-    # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
-    kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
-    assert_success
-    echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
-  } 
+  #   # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
+  #   kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
+  #   assert_success
+  #   echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
+  # } 
   # bats test_tags=tag:failed
   @test "storage: office-synology-csi-iscsi-tmp tests" {
     local storage="office-synology-csi-iscsi-tmp"

@@ -159,41 +159,9 @@ function vkube-k3s.check-pass-data-for-secrets() {
   (vlib.is-pass-dir-exists "$1/password.txt") || return 1
   return 0
 }
-# function vkube-k3s.secret-create {
-#   #############################
-#   # Create kubernetes secret
-#   # vkube-k3s.secret-create $1 $2
-#   #  $1 - kubernetes namespace where secret will be created
-#   #  $2 - kubernetes secret name
-#   #  $3 - folder path for secret data (username and password)
-#   #       Folder path type is recognized by first character in $3 parameter.
-#   #       Disk folder path recognized by first character '.', '~' or '/'. Two files (username.txt and password.txt) are expected inside folder.
-#   #       For 'pass' password manager path two secret files (username.txt and password.txt) are expected inside path.
-#   [ -z "$1" ] && err_and_exit "Missing namespace \$1 parameter."
-#   [ -z "$2" ] && err_and_exit "Missing secret name \$2 parameter."
-#   [ -z "$3" ] && err_and_exit "Missing secret folder path \$3 parameter."
-#   #echo "1='$1' 2='$2' 3='$3'" >&3
-#   local first_char="${3:0:1}"
-#   #echo "first_char='$first_char'" >&3
-#   if [[ "$first_char" = "." || "$first_char" = "~" || "$first_char" = "/" ]]; then
-#     eval local path=\"\$3\"
-#     #echo "path=$path" >&3
-#     vkube-k3s.check-dir-data-for-secrets-with-trace "$path"
-#     vkube-k3s.is-namespace-exist-or-create $1
-#     kubectl delete secret $2 -n $1 --ignore-not-found=true
-#     kubectl create secret generic $2 -n $1 --from-file=$path
-#   else
-#     vkube-k3s.check-pass-data-for-secrets-with-trace "$3"
-#     local username
-#     username="$(vlib.secret-get-text-from-pass $3/username.txt)"
-#     local password
-#     password="$(vlib.secret-get-text-from-pass $3/password.txt)"
-#     vkube-k3s.is-namespace-exist-or-create $1
-#     kubectl delete secret $2 -n $1 --ignore-not-found=true
-#     kubectl create secret generic $2 -n $1 --from-literal=username=$username --from-literal=password=$password
-#   fi
-# }
 function vkube-k3s.secret-create {
+  # https://kubernetes.io/docs/concepts/configuration/secret/
+  # https://kubernetes.io/docs/tasks/configmap-secret/managing-secret-using-kubectl/
   # Create kubernetes secret
   #  $1 - kubernetes namespace where secret will be created
   #  $2 - kubernetes secret name
@@ -228,7 +196,7 @@ function vkube-k3s.secret-create-from-folder {
   vkube-k3s.check-dir-data-for-secrets-with-trace "$path"
   vkube-k3s.is-namespace-exist-or-create $1
   kubectl delete secret $2 -n $1 --ignore-not-found=true
-  kubectl create secret generic $2 -n $1 --from-file=$path
+  kubectl create secret generic $2 -n $1 --from-file=username=$path/username.txt --from-file=password=$path/password.txt
 }
 function vkube-k3s.secret-create-from-pass-folder {
   #############################
@@ -1553,7 +1521,6 @@ function vkube-k3s.busybox-uninstall() {
 
   run "line '$LINENO';kubectl delete namespace busybox-system"
 }
-#region legacy
 function install-k3s() {
   # K3S Version
   k3s_latest=$(curl -sL https://api.github.com/repos/k3s-io/k3s/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
@@ -2042,12 +2009,14 @@ function install-storage() {
 
   if [ $local_storage_use -eq 1 ]; then
     inf "local (Line:$LINENO)\n"
+    #region local storage
     run "line '$LINENO';kubectl apply -f - <<<\"apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: local-storage
 provisioner: kubernetes.io/no-provisioner # indicates that this StorageClass does not support automatic provisioning
 volumeBindingMode: WaitForFirstConsumer\""
+    #endregion local storage
   fi
   if [ $csi_driver_nfs_use -eq 1 ]; then
     inf "csi-driver-nfs (Line:$LINENO)\n"
@@ -2308,10 +2277,10 @@ parameters: # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/docs/
   # source: //smb-server.default.svc.cluster.local/share
   # if csi.storage.k8s.io/provisioner-secret is provided, will create a sub directory
   # with PV name under source
-  csi.storage.k8s.io/provisioner-secret-name: $secret_folder_name
-  csi.storage.k8s.io/provisioner-secret-namespace: csi-smb
-  csi.storage.k8s.io/node-stage-secret-name: $secret_folder_name
-  csi.storage.k8s.io/node-stage-secret-namespace: csi-smb
+  csi.storage.k8s.io/provisioner-secret-name: $secret_name
+  csi.storage.k8s.io/provisioner-secret-namespace: $csi_driver_smb_namespace
+  csi.storage.k8s.io/node-stage-secret-name: $secret_name
+  csi.storage.k8s.io/node-stage-secret-namespace: $csi_driver_smb_namespace
 reclaimPolicy: $storage_server_protocol_class_reclaimPolicy
 volumeBindingMode: Immediate
 allowVolumeExpansion: $storage_server_protocol_class_allowVolumeExpansion
@@ -2330,10 +2299,10 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
   - vers=$storage_server_protocol_class_smb_vers"
               fi
               txt+="
-  #- noperm
-  #- mfsymlinks
-  #- cache=strict
-  #- noserverino  # required to prevent data corruption
+  - noperm
+  - mfsymlinks
+  - cache=strict
+  - noserverino  # required to prevent data corruption
 "
               #endregion
             else
@@ -2377,4 +2346,3 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
     ;;
   esac
 }
-#endregion legacy

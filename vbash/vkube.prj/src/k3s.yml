@@ -38,8 +38,8 @@ commands:
   - long: --app
     help: All applications. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
 
-# - name: uninstall
-#   help: Uninstall k3s kubernetes
+#- name: uninstall
+#  help: Uninstall k3s kubernetes
   #args: *cluster_plan
 
 - name: upgrade
