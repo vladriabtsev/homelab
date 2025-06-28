@@ -955,7 +955,9 @@ function vkube-k3s.csi-synology-install() {
 
   # Defaults
   # Root level scalar settings
+  #vlib.trace "synology_csi_plan=${synology_csi_plan}"
   eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_" + key + "='\''" + . + "'\''")'  < ${synology_csi_plan})"
+  #vlib.trace "csi_synology_snapshot_use=${csi_synology_snapshot_use}"
 
   csi_synology_namespace="synology-csi"
   vlib.trace "csi_synology_namespace=${csi_synology_namespace}"
@@ -1133,15 +1135,15 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
   # echo $csi_synology_ver
   if [[ $(kubectl get pods -l app=controller,app.kubernetes.io/name=synology-csi -n $csi_synology_namespace | wc -l) -eq 0 ]]; then # not installed yet
     eval "csi_synology_folder_with_dsm_secrets=$csi_synology_folder_with_dsm_secrets"
-    vlib.trace "csi_synology_folder_with_dsm_secrets=$ccsi_synology_folder_with_dsm_secrets"
+    vlib.trace "csi_synology_folder_with_dsm_secrets=$csi_synology_folder_with_dsm_secrets"
 
     # /etc/synology/client-info.yml
 
     if kubectl get secret -n $csi_synology_namespace client-info-secret > /dev/null ; then
-      run "line '$LINENO';kubectl delete secret -n $csi_synology_namespace client-info-secret"
+      run "line '$LINENO';kubectl delete secret -n $csi_synology_namespace client-info-secret --ignore-not-found=true"
     fi
-    #run "line '$LINENO';kubectl create secret -n $csi_synology_namespace generic client-info-secret --from-file="$csi_synology_folder_with_dsm_secrets/client-info.yml""
-    run "line '$LINENO';vkube-k3s.secret-create $csi_synology_namespace client-info-secret $csi_synology_folder_with_dsm_secrets/client-info.yml"
+    run "line '$LINENO';kubectl create secret -n $csi_synology_namespace generic client-info-secret --from-file="$csi_synology_folder_with_dsm_secrets/client-info.yml""
+    #run "line '$LINENO';vkube-k3s.secret-create $csi_synology_namespace client-info-secret $csi_synology_folder_with_dsm_secrets/client-info.yml"
     run "line '$LINENO';kubectl apply -f $vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version"
 
     if [ $csi_synology_snapshot_use -eq 1 ]; then
@@ -1742,9 +1744,13 @@ longhorn-install() {
   i_node=0
   for node in "${nodes[@]}"; do
     eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
-    node_root_password=$(vkube-k3s.get-node-admin-password)
-    node_disks 1
-    node_disks 2
+    readarray disks < <(yq -o=j -I=0 ".node[$i_node].node_storage[]" < $k3s_settings)
+    vlib.trace "disk amount=${#disks[@]}"
+    if [[ ${#disks[@]} -gt 0 ]]; then
+      node_root_password=$(vkube-k3s.get-node-admin-password)
+      node_disks 1
+      node_disks 2
+    fi
     ((i_node++))
     if [ $i_node -eq $amount_nodes ]; then break; fi
   done

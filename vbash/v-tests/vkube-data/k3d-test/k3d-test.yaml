@@ -30,54 +30,25 @@ nodes_admin_password_secret_pass_path: test-nodes-admin/password.txt # text from
 # node settings
 node:
 - node_id: 1
-  node_name: k3s1
-  node_ip4: 192.168.100.51
-  kube_vip_interface: eth1
-  # node admin user name and password from secret folder if need different account for node
-  node_admin_password_secret_file_path: # text file path
-  node_admin_password_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
-  node_user: vlad
-  node_is_control_plane: 1
-  node_is_worker: 1
-  node_storage:
-  - storage_class: nvme
-    disk_uuid: a852f0c8-bc0a-49d5-b2cc-33f1a2cccb99
-    mnt_path: /mnt/nvme0 # 465.8G
-  - storage_class: nvme
-    disk_uuid: 392ecee2-89cd-4866-b78f-d73e64305de3
-    mnt_path: /mnt/nvme1 # 465.8G
-  - storage_class: ssd
-    disk_uuid: 5387f615-80ab-4565-b6f4-152a099517b2
-    mnt_path: /mnt/ssd0 # 476.94G
-- node_id: 2
-  node_name: k3s2
-  node_ip4: 192.168.100.52
-  kube_vip_interface: eth1
-  node_is_control_plane: 1
-  node_is_worker: 1
-  node_storage:
-  - storage_class: nvme
-    disk_uuid: 2c30133e-3ab3-4171-bc9d-73bb9a50df3b
-    mnt_path: /mnt/nvme0 # 465.8G
-  - storage_class: nvme
-    disk_uuid: 99bb8649-3ded-404d-ad68-ce454262dfbb
-    mnt_path: /mnt/nvme1 # 465.8G
-  - storage_class: ssd
-    disk_uuid: fa1e39a4-9573-464a-abf4-c64b9e28e809
-    mnt_path: /mnt/ssd0 # 476.94G
-- node_id: 3
-  node_name: k3s3
-  node_ip4: 192.168.100.53
-  kube_vip_interface: eth1
-  node_is_control_plane: 1
-  node_is_worker: 1
-  node_storage:
-  - storage_class: nvme
-    disk_uuid: ef31bf5a-97d4-4701-bc8d-12fc06ffc95d
-    mnt_path: /mnt/nvme0 # 953.9G
-  - storage_class: ssd
-    disk_uuid: 080f3d00-581e-4081-99b2-44c31c9f8941
-    mnt_path: /mnt/ssd0 # 476.9G
+#   node_name: k3s1
+#   node_ip4: 192.168.100.51
+#   kube_vip_interface: eth1
+#   # node admin user name and password from secret folder if need different account for node
+#   node_admin_password_secret_file_path: # text file path
+#   node_admin_password_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
+#   node_user: vlad
+#   node_is_control_plane: 1
+#   node_is_worker: 1
+#   node_storage:
+#   - storage_class: nvme
+#     disk_uuid: a852f0c8-bc0a-49d5-b2cc-33f1a2cccb99
+#     mnt_path: /mnt/nvme0 # 465.8G
+#   - storage_class: nvme
+#     disk_uuid: 392ecee2-89cd-4866-b78f-d73e64305de3
+#     mnt_path: /mnt/nvme1 # 465.8G
+#   - storage_class: ssd
+#     disk_uuid: 5387f615-80ab-4565-b6f4-152a099517b2
+#     mnt_path: /mnt/ssd0 # 476.94G
 
 # S T O R A G E
 # https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27

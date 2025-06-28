@@ -1,0 +1,47 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: office-csi-driver-nfs-retain-test-pvc
+  namespace: storage-speedtest
+spec:
+  storageClassName: office-csi-driver-nfs-retain
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5G
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: office-csi-driver-nfs-retain-write-read
+  namespace: storage-speedtest
+spec:
+  template:
+    metadata:
+      name: office-csi-driver-nfs-retain-write-read
+      namespace: storage-speedtest
+      labels:
+        app: office-csi-driver-nfs-retain-storage-speedtest
+        job: write-read
+    spec:
+      containers:
+      - name: write-read
+        image: ubuntu:xenial
+        command: [sh, -c]
+        args:
+        - |
+          echo
+          echo '      Writing results:'
+          dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 oflag=dsync
+          echo '      Reading results:'
+          dd if=/mnt/pv/test.img of=/dev/null bs=8k
+        volumeMounts:
+        - mountPath: /mnt/pv
+          name: test-volume
+      volumes:
+      - name: test-volume
+        persistentVolumeClaim:
+          claimName: office-csi-driver-nfs-retain-test-pvc
+      restartPolicy: Never
+
