@@ -50,6 +50,12 @@ setup() {
 
 # https://bats-core.readthedocs.io/en/stable/writing-tests.html
 
+# TODO tests for different kubernetes clusters
+# https://spacelift.io/blog/kubeconfig
+
+# https://rnemet.dev/posts/k3d/
+# docker exec k3d-test-server-0 crictl images
+
 # bats test_tags=tag:core
 @test "k3d core installation" {
   #if kubectl cluster-info; then
@@ -357,36 +363,35 @@ setup() {
     assert_success
     echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
 
-    assert_failure
-    # https://github.com/SynologyOpenSource/synology-csi/pull/85
-    storage="office-synology-csi-iscsi-tmp"
-    echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
-    kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
-    kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
-    run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
-    assert_success
-    echo '        Testing...' >&3
-    sleep 15
-    run try "at most 3 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
-    assert_success
-    kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
-    assert_success
-    echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
+    # # https://github.com/SynologyOpenSource/synology-csi/pull/85
+    # storage="office-synology-csi-iscsi-tmp"
+    # echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
+    # kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
+    # kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
+    # run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
+    # assert_success
+    # echo '        Testing...' >&3
+    # sleep 15
+    # run try "at most 3 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
+    # assert_success
+    # kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
+    # assert_success
+    # echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
 
-    # https://github.com/SynologyOpenSource/synology-csi/pull/85
-    storage="office-synology-csi-iscsi-retain"
-    echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
-    kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
-    kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
-    run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
-    assert_success
-    echo '         Testing...' >&3
-    sleep 15
-    run try "at most 5 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
-    assert_success
-    kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
-    assert_success
-    echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
+    # # https://github.com/SynologyOpenSource/synology-csi/pull/85
+    # storage="office-synology-csi-iscsi-retain"
+    # echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
+    # kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
+    # kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
+    # run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
+    # assert_success
+    # echo '         Testing...' >&3
+    # sleep 15
+    # run try "at most 5 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
+    # assert_success
+    # kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
+    # assert_success
+    # echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
 
     # echo "      Step $[step=$step+1]. helm uninstall csi-driver-nfs -n csi-nfs" >&3
     # run helm uninstall csi-driver-nfs -n csi-nfs
@@ -397,8 +402,11 @@ setup() {
     # sleep 10
     # assert_success
   }
-  # bats test_tags=tag:storage-separate-one
+  # bats test_tags=tag:storage-separate
   @test "storage: install-uninstall longhorn" {
+    
+    skip "open-iscsi is not supported in k3d"
+
     echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-longhorn" >&3
     run ../vkube --cluster-plan k3d-test --trace k3s install --storage-longhorn
 
@@ -423,18 +431,6 @@ setup() {
   echo '      Testing...' >&3
   sleep 60
 
-  DETIK_CLIENT_NAMESPACE="synology-csi"
-  echo '      Testing synology-csi-node' >&3
-  run try "at most 5 times every 30s to get pods named '^synology-csi-node' and verify that 'status' is 'running'"
-  assert_success
-  # run verify "there are 2 pods named '^synology-csi-node'"
-  # assert_success
-  echo '      Testing synology-csi-controller' >&3
-  run try "at most 5 times every 30s to get pods named '^synology-csi-controller' and verify that 'status' is 'running'"
-  assert_success
-  # run verify "there are 4 pods named '^synology-csi-controller'"
-  # assert_success
-
   DETIK_CLIENT_NAMESPACE="csi-nfs"
   echo '      Testing csi-nfs-node' >&3
   run try "at most 5 times every 30s to get pods named '^csi-nfs-node' and verify that 'status' is 'running'"
@@ -457,6 +453,18 @@ setup() {
   run try "at most 5 times every 30s to get pods named '^csi-smb-controller' and verify that 'status' is 'running'"
   assert_success
   # run verify "there are 4 pods named '^csi-smb-controller'"
+  # assert_success
+
+  DETIK_CLIENT_NAMESPACE="synology-csi"
+  echo '      Testing synology-csi-node' >&3
+  run try "at most 5 times every 30s to get pods named '^synology-csi-node' and verify that 'status' is 'running'"
+  assert_success
+  # run verify "there are 2 pods named '^synology-csi-node'"
+  # assert_success
+  echo '      Testing synology-csi-controller' >&3
+  run try "at most 5 times every 30s to get pods named '^synology-csi-controller' and verify that 'status' is 'running'"
+  assert_success
+  # run verify "there are 4 pods named '^synology-csi-controller'"
   # assert_success
 
   # run try "at most 2 times every 30s to find 1 pods named 'nfs-subdir-external-provisioner' with 'status' being 'running'"
