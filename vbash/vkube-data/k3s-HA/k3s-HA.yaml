@@ -6,11 +6,11 @@ amount_nodes: 3 #3
 # can be overridden by node settings
 node_user: vlad
 # https://github.com/k3s-io/k3s/releases
-k3s_ver: v1.33.0+k3s1 # v1.32.4+k3s1 v1.32.2+k3s1 v1.30.10+k3s1 # v1.31.6+k3s1 # v1.32.2+k3s1
+k3s_ver: v1.33.1+k3s1 # v1.32.4+k3s1 v1.32.2+k3s1 v1.30.10+k3s1 # v1.31.6+k3s1 # v1.32.2+k3s1
 cert_name: id_rsa
 # https://github.com/kube-vip/kube-vip/releases
 kube_vip_use: 1
-kube_vip_ver: v0.9.1  # auto upgrade to latest if empty
+kube_vip_ver: v0.9.2  # auto upgrade to latest if empty
 #kube_vip_cloud_provider_ver: v0.0.10
 kube_vip_address: 192.168.100.50
 kube_vip_mode: ARP # ARP or BGP
@@ -18,55 +18,29 @@ kube_vip_as_ha: 1
 kube_vip_as_lb: 1
 kube_vip_lb_range: 192.168.100.101-192.168.100.200
 
-# https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
-local_storage_use: 1
-
 # https://github.com/kubernetes/examples/blob/master/volumes/iscsi/iscsi.yaml
-
-# https://github.com/SynologyOpenSource/synology-csi
-csi_synology_use: 1 # csi-synology/csi-synology-plan.yaml is expected in same folder as this file
-
-# https://github.com/kubernetes-csi/csi-driver-smb
-csi_driver_smb_use: 1
-csi_driver_smb_ver:   # auto upgrade to latest if empty
-csi_driver_smb_secret_folder: ${HOME}/.ssh/office-csi-driver-smb-secrets # folder with username.txt and password.txt files
-
-# https://github.com/kubernetes-csi/csi-driver-nfs
-csi_driver_nfs_use: 1
-csi_driver_nfs_ver:  # auto upgrade to latest if empty
-csi_driver_nfs_secret_folder: ${HOME}/.ssh/office-csi-driver-nfs-secrets # folder with username.txt and password.txt files
-
-# https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner
-# https://hbayraktar.medium.com/how-to-setup-dynamic-nfs-provisioning-in-a-kubernetes-cluster-cbf433b7de29
-# synology https://forum.huawei.com/enterprise/intl/en/thread/blog/729566720127025152?blogId=729566720127025152
-nfs_subdir_external_provisioner_use: 1
-nfs_subdir_external_provisioner_ver:  # auto upgrade to latest if empty
-nfs_subdir_external_provisioner_server: 192.168.100.227
-nfs_subdir_external_provisioner_server_path: /volume1/k8s-nfs-ext
-
-# Busybox
-busybox_use: 1
-busybox_ver:  # auto upgrade to latest if empty
 
 # https://github.com/kubernetes-sigs/external-dns/tree/master
 external_dns_ver: v0.15.0 # auto upgrade to latest if empty
-# https://github.com/kube-vip/kube-vip/releases
-pi_hole_use: 1
-pi_hole_ver: v5.18.3  # auto upgrade to latest if empty
+
 # https://github.com/cert-manager/cert-manager
 cert_manager_ver: v1.13.2 # auto upgrade to latest if empty
+
 # https://cert-manager.io/docs/configuration/issuers/
 cert_manager_issuer: ca # https://cert-manager.io/docs/configuration/ca/
+
 # https://github.com/rancher/rancher
 rancher_ver: v2.9.5 # auto upgrade to latest if empty
-# https://github.com/longhorn/longhorn
-longhorn_ver: v1.8.1 # auto upgrade to latest if empty
+
 # https://velero.io/docs/v1.15/basic-install/
 velero_ver: v1.15.2 # auto upgrade to latest if empty
+
 # https://github.com/metallb/metallb
-metal_lb_ver: v0.14.9 # auto upgrade to latest if empty
+metal_lb_ver: v0.15.2 # v0.14.9 auto upgrade to latest if empty
+
 # https://github.com/argoproj/argo-cd
 argo_cd: v2.13.3 # auto upgrade to latest if empty
+
 # node settings
 node:
 - node_id: 1
@@ -78,10 +52,10 @@ node:
   node_is_worker: 1
   node_storage:
   - storage_class: nvme
-    disk_uuid: a852f0c8-bc0a-49d5-b2cc-33f1a2cccb99
+    disk_uuid: 392ecee2-89cd-4866-b78f-d73e64305de3
     mnt_path: /mnt/nvme0 # 465.8G
   - storage_class: nvme
-    disk_uuid: 392ecee2-89cd-4866-b78f-d73e64305de3
+    disk_uuid: a852f0c8-bc0a-49d5-b2cc-33f1a2cccb99
     mnt_path: /mnt/nvme1 # 465.8G
   - storage_class: ssd
     disk_uuid: 5387f615-80ab-4565-b6f4-152a099517b2
@@ -94,10 +68,10 @@ node:
   node_is_worker: 1
   node_storage:
   - storage_class: nvme
-    disk_uuid: 2c30133e-3ab3-4171-bc9d-73bb9a50df3b
+    disk_uuid: 99bb8649-3ded-404d-ad68-ce454262dfbb
     mnt_path: /mnt/nvme0 # 465.8G
   - storage_class: nvme
-    disk_uuid: 99bb8649-3ded-404d-ad68-ce454262dfbb
+    disk_uuid: 01eb859f-3466-4680-8ffa-5c175078a75d
     mnt_path: /mnt/nvme1 # 465.8G
   - storage_class: ssd
     disk_uuid: fa1e39a4-9573-464a-abf4-c64b9e28e809
@@ -115,3 +89,100 @@ node:
   - storage_class: ssd
     disk_uuid: 080f3d00-581e-4081-99b2-44c31c9f8941
     mnt_path: /mnt/ssd0 # 476.9G
+
+#################
+# S T O R A G E
+#################
+
+# https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
+local_storage_use: 1
+
+# https://github.com/kubernetes-csi/csi-driver-nfs
+csi_driver_nfs_use: 1
+csi_driver_nfs_ver: v4.11.0 # auto upgrade to latest if empty
+csi_driver_nfs_namespace: csi-nfs
+
+# # https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner
+# # https://hbayraktar.medium.com/how-to-setup-dynamic-nfs-provisioning-in-a-kubernetes-cluster-cbf433b7de29
+# # synology https://forum.huawei.com/enterprise/intl/en/thread/blog/729566720127025152?blogId=729566720127025152
+# nfs_subdir_external_provisioner_use: 0
+# nfs_subdir_external_provisioner_ver:  # auto upgrade to latest if empty
+# nfs_subdir_external_provisioner_server: 192.168.100.227
+# nfs_subdir_external_provisioner_server_path: /volume1/k8s-nfs-ext
+
+
+# https://github.com/kubernetes-csi/csi-driver-smb
+csi_driver_smb_use: 1
+csi_driver_smb_ver: v1.18.0  # auto upgrade to latest if empty
+csi_driver_smb_namespace: csi-smb
+
+# https://github.com/SynologyOpenSource/synology-csi
+csi_synology_use: 1 # csi-synology/csi-synology-plan.yaml is expected in same folder as this file
+csi_synology_namespace: csi-synology
+
+# https://github.com/longhorn/longhorn
+longhorn_ver: v1.9.0 # auto upgrade to latest if empty
+longhorn_use: 1
+longhorn_ui_admin_name_secret_file_path: ${HOME}/.ssh/test-longhorn/username.txt # text file path
+longhorn_ui_admin_name_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
+longhorn_ui_admin_password_secret_file_path: ${HOME}/.ssh/test-longhorn/password.txt # text file path
+longhorn_ui_admin_password_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
+
+storage_servers:
+- name: office
+  ip4: 192.168.100.227
+  protocols:
+  # - name: csi-synology
+  #   classes:
+  #   - name: tmp
+  #     reclaimPolicy: Delete
+  #     allowVolumeExpansion: true
+  - name: csi-driver-smb
+    # https://github.com/kubernetes-csi/csi-driver-smb
+    secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
+    secret_pass_folder: # secret from 'pass' password manager folder with username.txt and password.txt secrets
+    classes:
+    - name: tmp
+      smb_vers: "3.0"
+      location: /csi-driver-smb
+      reclaimPolicy: Delete
+      allowVolumeExpansion: true
+  - name: csi-driver-nfs
+    # https://github.com/kubernetes-csi/csi-driver-nfs
+    # https://microk8s.io/docs/how-to-nfs
+    # https://medium.com/@bastian.ohm/configuring-your-synology-nas-as-nfs-storage-for-kubernetes-cluster-5e668169e5a2
+    secret_folder: ${HOME}/.ssh/office-nfs-secrets # folder with username.txt and password.txt files
+    secret_pass_folder: # secret from 'pass' password manager folder with username.txt and password.txt secrets
+    classes:
+    - name: retain
+      location: /volume1/csi-driver-nfs
+      mountOptions_nfsvers: "4.0"
+      reclaimPolicy: Retain
+      allowVolumeExpansion: false
+# - name: backup2
+#   ip4: 192.168.100.221
+#   protocols:
+#   - name: csi-driver-nfs
+#     secret_folder: ${HOME}/.ssh/backup2-nfs-secrets # folder with username.txt and password.txt files
+#     classes:
+#     - name: retain
+#       location: '/Volume1/csi-nfs' # 'Volume1' without spaces !!!
+#       mountOptions_nfsvers: 4.1
+#       reclaimPolicy: Retain
+#   - name: csi-driver-smb
+#     secret_folder: ${HOME}/.ssh/backup2-smb-secrets # folder with username.txt and password.txt files
+#     classes:
+#     - name: tmp
+#       location: /volume1
+
+##########################
+# A P P L I C A T I O N S
+##########################
+
+# Busybox
+busybox_use: 1
+busybox_ver:  # auto upgrade to latest if empty
+
+# https://github.com/kube-vip/kube-vip/releases
+pi_hole_use: 1
+pi_hole_ver: v5.18.3  # auto upgrade to latest if empty

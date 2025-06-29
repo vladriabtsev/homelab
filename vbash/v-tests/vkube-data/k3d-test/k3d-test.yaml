@@ -21,7 +21,7 @@ kube_vip_lb_range: 192.168.100.101-192.168.100.200
 # Custom Kubernetes controller that can be used to replicate secrets, configmaps and certificates.
 # https://github.com/emberstack/kubernetes-reflector
 # https://www.baeldung.com/ops/kubernetes-namespaces-common-secrets
-kubernetes_reflector_use: 1
+kubernetes_reflector_use: 0
 kubernetes_reflector_ver: # auto upgrade to latest if empty
 
 # all nodes settings
@@ -50,9 +50,28 @@ node:
 #     disk_uuid: 5387f615-80ab-4565-b6f4-152a099517b2
 #     mnt_path: /mnt/ssd0 # 476.94G
 
+#################
 # S T O R A G E
+#################
+
 # https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
 local_storage_use: 1
+
+# https://github.com/kubernetes-csi/csi-driver-nfs
+csi_driver_nfs_use: 1
+csi_driver_nfs_ver:  # auto upgrade to latest if empty
+csi_driver_nfs_namespace: csi-nfs
+
+# https://github.com/kubernetes-csi/csi-driver-smb
+csi_driver_smb_use: 1
+csi_driver_smb_ver:   # auto upgrade to latest if empty
+# csi_driver_smb_secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
+# csi_driver_smb_secret_pass_folder: # 'pass' password manager folder with username.txt and password.txt
+csi_driver_smb_namespace: csi-smb
+
+# https://github.com/SynologyOpenSource/synology-csi
+csi_synology_use: 1 # csi-synology/csi-synology-plan.yaml is expected in same folder as this file
+csi_synology_namespace: csi-synology
 
 # https://github.com/longhorn/longhorn
 longhorn_ver: v1.8.1 # auto upgrade to latest if empty
@@ -63,23 +82,6 @@ longhorn_ui_admin_password_secret_file_path: ${HOME}/.ssh/test-longhorn/password
 longhorn_ui_admin_password_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
 
 # https://github.com/kubernetes/examples/blob/master/volumes/iscsi/iscsi.yaml
-
-# https://github.com/SynologyOpenSource/synology-csi
-csi_synology_use: 1 # csi-synology/csi-synology-plan.yaml is expected in same folder as this file
-csi_synology_namespace: csi-synology
-
-# # https://github.com/kubernetes-csi/csi-driver-smb
-csi_driver_smb_use: 1
-csi_driver_smb_ver:   # auto upgrade to latest if empty
-# csi_driver_smb_secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
-# csi_driver_smb_secret_pass_folder: # 'pass' password manager folder with username.txt and password.txt
-csi_driver_smb_namespace: csi-smb
-
-# # https://github.com/kubernetes-csi/csi-driver-nfs
-csi_driver_nfs_use: 1
-csi_driver_nfs_ver:  # auto upgrade to latest if empty
-#csi_driver_nfs_secret_folder: ${HOME}/.ssh/office-nfs-secrets # folder with username.txt and password.txt files
-csi_driver_nfs_namespace: csi-nfs
 
 # # https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner
 # # https://hbayraktar.medium.com/how-to-setup-dynamic-nfs-provisioning-in-a-kubernetes-cluster-cbf433b7de29
@@ -136,7 +138,10 @@ storage_servers:
 #     - name: tmp
 #       location: /volume1
 
+##########################
 # A P P L I C A T I O N S
+##########################
+
 # Busybox
 busybox_use: 1
 busybox_ver:  # auto upgrade to latest if empty
