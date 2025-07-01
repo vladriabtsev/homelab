@@ -7,6 +7,12 @@
 # https://github.com/alebcay/awesome-shell
 # https://github.com/SkypLabs/bsfl/tree/develop
 
+
+#region colors
+
+# https://misc.flogisoft.com/bash/tip_colors_and_formatting
+# https://misc.flogisoft.com/bash/tip_colors_and_formatting#terminals_compatibility
+
 print_in_color() {
   local color="$1"
   shift
@@ -37,6 +43,286 @@ blue_underlined() { print_in_color "\e[4;34m" "$*"; }
 magenta_underlined() { print_in_color "\e[4;35m" "$*"; }
 cyan_underlined() { print_in_color "\e[4;36m" "$*"; }
 
+# Foreground Colors (Text):
+vlib_default='\e[39m'
+vlib_black='\e[30m'
+vlib_red='\e[31m'
+vlib_green='\e[32m'
+vlib_yellow='\e[33m'
+vlib_blue='\e[34m'
+vlib_magenta='\e[35m'
+vlib_cyan='\e[36m'
+vlib_white='\e[37m'
+
+# Foreground Colors (Text):
+vlib_bg_default='\e[49m'
+vlib_bg_black='\e[40m'
+vlib_bg_red='\e[41m'
+vlib_bg_green='\e[42m'
+vlib_bg_yellow='\e[43m'
+vlib_bg_blue='\e[44m'
+vlib_bg_magenta='\e[45m'
+vlib_bg_cyan='\e[46m'
+vlib_bg_white='\e[47m'
+
+# Set style:
+vlib_bold='\e[1m'
+vlib_dim='\e[2m'
+vlib_underlined='\e[4m'
+vlib_blink='\e[5m'
+vlib_reverse='\e[7m'
+vlib_hidden='\e[8m'
+
+# Reset style:
+vlib_reset_bold='\e[21m'
+vlib_reset_dim='\e[22m'
+vlib_reset_underlined='\e[24m'
+vlib_reset_blink='\e[25m'
+vlib_reset_reverse='\e[27m'
+vlib_reset_hidden='\e[28m'
+vlib_reset='\e[0m'
+
+function vlib.echo() {
+  usage="Usage: vlib.echo [OPTION] 'message text'
+  Options:
+    -n # no reset after printing message
+    -b # echo bold text
+    -d # echo dimmed text
+    -u # echo underlined text
+    -l # echo blinked text
+    -r # echo reversed text (invert the foreground and background colors)	
+    -h # echo hidden text (useful for passwords)
+    --fg=value # foreground color, expected values: black, red, 
+               green, yellow, blue, magenta, cyan, white
+    --bg=value # background color, expected values: black, red, 
+               green, yellow, blue, magenta, cyan, white
+  "
+  local color
+  local bgrd
+  local reset=1
+  local mod
+  local out
+  OPTIND=0
+  while getopts "nbdulrh-:" opt; do
+    #echo "opt=$opt" >&3
+    case $opt in
+      - )
+        case $OPTARG in
+          fg=* )
+            # echo "fg" >&3
+            # echo "$OPTARG" >&3
+            case $OPTARG in
+              fg=black )
+                color="${vlib_black}"
+              ;;
+              fg=red )
+                color="${vlib_red}"
+              ;;
+              fg=green )
+                color="${vlib_green}"
+              ;;
+              fg=yellow )
+                color="${vlib_yellow}"
+              ;;
+              fg=blue )
+                color="${vlib_blue}"
+              ;;
+              fg=magenta )
+                color="${vlib_magenta}"
+              ;;
+              fg=cyan )
+                color="${vlib_cyan}"
+              ;;
+              fg=white )
+                color="${vlib_white}"
+              ;;
+              * ) 
+                #echo "$OPTARG" >&3
+                err_and_exit "Error: Wrong color parameter for foreground '--$OPTARG'\n$usage"
+              ;;
+            esac
+          ;;
+          bg=* )
+            case $OPTARG in
+              bg=black )
+                bgrd="${vlib_bg_black}"
+              ;;
+              bg=red )
+                bgrd="${vlib_bg_red}"
+              ;;
+              bg=green )
+                bgrd="${vlib_bg_green}"
+              ;;
+              bg=yellow )
+                bgrd="${vlib_bg_yellow}"
+              ;;
+              bg=blue )
+                bgrd="${vlib_bg_blue}"
+              ;;
+              bg=magenta )
+                bgrd="${vlib_bg_magenta}"
+              ;;
+              bg=cyan )
+                bgrd="${vlib_bg_cyan}"
+              ;;
+              bg=white )
+                bgrd="${vlib_bg_white}"
+              ;;
+              * ) 
+                err_and_exit "Error: Wrong color parameter for background '--$OPTARG'\n$usage"
+              ;;
+            esac
+          ;;
+          * )
+            err_and_exit "Invalid long option: --$OPTARG\n$usage"
+          ;;
+        esac
+        ;;
+      n )
+        reset=0
+      ;;
+      b )
+        mod="${vlib_bold}"
+      ;;
+      d )
+        mod="${vlib_dim}"
+      ;;
+      u )
+        mod="${vlib_underlined}"
+      ;;
+      l )
+        mod="${vlib_blink}"
+      ;;
+      r )
+        mod="${vlib_reverse}"
+      ;;
+      h )
+        mod="${vlib_hidden}"
+      ;;
+      \? ) 
+        err_and_exit "Wrong parameter '$opt'\n$usage"
+      ;;
+    esac
+  done
+  #echo "OPTIND=$OPTIND" >&3
+  shift $((OPTIND-1))
+  #vlib.print "${color}" $reset "" "$*"
+  if [[ -z $1 ]]; then
+    echo
+  else
+    if [[ ${reset} -eq 1 ]]; then
+      # echo "kuku1" >&3
+      # echo "#=$#" >&3
+      # echo "1=$1" >&3
+      printf "${mod}${color}${bgrd}%b\e[0m\n" "$*"
+    else
+      printf "${mod}${color}${bgrd}%b\n" "$*"
+    fi
+  fi
+
+}
+function vlib.all-colors() {
+  declare -a colors 
+  colors=( "black" "red" "green" "yellow" "blue" "magenta" "cyan" "white" )
+  for bcolor in "${colors[@]}"; do
+    for color in "${colors[@]}"; do
+      vlib.echo --bg=$bcolor --fg=$color "$color on $bcolor"
+      vlib.echo --bg=$bcolor -b --fg=$color "$color bold on $bcolor"
+      vlib.echo --bg=$bcolor -d --fg=$color "$color dim on $bcolor"
+      vlib.echo --bg=$bcolor -u --fg=$color "$color underlined on $bcolor"
+      vlib.echo --bg=$bcolor -l --fg=$color "$color blinked on $bcolor"
+      vlib.echo --bg=$bcolor -r --fg=$color "$color reversed on $bcolor"
+      vlib.echo --bg=$bcolor -h --fg=$color "$color hidden on $bcolor"
+    done
+  done
+
+  #Background
+  for clbg in {40..47} {100..107} 49 ; do
+    #Foreground
+    for clfg in {30..37} {90..97} 39 ; do
+      #Formatting
+      for attr in 0 1 2 4 5 7 ; do
+        #Print the result
+        echo -en "\e[${attr};${clbg};${clfg}m ^[${attr};${clbg};${clfg}m \e[0m"
+      done
+      echo #Newline
+    done
+  done  
+
+  vlib.h1 red "h1. text"
+  vlib.h2 red h2. text
+  vlib.h3 red "h3. text"
+  vlib.h4 red "h4. text"
+
+  echo -e "Default \e[31mRed"
+  # vlib.echo "default $(vlib.red)red $(vlib.green)green $(vlib.yellow)yellow $(vlib.blue)blue $(vlib.magenta)magenta $(vlib.cyan)cyan $(vlib.white)white $(vlib.reset)"
+}
+
+# on black
+# bold on black
+# underlined on black
+# reversed on black
+
+# error - red
+# warning - yellow
+# info - green, blue, magenta, cyan, white
+
+function vlib.h1() {
+  if [[ $# -eq 1 ]]; then
+    vlib.echo -r "$1"
+  elif [[ $# -eq 0 ]]; then
+    vlib.echo
+  else
+    local color
+    color=$1
+    shift
+    vlib.echo -r --fg=$color "$@"
+  fi
+}
+function vlib.h2() {
+  if [[ $# -eq 1 ]]; then
+    vlib.echo -u "$1"
+  elif [[ $# -eq 0 ]]; then
+    vlib.echo
+  else
+    local color
+    color=$1
+    shift
+    vlib.echo -u --fg=$color "$@"
+  fi
+}
+function vlib.h3() {
+  if [[ $# -eq 1 ]]; then
+    vlib.echo -b "$1"
+  elif [[ $# -eq 0 ]]; then
+    vlib.echo
+  else
+    local color
+    color=$1
+    shift
+    vlib.echo -b --fg=$color "$@"
+  fi
+}
+function vlib.h4() {
+  if [[ $# -eq 1 ]]; then
+    vlib.echo "$1"
+  elif [[ $# -eq 0 ]]; then
+    vlib.echo
+  else
+    local color
+    color=$1
+    shift
+    vlib.echo --fg=$color "$@"
+  fi
+}
+
+
+
+# function vlib.h2() {
+#   echo "$(blue_bold "$@")"
+# }
+
+#endregion colors
 
 function h2() {
   vlib.message-box "INFO" "$@" #"$(blue_bold)"

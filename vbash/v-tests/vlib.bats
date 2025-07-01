@@ -70,6 +70,137 @@ testvercomp() {
   [ ${#storageClass} -gt 10 ]
 }
 
+#region echo
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo without text" {
+    run vlib.echo
+    assert_success
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo only text" {
+    run vlib.echo "default"
+    assert_success
+    #assert_line --index 0 -p 'default0m'
+    #echo "${lines[0]}"
+    printf -v var "%q" "${lines[0]}"
+    #echo $var >&3
+    [ $var = "$'default\E[0m'" ]
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo only text without reset" {
+    run vlib.echo -n "default"
+    assert_success
+    #assert_line --index 0 -p 'default0m'
+    #echo "${lines[0]}"
+    printf -v var "%q" "${lines[0]}"
+    #echo $var >&3
+    [ $var = "default" ]
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo wrong color text" {
+    run vlib.echo --fg=wrong "default"
+    #echo "output=$output" >&3
+    assert_failure
+    #assert_line --index 0 -p 'default0m'
+    #echo "${lines[0]}"
+    assert_output --partial "Error: Wrong color parameter for foreground '--fg=wrong'"
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo wrong background color text" {
+    run vlib.echo --bg=wrong "default"
+    assert_failure
+    #assert_line --index 0 -p 'default0m'
+    #echo "${lines[0]}"
+    assert_output --partial "Error: Wrong color parameter for background '--bg=wrong'"
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo red text" {
+    run vlib.echo --fg=red "default"
+    assert_success
+    #assert_line --index 0 -p 'default0m'
+    #echo "${lines[0]}"
+    printf -v var "%q" "${lines[0]}"
+    #echo $var >&3
+    [ $var = "$'\E[31mdefault\E[0m'" ]
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo red bold text" {
+    run vlib.echo -b --fg=red "default"
+    assert_success
+    #assert_line --index 0 -p 'default0m'
+    #echo "${lines[0]}"
+    printf -v var "%q" "${lines[0]}"
+    #echo $var >&3
+    [ $var = "$'\E[1m\E[31mdefault\E[0m'" ]
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo red bold text 2" {
+    run vlib.echo --fg=red -b "default"
+    assert_success
+    #assert_line --index 0 -p 'default0m'
+    #echo "${lines[0]}"
+    printf -v var "%q" "${lines[0]}"
+    #echo $var >&3
+    [ $var = "$'\E[1m\E[31mdefault\E[0m'" ]
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo red dim text" {
+    run vlib.echo -d --fg=red "default"
+    assert_success
+    #assert_line --index 0 -p 'default0m'
+    #echo "${lines[0]}"
+    printf -v var "%q" "${lines[0]}"
+    #echo $var >&3
+    [ $var = "$'\E[2m\E[31mdefault\E[0m'" ]
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo red underlined text" {
+    run vlib.echo -u --fg=red "default"
+    assert_success
+    #assert_line --index 0 -p 'default0m'
+    #echo "${lines[0]}"
+    printf -v var "%q" "${lines[0]}"
+    #echo $var >&3
+    [ $var = "$'\E[4m\E[31mdefault\E[0m'" ]
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo red blinked text" {
+    run vlib.echo -l --fg=red "default"
+    assert_success
+    #assert_line --index 0 -p 'default0m'
+    #echo "${lines[0]}"
+    printf -v var "%q" "${lines[0]}"
+    #echo $var >&3
+    [ $var = "$'\E[5m\E[31mdefault\E[0m'" ]
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo red reversed text" {
+    run vlib.echo -r --fg=red "default"
+    assert_success
+    #assert_line --index 0 -p 'default0m'
+    #echo "${lines[0]}"
+    printf -v var "%q" "${lines[0]}"
+    #echo $var >&3
+    [ $var = "$'\E[7m\E[31mdefault\E[0m'" ]
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo red hidden text" {
+    run vlib.echo -h --fg=red "default"
+    assert_success
+    #assert_line --index 0 -p 'default0m'
+    #echo "${lines[0]}"
+    printf -v var "%q" "${lines[0]}"
+    #echo $var >&3
+    [ $var = "$'\E[8m\E[31mdefault\E[0m'" ]
+  }
+  # bats test_tags=tag:echo
+  @test "echo: terminal echo all colors" {
+    run vlib.all-colors
+    assert_success
+    echo "$output" >&3
+  }
+#endregion echo
+
 #region text
   @test "text: count lines" {
     local txt="first line
