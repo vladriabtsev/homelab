@@ -85,6 +85,7 @@ vlib_reset='\e[0m'
 function vlib.echo() {
   usage="Usage: vlib.echo [OPTION] 'message text'
   Options:
+    -i indent # indent string
     -n # no reset after printing message
     -b # echo bold text
     -d # echo dimmed text
@@ -101,9 +102,9 @@ function vlib.echo() {
   local bgrd
   local reset=1
   local mod
-  local out
+  local indent=""
   OPTIND=0
-  while getopts "nbdulrh-:" opt; do
+  while getopts "nbdulrh-:i:" opt; do
     #echo "opt=$opt" >&3
     case $opt in
       - )
@@ -178,6 +179,9 @@ function vlib.echo() {
           ;;
         esac
         ;;
+      i )
+        indent=$OPTARG
+      ;;
       n )
         reset=0
       ;;
@@ -199,7 +203,7 @@ function vlib.echo() {
       h )
         mod="${vlib_hidden}"
       ;;
-      \? ) 
+      * ) 
         err_and_exit "Wrong parameter '$opt'\n$usage"
       ;;
     esac
@@ -214,9 +218,9 @@ function vlib.echo() {
       # echo "kuku1" >&3
       # echo "#=$#" >&3
       # echo "1=$1" >&3
-      printf "${mod}${color}${bgrd}%b\e[0m\n" "$*"
+      printf "${indent}${mod}${color}${bgrd}%b\e[0m\n" "$*"
     else
-      printf "${mod}${color}${bgrd}%b\n" "$*"
+      printf "${indent}${mod}${color}${bgrd}%b\n" "$*"
     fi
   fi
 
@@ -276,43 +280,43 @@ function vlib.h1() {
     local color
     color=$1
     shift
-    vlib.echo -r --fg=$color "$@"
+    vlib.echo -r --fg=$color "$*"
   fi
 }
 function vlib.h2() {
   if [[ $# -eq 1 ]]; then
-    vlib.echo -u "$1"
+    vlib.echo -i "  " -u "$1"
   elif [[ $# -eq 0 ]]; then
     vlib.echo
   else
     local color
     color=$1
     shift
-    vlib.echo -u --fg=$color "$@"
+    vlib.echo -i "  " -u --fg=$color "$*"
   fi
 }
 function vlib.h3() {
   if [[ $# -eq 1 ]]; then
-    vlib.echo -b "$1"
+    vlib.echo -i "    " -b "$1"
   elif [[ $# -eq 0 ]]; then
     vlib.echo
   else
     local color
     color=$1
     shift
-    vlib.echo -b --fg=$color "$@"
+    vlib.echo -i "    " -b --fg=$color "$*"
   fi
 }
 function vlib.h4() {
   if [[ $# -eq 1 ]]; then
-    vlib.echo "$1"
+    vlib.echo -i "      " "$1"
   elif [[ $# -eq 0 ]]; then
     vlib.echo
   else
     local color
     color=$1
     shift
-    vlib.echo --fg=$color "$@"
+    vlib.echo -i "      " --fg=$color "$*"
   fi
 }
 
