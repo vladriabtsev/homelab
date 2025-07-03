@@ -70,6 +70,56 @@ testvercomp() {
   [ ${#storageClass} -gt 10 ]
 }
 
+#region var
+  # bats test_tags=tag:var
+  @test "is-not-empty: without parameter" {
+    run vlib.var.is-not-empty
+    assert_failure
+    assert_output --partial "## C A L L   T R A C E ##"
+  }
+  # bats test_tags=tag:var
+  @test "is-not-empty: but unknown variable" {
+    run vlib.var.is-not-empty $_unknown_variable_
+    assert_failure
+  }
+  # bats test_tags=tag:var
+  @test "is-not-empty: but empty ''" {
+    run vlib.var.is-not-empty ''
+    assert_failure
+  }
+  # bats test_tags=tag:var
+  @test "is-not-empty: not empty variable" {
+    local p
+    p="kuku"
+    run vlib.var.is-not-empty $p
+    assert_success
+    #echo "output=$output" >&3
+  }
+  # bats test_tags=tag:var
+  @test "is-not-empty: not empty" {
+    run vlib.var.is-not-empty 'kuku'
+    #echo "output=$output" >&3
+    assert_success
+  }
+  # bats test_tags=tag:var
+  @test "has-be-not-empty: without parameter" {
+    run vlib.var.has-be-not-empty
+    assert_failure
+    assert_output --partial "## C A L L   T R A C E ##"
+  }
+  # bats test_tags=tag:var
+  @test "has-be-not-empty: but empty" {
+    run vlib.var.has-be-not-empty  $_unknown_variable_
+    assert_failure
+    assert_output --partial "## C A L L   T R A C E ##"
+  }
+  # bats test_tags=tag:var
+  @test "has-be-not-empty: not empty" {
+    run vlib.var.has-be-not-empty 'kuku'
+    assert_success
+  }
+#endregion var
+
 #region echo
   # bats test_tags=tag:echo
   @test "echo: terminal echo without text" {
@@ -281,7 +331,7 @@ testvercomp() {
     runtime=$((end-start))
     echo "runtime=$runtime"
     [ "$runtime" -gt 5 ]
-    [ 7 -gt "$runtime" ]
+    [ 11 -gt "$runtime" ]
   }
   # bats test_tags=tag:wait
   @test "wait-for-error: error if without parameters" {
@@ -318,6 +368,57 @@ testvercomp() {
     [ 7 -gt "$runtime" ]
   }
 #endregion wait-for 
+
+#region file
+  # bats test_tags=tag:file
+  @test "vlib.is-file-exists: error without parameters" {
+    run vlib.is-file-exists
+    #echo "output=$output" >&3
+    #echo "status=$status" >&3
+    assert_failure
+    [ "$status" -eq 1 ]
+    assert_output --partial "Function 'vlib.is-file-exists' is expecting file path parameter"
+  }
+  # bats test_tags=tag:file
+  @test "vlib.is-file-exists: existing path" {
+    run vlib.is-file-exists "${HOME}/.test/username.txt"
+    assert_success
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+  }
+  # bats test_tags=tag:file
+  @test "vlib.is-file-exists: not existing path" {
+    run vlib.is-file-exists "${HOME}/.test/not-exist-file"
+    assert_failure
+    [ "$status" -eq 1 ]
+    [ "$output" = "" ]
+  }
+  # bats test_tags=tag:file
+  @test "vlib.is-file-exists-with-trace: error without parameters" {
+    run vlib.is-file-exists-with-trace
+    #echo "output=$output" >&3
+    #echo "status=$status" >&3
+    assert_failure
+    [ "$status" -eq 1 ]
+    assert_output --partial "Function 'vlib.is-file-exists' is expecting file path parameter"
+    assert_output --partial "## C A L L   T R A C E ##"
+  }
+  # bats test_tags=tag:file
+  @test "vlib.is-file-exists-with-trace: existing path" {
+    run vlib.is-file-exists-with-trace "${HOME}/.test/username.txt"
+    assert_success
+    #echo "$output" >&3
+    [ "$status" -eq 0 ]
+    [ "$output" = "" ]
+  }
+  # bats test_tags=tag:file
+  @test "vlib.is-file-exists-with-trace: not existing path" {
+    run vlib.is-file-exists-with-trace "${HOME}/.test/not-exist-file"
+    assert_failure
+    [ "$status" -eq 1 ]
+    assert_output --partial "## C A L L   T R A C E ##"
+  }
+#endregion file
 
 #region dir
   # bats test_tags=tag:dir

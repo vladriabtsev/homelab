@@ -1,8 +1,8 @@
 # https://github.com/SynologyOpenSource/synology-csi
+folder_with_dsm_secrets: ${HOME}/.ssh/synology-csi-secrets # folder with client-info.yam file
+
 snapshot_use: 0
 #csi_synology_ver: v1.2.0 # auto upgrade to latest if empty
-
-folder_with_dsm_secrets: ${HOME}/.ssh/synology-csi-secrets # folder with client-info.yam file
 
 # Synology node settings
 host_protocol_class_reclaimPolicy: Delete # default for all internal elements
@@ -12,8 +12,7 @@ hosts:
   dsm_ip4: 192.168.100.227
   #dsm_port: 5101
   #https: true
-  # https://github.com/SynologyOpenSource/synology-csi # Creating a Secret
-  protocol_class_location: "/volume3" # 'volume3' wiyhout spaces!!! default for all internal elements
+  protocol_class_location: "/volume3" # 'volume3' without spaces!!! default for all internal elements
   protocols:
   - name: synology-csi-iscsi #ISCSI
     classes:

@@ -1,4 +1,4 @@
-apiVersion: storage.k8s.io/v1 # line:2320
+apiVersion: storage.k8s.io/v1 # line:2324
 kind: StorageClass
 metadata:
   name: office-csi-driver-smb-tmp
@@ -30,7 +30,7 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
   - cache=strict
   - noserverino  # required to prevent data corruption
 ---
-apiVersion: storage.k8s.io/v1 # line:2250
+apiVersion: storage.k8s.io/v1 # line:2254
 kind: StorageClass
 metadata:
   name: office-csi-driver-nfs-retain

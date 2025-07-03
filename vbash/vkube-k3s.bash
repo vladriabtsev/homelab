@@ -941,9 +941,12 @@ function vkube-k3s.csi-synology-install() {
   # https://blog.tratif.com/2023/01/27/bash-tips-3-templating-in-bash-scripts/
   #set -x
   local synology_csi_plan=${args[plan]}
+  vlib.trace "vkube_data_folder=${vkube_data_folder}"
   if [[ -z $synology_csi_plan ]]; then
     synology_csi_plan="${vkube_data_folder}/synology-csi/synology-csi-plan.yaml"
   fi
+  vlib.trace "synology_csi_plan=${synology_csi_plan}"
+  run "line '$LINENO';vlib.is-file-exists-with-trace '${synology_csi_plan}'"
   if [[ $(yq --exit-status 'tag == "!!map" or tag== "!!seq"' "${synology_csi_plan}" > /dev/null) ]]; then
     err_and_exit "Error: Invalid format for YAML file: '${synology_csi_plan}'." ${LINENO}
   fi
@@ -956,8 +959,7 @@ function vkube-k3s.csi-synology-install() {
 
   # Defaults
   # Root level scalar settings
-  #vlib.trace "synology_csi_plan=${synology_csi_plan}"
-  eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_" + key + "='\''" + . + "'\''")'  < ${synology_csi_plan})"
+  eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_" + key + "='\''" + . + "'\''")'  < "${synology_csi_plan}")"
   #vlib.trace "csi_synology_snapshot_use=${csi_synology_snapshot_use}"
 
   csi_synology_namespace="synology-csi"
@@ -1065,6 +1067,7 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
             #endregion
           ;;
           synology-csi-smb )
+            #run "line '$LINENO';vlib.var.only-one-has-be-not-empty $csi_synology_host_protocol_secret_folder $csi_synology_host_protocol_secret_pass_folder"
             secret_folder_name=$(basename "$csi_synology_host_protocol_secret_folder")
             storage_class="$csi_synology_host_name-synology-csi-smb-$csi_synology_host_protocol_class_name"
             vlib.trace "secret_folder_name=$secret_folder_name"
@@ -1226,10 +1229,14 @@ spec:
         command: ["sh", "-c"]
         args:
         - |
-          echo
-          echo '      Writing results:'
+          # apt-get install -y iozone3
+          # echo '  iozone -t1 -i0 -i2 -r1k -s1g -F /tmp/testfile:'
+          # iozone -t1 -i0 -i2 -r1k -s1g -F /tmp/testfile
+          echo '  Sequential writing results:'
           dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 oflag=dsync
-          echo '      Reading results:'
+          echo '  Sequential reading results:'
+          # flush buffers or disk caches #
+          #echo 3 | tee /proc/sys/vm/drop_caches
           dd if=/mnt/pv/test.img of=/dev/null bs=8k
         volumeMounts:
         - mountPath: "/mnt/pv"
@@ -1776,23 +1783,12 @@ longhorn-install() {
     if [ $i_node -eq $amount_nodes ]; then break; fi
   done
 
-  #wait-for-success -t 1 "ls ~/"
-  #wait-for-success
-  #wait-for-success "kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system"
-  #wait-for-success -t 1 "kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system"
-  #run wait-for-success -t 1 "kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system"
-  #run "wait-for-success -t 1 \"kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system\""
-  #run "wait-for-success -t 1 'kubectl wait --for=condition=Ready pod/csi-attacher -n longhorn-system'"
-  #exit
-
   hl.blue "$parent_step$((++install_step)). Longhorn installation. (Line:$LINENO)"
   if command kubectl get deploy longhorn-ui -n longhorn-system &> /dev/null; then
     err_and_exit "Longhorn already installed."  ${LINENO} "$0"
   fi
-  echo "kuku0" >&3
   # https://longhorn.io/docs/1.7.2/advanced-resources/longhornctl/install-longhornctl/
   if ! ($(longhornctl version > /dev/null ) || $(longhornctl version) != $longhorn_ver ); then
-  echo "kuku1" >&3
     # Download the release binary.
     run "line '$LINENO';curl -LO "https://github.com/longhorn/cli/releases/download/$longhorn_ver/longhornctl-linux-${ARCH}""
     # Download the checksum for your architecture.
@@ -1802,9 +1798,7 @@ longhorn-install() {
     run "line '$LINENO';sudo install longhornctl-linux-${ARCH} /usr/local/bin/longhornctl;longhornctl version"
   fi
 
-  echo "kuku2" >&3
   longhornctl check preflight
-  echo "kuku3" >&3
   run.ui.ask "Preflight errors check is finished. Proceed new installation?" || exit 1
 
   # https://longhorn.io/docs/1.7.2/advanced-resources/deploy/customizing-default-settings/#using-the-longhorn-deployment-yaml-file
@@ -1823,11 +1817,11 @@ longhorn-install() {
   # https://kubernetes.io/docs/reference/kubectl/generated/kubectl_wait/
   # https://kubernetes.io/docs/reference/kubectl/jsonpath/
   # https://stackoverflow.com/questions/53536907/kubectl-wait-for-condition-complete-timeout-30s
-  run "line '$LINENO';vlib.wait-for-success 'kubectl wait --for=condition=ready pod -l app=longhorn-manager -n longhorn-system' -t 600"
-  run "line '$LINENO';vlib.wait-for-success 'kubectl wait --for=condition=ready pod -l app=csi-attacher -n longhorn-system' -t 600"
-  run "line '$LINENO';vlib.wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system' -t 600"
-  # no need if cluster exist run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system'"
-  # not working sometime run "line '$LINENO';wait-for-success 'kubectl rollout status deployment csi-attacher -n longhorn-system'"
+  run "line '$LINENO';kubectl wait --for=condition=Available deployment/longhorn-driver-deployer -n longhorn-system --timeout=600s"
+  run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-attacher -n longhorn-system --timeout=600s"
+  run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-provisioner -n longhorn-system --timeout=600s"
+  run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-resizer -n longhorn-system --timeout=600s"
+  run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-snapshotter -n longhorn-system --timeout=600s"
 
   #run "helm upgrade longhorn longhorn/longhorn --namespace longhorn-system --values ./values.yaml --version $longhorn_ver"
 

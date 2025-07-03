@@ -368,14 +368,13 @@ setup() {
   function speed-test() {
     # $1 - storage driver
     local storage="$1"
-    vlib.all-colors ">&3"
-    vlib.echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" green_bold 1
+    vlib.h1 "Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
     #echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
     kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
     kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
     run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
     assert_success
-    vlib.echo  '         Waiting...' yellow 1
+    vlib.h2  'Waiting...' >&3
     sleep 15
     DETIK_CLIENT_NAMESPACE="storage-speedtest"
     run try "at most 5 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
@@ -383,7 +382,7 @@ setup() {
     # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
     kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
     assert_success
-    vlib.echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" green_bold 1
+    vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
   }
   # https://kubernetes.io/docs/concepts/storage/volumes/
   # # bats test_tags=tag:speed
@@ -569,18 +568,20 @@ setup() {
   # } 
 #endregion general storage tests
 
-# bats test_tags=tag:storage-speed-one
+# bats test_tags=tag:storage-speed
 @test "k3d-test general storage speed tests" {
   export KUBECONFIG="${HOME}/.kube/k3d-test"
+  #export KUBECONFIG=~/.kube/k3d-test
   speed-test "local-path"
   speed-test "office-csi-driver-nfs-retain"
   speed-test "office-csi-driver-smb-tmp"
   speed-test "office-synology-csi-nfs-retain"
   speed-test "office-synology-csi-smb-tmp"
 }
-# bats test_tags=tag:storage-speed
+# bats test_tags=tag:storage-speed-one
 @test "k3s-HA general storage speed tests" {
   export KUBECONFIG="${HOME}/.kube/k3s-HA"
+  #export KUBECONFIG=~/.kube/k3s-HA
   speed-test "local-path"
   speed-test "office-csi-driver-nfs-retain"
   speed-test "office-csi-driver-smb-tmp"
@@ -588,6 +589,7 @@ setup() {
   speed-test "office-synology-csi-smb-tmp"
   speed-test "longhorn"
   export KUBECONFIG="${HOME}/.kube/k3d-test"
+  #export KUBECONFIG=~/.kube/k3d-test
 }
 
 # bats test_tags=tag:longhorn

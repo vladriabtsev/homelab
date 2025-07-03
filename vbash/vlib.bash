@@ -8,6 +8,27 @@
 # https://github.com/SkypLabs/bsfl/tree/develop
 
 
+#region var
+function vlib.var.is-not-empty {
+  [ $# -ne 1 ] && err_and_exit "Expecting one parameter"
+  [ -z $1 ] && return 1
+  [ ${#1} -eq 0 ] && return 1
+  return 0
+}
+function vlib.var.has-be-not-empty {
+  [ $# -ne 1 ] && err_and_exit "Expecting one parameter"
+  [ -z $1 ] && err_and_exit "Parameter \$1 is not defined"
+  [ ${#1} -eq 0 ] && err_and_exit "Parameter \$1 is empty"
+  return 0
+}
+function vlib.var.only-one-has-be-not-empty {
+  [ $# -ne 2 ] && err_and_exit "Expecting two parameters"
+  [ -z $1 ] && [ -z $2 ] && err_and_exit "Both parameters \$1 and \$2 are not defined"
+  [ ${#1} -eq 0 ] && [ ${#2} -eq 0 ] && err_and_exit "Both parameters \$1 and \$2 are empty"
+  return 0
+}
+#endregion var
+
 #region colors
 
 # https://misc.flogisoft.com/bash/tip_colors_and_formatting
@@ -223,7 +244,6 @@ function vlib.echo() {
       printf "${indent}${mod}${color}${bgrd}%b\n" "$*"
     fi
   fi
-
 }
 function vlib.all-colors() {
   declare -a colors 
@@ -348,37 +368,12 @@ function bashly_info() {
 function bashly_warn() {
   echo "  ==> $(yellow_bold "$@")"
 }
-# function bashly_err()
-# {
-#   echo "  ===> $(red_bold "$@")"
-#   exit 1
-# }
-function echo_err() {
-  echo "$(red_bold "$@")"
-}
 function warn-and-trace() {
   echo "$(yellow_bold "$@")"
   vlib.call-trace 1
 }
 function err_and_exit() {
-  # if [ -z "$1" ]; then
-  #   echo_err "Function err_and_exit is expecting error message as a first parameter"
-  # fi
-  # #caller.stack
-  # #exit
-  # if [ -z "$2" ]; then
-  #   echo_err "Function err_and_exit is expecting \$LINENO as a second parameter"
-  #   vlib.call-trace 1
-  #   exit 1
-  # fi
-  # local call_lineno="$2"
-
-  # if [ -z "$3" ]; then
-  #   echo_err "$1 LINENO: $2"
-  # else
-  #   echo_err "$1 FUNCNAME: $3, LINENO: $2"
-  # fi
-  echo_err "$1"
+  vlib.echo -b --fg=red "$1"
   vlib.call-trace 1
   exit 1
 }
@@ -533,8 +528,6 @@ function vlib.bashly-init-error-handler() {
 
 }
 function redirect-to-log-file {
-  #[[ $# -eq 1 ]] || ( echo_err "Only one parameter is expected" ${LINENO}; exit 1 )
-  #[ -z "$1" ] && ( echo_err "Expecting log file path as a parameter"; exit 1 )
   [[ $# -eq 1 ]] || err_and_exit "Only one parameter is expected"
   [ -z "$1" ] && err_and_exit "Expecting log file path as a parameter"
 
@@ -578,7 +571,7 @@ function vlib.bashly-init-command() {
   set -e
 
   [ -n $args ] || err_and_exit "Expecting bashly script when call bashly-init-command()" 
-  #[ -z $args ] && ( echo_err "Expecting bashly script when call bashly-init-command()"; exit 1 ) 
+  #[ -z $args ] && ( err_and_exit "Expecting bashly script when call bashly-init-command()"; exit 1 ) 
   #[[ $# -eq 1 ]] || err_and_exit "Only one parameter is expected" ${LINENO}
 
   __is_trace=0
@@ -678,8 +671,7 @@ function vlib.bashly-init-command() {
       # https://askubuntu.com/questions/370571/how-can-i-automatically-rotate-archive-my-bash-history-logs
       redirect-to-log-file "${MY_LOG_DIR}${__command_action_name}.log"
     else
-      echo_err "Environment variable MY_LOG_DIR is empty."
-      exit 1
+      err_and_exit "Environment variable MY_LOG_DIR is empty."
     fi
   elif [ -n "${args[--log-file]}" ]; then
     redirect-to-log-file "${args[log-file-path]}"
@@ -1133,11 +1125,16 @@ function vlib.message-box() {
 
   #unset border line padding padded_line
 }
-# function vlib.exists-dir {
-#   [ -z $1 ] && err_and_exit "Function 'vlib.exists-dir' is expecting dir path parameter"
-#   [ -d "$1" ] || err_and_exit "Directory '$1' is not found"
-#   return 0
-# }
+function vlib.is-file-exists {
+  [ -z $1 ] && err_and_exit "Function 'vlib.is-file-exists' is expecting file path parameter"
+  [ -f "$1" ] || return 1
+  return 0
+}
+function vlib.is-file-exists-with-trace {
+  [ -z $1 ] && err_and_exit "Function 'vlib.is-file-exists' is expecting file path parameter"
+  [ -f "$1" ] || err_and_exit "Can't find '$1' file."
+  return 0
+}
 function vlib.is-dir-exists {
   [ -z $1 ] && err_and_exit "Function 'vlib.is-dir-exists' is expecting dir path parameter"
   [ -d "$1" ] || return 1
