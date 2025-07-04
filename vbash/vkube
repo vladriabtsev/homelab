@@ -162,10 +162,11 @@ vkube_k3s_usage() {
   echo
   # :command.usage_commands
   printf "%s\n" "$(bold "Commands:")"
-  printf "  %s   Install k3s kubernetes\n" "$(green "install")"
-  printf "  %s   Upgrade k3s kubernetes\n" "$(green "upgrade")"
-  printf "  %s   Backup k3s kubernetes\n" "$(green "backup") "
-  printf "  %s   Restore k3s kubernetes\n" "$(green "restore")"
+  printf "  %s   Install k3s kubernetes\n" "$(green "install")      "
+  printf "  %s   Test speed for storage storage class\n" "$(green "storage-speed")"
+  printf "  %s   Upgrade k3s kubernetes\n" "$(green "upgrade")      "
+  printf "  %s   Backup k3s kubernetes\n" "$(green "backup")       "
+  printf "  %s   Restore k3s kubernetes\n" "$(green "restore")      "
   echo
 
   # :command.long_usage
@@ -215,31 +216,31 @@ vkube_k3s_install_usage() {
     echo
 
     # :flag.usage
-    printf "  %s\n" "$(magenta "--storage-local")"
+    printf "  %s\n" "$(magenta "--local")"
     printf "    Local storage. Overriding storage use in cluster plan. Install all if\n    --core, --storage, and --apps flags are not set.\n"
     printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
-    printf "  %s\n" "$(magenta "--storage-csi-driver-nfs")"
+    printf "  %s\n" "$(magenta "--csi-driver-nfs")"
     printf "    CSI driver NFS storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --apps flags are not set.\n"
     printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
-    printf "  %s\n" "$(magenta "--storage-csi-driver-smb")"
+    printf "  %s\n" "$(magenta "--csi-driver-smb")"
     printf "    CSI driver SMB storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --apps flags are not set.\n"
     printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
-    printf "  %s\n" "$(magenta "--storage-csi-synology")"
+    printf "  %s\n" "$(magenta "--csi-synology")"
     printf "    Synology CSI storage. Overriding storage use in cluster plan. Install all if\n    --core, --storage, and --apps flags are not set.\n"
     printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
-    printf "  %s\n" "$(magenta "--storage-longhorn")"
+    printf "  %s\n" "$(magenta "--longhorn")"
     printf "    Longhorn storage. Overriding storage use in cluster plan. Install all if\n    --core, --storage, and --apps flags are not set.\n"
     printf "    %s\n" "Conflicts: --storage"
     echo
@@ -247,6 +248,63 @@ vkube_k3s_install_usage() {
     # :flag.usage
     printf "  %s\n" "$(magenta "--app")"
     printf "    All applications. Overriding storage use in cluster plan. Install all if\n    --core, --storage, and --apps flags are not set.\n"
+    echo
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_k3s_storage_speed_usage() {
+  printf "vkube k3s storage-speed - Test speed for storage storage class\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube k3s storage-speed [OPTIONS]\n"
+  printf "  vkube k3s storage-speed --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_flags
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--storage")"
+    printf "    Test speed for all general storage drivers\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--local")"
+    printf "    Test speed for local storage\n"
+    printf "    %s\n" "Conflicts: --storage"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--csi-driver-nfs")"
+    printf "    Test speed for CSI driver NFS storage\n"
+    printf "    %s\n" "Conflicts: --storage"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--csi-driver-smb")"
+    printf "    Test speed for CSI driver SMB storage\n"
+    printf "    %s\n" "Conflicts: --storage"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--csi-synology")"
+    printf "    Test speed for Synology CSI storage\n"
+    printf "    %s\n" "Conflicts: --storage"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--longhorn")"
+    printf "    Test speed for Longhorn storage\n"
+    printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :command.usage_fixed_flags
@@ -486,6 +544,18 @@ vkube_k3s_install_command() {
   source "${VBASH}/vkube-k3s.bash"
   #echo "      vkube-k3s.install()" >&3
   vkube-k3s.install
+
+}
+
+# :command.function
+vkube_k3s_storage_speed_command() {
+
+  # src/k3s_storage_speed_command.sh
+  echo "# This file is located at 'src/k3s_storage_speed_command.sh'."
+  echo "# It contains the implementation for the 'vkube k3s storage-speed' command."
+  echo "# The code you write here will be wrapped by a function named 'vkube_k3s_storage_speed_command()'."
+  echo "# Feel free to edit this file; your changes will persist when regenerating."
+  inspect_args
 
 }
 
@@ -823,6 +893,13 @@ vkube_k3s_parse_requirements() {
       shift $#
       ;;
 
+    storage-speed)
+      action="storage-speed"
+      shift
+      vkube_k3s_storage_speed_parse_requirements "$@"
+      shift $#
+      ;;
+
     upgrade)
       action="upgrade"
       shift
@@ -923,7 +1000,7 @@ vkube_k3s_install_parse_requirements() {
         ;;
 
       # :flag.case
-      --storage-local)
+      --local)
         # :flag.conflicts
         if [[ -n "${args['--storage']:-}" ]]; then
           printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
@@ -931,12 +1008,12 @@ vkube_k3s_install_parse_requirements() {
         fi
 
         # :flag.case_no_arg
-        args['--storage-local']=1
+        args['--local']=1
         shift
         ;;
 
       # :flag.case
-      --storage-csi-driver-nfs)
+      --csi-driver-nfs)
         # :flag.conflicts
         if [[ -n "${args['--storage']:-}" ]]; then
           printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
@@ -944,12 +1021,12 @@ vkube_k3s_install_parse_requirements() {
         fi
 
         # :flag.case_no_arg
-        args['--storage-csi-driver-nfs']=1
+        args['--csi-driver-nfs']=1
         shift
         ;;
 
       # :flag.case
-      --storage-csi-driver-smb)
+      --csi-driver-smb)
         # :flag.conflicts
         if [[ -n "${args['--storage']:-}" ]]; then
           printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
@@ -957,12 +1034,12 @@ vkube_k3s_install_parse_requirements() {
         fi
 
         # :flag.case_no_arg
-        args['--storage-csi-driver-smb']=1
+        args['--csi-driver-smb']=1
         shift
         ;;
 
       # :flag.case
-      --storage-csi-synology)
+      --csi-synology)
         # :flag.conflicts
         if [[ -n "${args['--storage']:-}" ]]; then
           printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
@@ -970,12 +1047,12 @@ vkube_k3s_install_parse_requirements() {
         fi
 
         # :flag.case_no_arg
-        args['--storage-csi-synology']=1
+        args['--csi-synology']=1
         shift
         ;;
 
       # :flag.case
-      --storage-longhorn)
+      --longhorn)
         # :flag.conflicts
         if [[ -n "${args['--storage']:-}" ]]; then
           printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
@@ -983,7 +1060,7 @@ vkube_k3s_install_parse_requirements() {
         fi
 
         # :flag.case_no_arg
-        args['--storage-longhorn']=1
+        args['--longhorn']=1
         shift
         ;;
 
@@ -992,6 +1069,123 @@ vkube_k3s_install_parse_requirements() {
 
         # :flag.case_no_arg
         args['--app']=1
+        shift
+        ;;
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+vkube_k3s_storage_speed_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_k3s_storage_speed_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="k3s storage-speed"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      # :flag.case
+      --storage)
+
+        # :flag.case_no_arg
+        args['--storage']=1
+        shift
+        ;;
+
+      # :flag.case
+      --local)
+        # :flag.conflicts
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--local']=1
+        shift
+        ;;
+
+      # :flag.case
+      --csi-driver-nfs)
+        # :flag.conflicts
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--csi-driver-nfs']=1
+        shift
+        ;;
+
+      # :flag.case
+      --csi-driver-smb)
+        # :flag.conflicts
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--csi-driver-smb']=1
+        shift
+        ;;
+
+      # :flag.case
+      --csi-synology)
+        # :flag.conflicts
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--csi-synology']=1
+        shift
+        ;;
+
+      # :flag.case
+      --longhorn)
+        # :flag.conflicts
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--longhorn']=1
         shift
         ;;
 
@@ -1186,6 +1380,7 @@ bashly-run() {
     "exec") vkube_exec_command ;;
     "k3s") vkube_k3s_command ;;
     "k3s install") vkube_k3s_install_command ;;
+    "k3s storage-speed") vkube_k3s_storage_speed_command ;;
     "k3s upgrade") vkube_k3s_upgrade_command ;;
     "k3s backup") vkube_k3s_backup_command ;;
     "k3s restore") vkube_k3s_restore_command ;;

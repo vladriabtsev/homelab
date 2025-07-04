@@ -483,7 +483,7 @@ function vkube-k3s.install() {
     install_storage_at_least_one=1
     install_storage=1
     __install_all=0
-  elif [[ -n ${args[--storage-local]} || -n ${args[--storage-csi-driver-nfs]} || -n ${args[--storage-csi-driver-smb]} || -n ${args[--storage-csi-synology]} || -n ${args[--storage-longhorn]} || -n ${args[--nfs-subdir-external-provisioner-use]} ]]; then
+  elif [[ -n ${args[--local]} || -n ${args[--csi-driver-nfs]} || -n ${args[--csi-driver-smb]} || -n ${args[--csi-synology]} || -n ${args[--longhorn]} || -n ${args[--nfs-subdir-external-provisioner-use]} ]]; then
     install_storage_at_least_one=1
     local_storage_use=0
     csi_driver_nfs_use=0
@@ -493,27 +493,27 @@ function vkube-k3s.install() {
     longhorn_use=0
     __install_all=0
   fi
-  if [[ -n ${args[--storage-local]} ]]; then
+  if [[ -n ${args[--local]} ]]; then
     install_storage_at_least_one=1
     local_storage_use=1
     __install_all=0
   fi
-  if [[ -n ${args[--storage-csi-driver-nfs]} ]]; then
+  if [[ -n ${args[--csi-driver-nfs]} ]]; then
     install_storage_at_least_one=1
     csi_driver_nfs_use=1
     __install_all=0
   fi
-  if [[ -n ${args[--storage-csi-driver-smb]} ]]; then
+  if [[ -n ${args[--csi-driver-smb]} ]]; then
     install_storage_at_least_one=1
     csi_driver_smb_use=1
     __install_all=0
   fi
-  if [[ -n ${args[--storage-csi-synology]} ]]; then
+  if [[ -n ${args[--csi-synology]} ]]; then
     install_storage_at_least_one=1
     csi_synology_use=1
     __install_all=0
   fi
-  if [[ -n ${args[--storage-longhorn]} ]]; then
+  if [[ -n ${args[--longhorn]} ]]; then
     install_storage_at_least_one=1
     longhorn_use=1
     __install_all=0
@@ -1759,8 +1759,13 @@ EOF1
 }
 
 longhorn-install() {
+  hl.blue "$parent_step$((++install_step)). Longhorn installation. (Line:$LINENO)"
   if ! [[ -e ${k3s_settings} ]]; then
     err_and_exit "Cluster plan file '${k3s_settings}' is not found" ${LINENO};
+  fi
+
+  if command kubectl get deploy longhorn-ui -n longhorn-system &> /dev/null; then
+    err_and_exit "Longhorn already installed."  ${LINENO} "$0"
   fi
 
   longhorn_ui_admin_name=$(vlib.secret-get-text $longhorn_ui_admin_name_secret_file_path $longhorn_ui_admin_name_secret_pass_path)
@@ -1783,10 +1788,6 @@ longhorn-install() {
     if [ $i_node -eq $amount_nodes ]; then break; fi
   done
 
-  hl.blue "$parent_step$((++install_step)). Longhorn installation. (Line:$LINENO)"
-  if command kubectl get deploy longhorn-ui -n longhorn-system &> /dev/null; then
-    err_and_exit "Longhorn already installed."  ${LINENO} "$0"
-  fi
   # https://longhorn.io/docs/1.7.2/advanced-resources/longhornctl/install-longhornctl/
   if ! ($(longhornctl version > /dev/null ) || $(longhornctl version) != $longhorn_ver ); then
     # Download the release binary.
@@ -1817,6 +1818,8 @@ longhorn-install() {
   # https://kubernetes.io/docs/reference/kubectl/generated/kubectl_wait/
   # https://kubernetes.io/docs/reference/kubectl/jsonpath/
   # https://stackoverflow.com/questions/53536907/kubectl-wait-for-condition-complete-timeout-30s
+  run "line '$LINENO';vlib.wait-for-success -t 600 'kubectl get deployment longhorn-driver-deployer -n longhorn-system'"
+  #run "line '$LINENO';sleep 120"
   run "line '$LINENO';kubectl wait --for=condition=Available deployment/longhorn-driver-deployer -n longhorn-system --timeout=600s"
   run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-attacher -n longhorn-system --timeout=600s"
   run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-provisioner -n longhorn-system --timeout=600s"
@@ -1925,10 +1928,7 @@ longhorn-uninstall()
   # Get all resorces for namespace
   #kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n longhorn-system
 
-  # kubectl wait --for jsonpath='{.status.state}'=AtLatestKnown sub mysub -n myns --timeout=3m
-  #run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=complete job/longhorn-uninstall -n longhorn-system'"
   run "line '$LINENO';kubectl wait --for=condition=complete job/longhorn-uninstall -n longhorn-system --timeout=5m"
-  #run "line '$LINENO';wait-for-success \"kubectl get job/longhorn-uninstall -n longhorn-system -o jsonpath='{.status.conditions[?(@.type==\"Complete\")].status}' | grep True\""
 
   run "line '$LINENO';kubectl delete namespace longhorn-system"
   run "line '$LINENO';kubectl delete storageclass longhorn-ssd"
@@ -1975,7 +1975,7 @@ longhorn-upgrade()
 
   run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
   run "line '$LINENO';vlib.wait-for-success 'kubectl rollout status deployment longhorn-driver-deployer -n longhorn-system'"
-  run "line '$LINENO';vlib.wait-for-success 'kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system --timeout=5m'"
+  run "line '$LINENO';kubectl wait --for=condition=ready pod -l app=instance-manager -n longhorn-system --timeout=5m"
 
   # if timeout when upgrade
   longhorn-restore
@@ -2367,4 +2367,36 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
     * )
     ;;
   esac
+}
+function vkube-k3s.-internal-storage-speed-test() {
+  # $1 - storage driver
+  local storage="$1"
+  vlib.h1 "Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
+  #echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
+  kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
+  kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
+  run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
+  assert_success
+  vlib.h2  'Waiting...' >&3
+  sleep 15
+  DETIK_CLIENT_NAMESPACE="storage-speedtest"
+  run try "at most 5 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
+  assert_success
+  # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
+  kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
+  assert_success
+  vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
+}
+function vkube-k3s.storage-speed-test {
+  hl.blue "$((++install_step)). Storage class speed test. (Line:$LINENO)"
+
+  vkube-k3s.-internal-storage-speed-test "local-path"
+  vkube-k3s.-internal-storage-speed-test "office-csi-driver-nfs-retain"
+  vkube-k3s.-internal-storage-speed-test "office-csi-driver-smb-tmp"
+  vkube-k3s.-internal-storage-speed-test "office-synology-csi-nfs-retain"
+  vkube-k3s.-internal-storage-speed-test "office-synology-csi-smb-tmp"
+  if kubectl get ns/longhorn-system; then
+    vkube-k3s.-internal-storage-speed-test "longhorn"
+  fi
+
 }

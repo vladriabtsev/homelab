@@ -19,28 +19,56 @@ commands:
   - long: --core
     help: Install core cluster components. Install all if --core, --storage, and --apps flags are not set.
   - long: --storage
-    help: All general storage drivers. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
-  - long: --storage-local
+    help: All general storage drivers according cluster plan.
+  - long: --storage-all-drivers
+    help: All general storage drivers. Overriding storage use in cluster plan.
+    conflicts: [--storage]
+  - long: --local
     help: Local storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
-    conflicts: [--storage]
-  - long: --storage-csi-driver-nfs
+    conflicts: [--storage --storage-all-drivers]
+  - long: --csi-driver-nfs
     help: CSI driver NFS storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
-    conflicts: [--storage]
-  - long: --storage-csi-driver-smb
+    conflicts: [--storage --storage-all-drivers]
+  - long: --csi-driver-smb
     help: CSI driver SMB storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
-    conflicts: [--storage]
-  - long: --storage-csi-synology
-    help: Synology CSI storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
-    conflicts: [--storage]
-  - long: --storage-longhorn
+    conflicts: [--storage --storage-all-drivers]
+  - long: --csi-synology
+    help: Synology CSI storage (NFS, SMB, ISCSI). Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
+    conflicts: [--storage --storage-all-drivers]
+  - long: --longhorn
     help: Longhorn storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
-    conflicts: [--storage]
+    conflicts: [--storage --storage-all-drivers]
   - long: --app
     help: All applications. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
 
 #- name: uninstall
 #  help: Uninstall k3s kubernetes
   #args: *cluster_plan
+
+- name: storage-speed
+  help: Test speed for storage storage class
+  flags:
+  - long: --all-drivers
+    help: Test speed for all general storage drivers
+  - long: --local
+    help: Test speed for local storage
+    conflicts: [--all-drivers]
+  - long: --csi-driver-nfs
+    help: Test speed for CSI driver NFS storage
+    conflicts: [--all-drivers]
+  - long: --csi-driver-smb
+    help: Test speed for CSI driver SMB storage
+    conflicts: [--all-drivers]
+  - long: --csi-synology
+    help: Test speed for Synology CSI storage (NFS, SMB, ISCSI)
+    conflicts: [--all-drivers]
+  - long: --longhorn
+    help: Test speed for Longhorn storage
+    conflicts: [--all-drivers]
+  - long: --storage-class
+    help: Storage class name
+    arg: name
+    required: true
 
 - name: upgrade
   help: Upgrade k3s kubernetes

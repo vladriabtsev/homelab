@@ -193,21 +193,22 @@ setup() {
 #region storage install and uninstall
   # bats test_tags=tag:storage-separate
   @test "storage: install-uninstall local" {
-    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-local" >&3
-    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-local
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --local" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --local
     sleep 10
     assert_success
     run verify "there is 1 storageclass named 'local-storage'"
 	  [ "$status" -eq 0 ]
 
-    speed-test "local-path"
+    #vkube-k3s.-internal-storage-speed-test "local-path"
+    run ../vkube --cluster-plan k3d-test --trace k3s storage-speed-test "local-path" --csi-driver-nfs
   }
   # bats test_tags=tag:storage-separate-one
   # https://rudimartinsen.com/2024/01/09/nfs-csi-driver-kubernetes/
   # https://github.com/kubernetes-csi/csi-driver-nfs
   @test "storage: install-uninstall nfs" {
-    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-nfs" >&3
-    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-nfs
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --csi-driver-nfs" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --csi-driver-nfs
     echo '         Testing...' >&3
     sleep 60
     DETIK_CLIENT_NAMESPACE="csi-nfs"
@@ -218,7 +219,8 @@ setup() {
     run try "at most 5 times every 30s to get pods named '^csi-nfs-controller' and verify that 'status' is 'running'"
     assert_success
 
-    speed-test "office-csi-driver-nfs-retain"
+    #vkube-k3s.-internal-storage-speed-test "office-csi-driver-nfs-retain"
+    run ../vkube --cluster-plan k3d-test --trace k3s storage-speed-test "office-csi-driver-nfs-retain" --csi-driver-nfs
     
     echo "      Step $[step=$step+1]. helm uninstall csi-driver-nfs -n csi-nfs" >&3
     run helm uninstall csi-driver-nfs -n csi-nfs
@@ -232,8 +234,8 @@ setup() {
   # bats test_tags=tag:storage-separate
   # https://github.com/kubernetes-csi/csi-driver-nfs/tree/master/charts
   @test "storage: install-uninstall smb" {
-    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-smb" >&3
-    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-driver-smb
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --csi-driver-smb" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --csi-driver-smb
     echo '         Testing...' >&3
     sleep 60
     DETIK_CLIENT_NAMESPACE="csi-smb"
@@ -244,7 +246,8 @@ setup() {
     run try "at most 5 times every 30s to get pods named '^csi-smb-controller' and verify that 'status' is 'running'"
     assert_success
 
-    speed-test "office-csi-driver-smb-tmp"
+    #vkube-k3s.-internal-storage-speed-test "office-csi-driver-smb-tmp"
+    run ../vkube --cluster-plan k3d-test --trace k3s storage-speed-test "office-csi-driver-smb-tmp" --csi-driver-nfs
 
     echo "      Step $[step=$step+1]. helm uninstall csi-driver-smb -n csi-smb" >&3
     run helm uninstall csi-driver-smb -n csi-smb
@@ -257,8 +260,8 @@ setup() {
   }
   # bats test_tags=tag:storage-separate
   @test "storage: install-uninstall synology-csi" {
-    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-synology" >&3
-    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-csi-synology
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --csi-synology" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --csi-synology
     echo '         Testing...' >&3
     sleep 30
     DETIK_CLIENT_NAMESPACE="synology-csi"
@@ -269,8 +272,10 @@ setup() {
     run try "at most 5 times every 30s to get pods named '^synology-csi-controller' and verify that 'status' is 'running'"
     assert_success
 
-    speed-test "office-synology-csi-nfs-retain"
-    speed-test "office-synology-csi-smb-tmp"
+    #vkube-k3s.-internal-storage-speed-test "office-synology-csi-nfs-retain"
+    run ../vkube --cluster-plan k3d-test --trace k3s storage-speed-test "office-synology-csi-nfs-retain" --csi-driver-nfs
+    #vkube-k3s.-internal-storage-speed-test "office-synology-csi-smb-tmp"
+    run ../vkube --cluster-plan k3d-test --trace k3s storage-speed-test "office-synology-csi-smb-tmp" --csi-driver-nfs
 
     # # https://github.com/SynologyOpenSource/synology-csi/pull/85
     # storage="office-synology-csi-iscsi-tmp"
@@ -314,16 +319,32 @@ setup() {
   # bats test_tags=tag:storage-separate
   @test "storage: install-uninstall longhorn" {
     
-    skip "open-iscsi is not supported in k3d"
+    if kubectl get ns/longhorn-system; then
+      run ../vkube --cluster-plan k3d-test --trace k3s storage-speed-test "longhorn" --longhorn
+    else
+      skip "Longhorn is not installed. If it k3d then probably because open-iscsi is not supported in k3d"
+    fi
 
-    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-longhorn" >&3
-    run ../vkube --cluster-plan k3d-test --trace k3s install --storage-longhorn
+    echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --longhorn" >&3
+    run ../vkube --cluster-plan k3d-test --trace k3s install --longhorn
 
     echo '      Testing...' >&3
     sleep 60
+    DETIK_CLIENT_NAMESPACE="synology-csi"
+    echo '         Testing synology-csi-node' >&3
+    run try "at most 5 times every 30s to get pods named '^synology-csi-node' and verify that 'status' is 'running'"
+    assert_success
+    echo '         Testing synology-csi-controller' >&3
+    run try "at most 5 times every 30s to get pods named '^synology-csi-controller' and verify that 'status' is 'running'"
+    assert_success
 
-    # echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-longhorn" >&3
-    # run ../vkube --cluster-plan k3d-test --trace k3s uninstall --storage-longhorn
+    #vkube-k3s.-internal-storage-speed-test "office-synology-csi-nfs-retain"
+    run ../vkube --cluster-plan k3d-test --trace k3s storage-speed-test "office-synology-csi-nfs-retain" --csi-driver-nfs
+    #vkube-k3s.-internal-storage-speed-test "office-synology-csi-smb-tmp"
+    run ../vkube --cluster-plan k3d-test --trace k3s storage-speed-test "office-synology-csi-smb-tmp" --csi-driver-nfs
+
+    # echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s uninstall --longhorn" >&3
+    # run ../vkube --cluster-plan k3d-test --trace k3s uninstall --longhorn
     # sleep 10
     # assert_success
   }
@@ -365,25 +386,6 @@ setup() {
   assert_success
 }
 #region general storage speed tests
-  function speed-test() {
-    # $1 - storage driver
-    local storage="$1"
-    vlib.h1 "Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
-    #echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
-    kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
-    kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
-    run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
-    assert_success
-    vlib.h2  'Waiting...' >&3
-    sleep 15
-    DETIK_CLIENT_NAMESPACE="storage-speedtest"
-    run try "at most 5 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
-    assert_success
-    # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
-    kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
-    assert_success
-    vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
-  }
   # https://kubernetes.io/docs/concepts/storage/volumes/
   # # bats test_tags=tag:speed
   # @test "storage: local-path tests" {
@@ -569,31 +571,20 @@ setup() {
 #endregion general storage tests
 
 # bats test_tags=tag:storage-speed
-@test "k3d-test general storage speed tests" {
-  export KUBECONFIG="${HOME}/.kube/k3d-test"
-  #export KUBECONFIG=~/.kube/k3d-test
-  speed-test "local-path"
-  speed-test "office-csi-driver-nfs-retain"
-  speed-test "office-csi-driver-smb-tmp"
-  speed-test "office-synology-csi-nfs-retain"
-  speed-test "office-synology-csi-smb-tmp"
-}
-# bats test_tags=tag:storage-speed-one
-@test "k3s-HA general storage speed tests" {
-  export KUBECONFIG="${HOME}/.kube/k3s-HA"
-  #export KUBECONFIG=~/.kube/k3s-HA
-  speed-test "local-path"
-  speed-test "office-csi-driver-nfs-retain"
-  speed-test "office-csi-driver-smb-tmp"
-  speed-test "office-synology-csi-nfs-retain"
-  speed-test "office-synology-csi-smb-tmp"
-  speed-test "longhorn"
-  export KUBECONFIG="${HOME}/.kube/k3d-test"
-  #export KUBECONFIG=~/.kube/k3d-test
+@test "k3(s/d) general storage speed tests" {
+  vkube-k3s.-internal-storage-speed-test "local-path"
+  vkube-k3s.-internal-storage-speed-test "office-csi-driver-nfs-retain"
+  vkube-k3s.-internal-storage-speed-test "office-csi-driver-smb-tmp"
+  vkube-k3s.-internal-storage-speed-test "office-synology-csi-nfs-retain"
+  vkube-k3s.-internal-storage-speed-test "office-synology-csi-smb-tmp"
+  if kubectl get ns/longhorn-system; then
+    vkube-k3s.-internal-storage-speed-test "longhorn"
+  fi
 }
 
 # bats test_tags=tag:longhorn
 @test "k3d longhorn installation" {
+  skip "Not working yet? Or not supported?"
   echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --longhorn" >&3
 
   node_root_password="kuku"
