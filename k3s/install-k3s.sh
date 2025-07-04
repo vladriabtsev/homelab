@@ -180,7 +180,7 @@ install_first_node()
     # https://docs.k3s.io/cli/certificate#certificate-authority-ca-certificates
     # https://github.com/k3s-io/k3s/blob/master/contrib/util/generate-custom-ca-certs.sh
     # https://blog.chkpwd.com/posts/k3s-ha-installation-kube-vip-and-metallb/
-    if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$k3s_settings'." ${LINENO}; fi
+    if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$cluster_plan_file'." ${LINENO}; fi
     cluster_node_ip=$node_ip4
     if [ $kube_vip_use -eq 1 ]; then
       gen_kube_vip_manifest
@@ -369,14 +369,14 @@ if ! [[ $# -eq 1 ]]; then err_and_exit $usage ${LINENO}; fi
 
 start_time=$(date +%s)
 install_step=0
-k3s_settings=$1
+cluster_plan_file=$1
 
 vlib.cluster_plan_read
 
 if [[ $opt_install_remove -eq 1 ]]; then
-  h2 "Remove K3s cluster with $amount_nodes nodes. Cluster plan from '$k3s_settings' file. (Line:$LINENO)"
+  h2 "Remove K3s cluster with $amount_nodes nodes. Cluster plan from '$cluster_plan_file' file. (Line:$LINENO)"
 else
-  h2 "Install K3s cluster with $amount_nodes nodes. Cluster plan from '$k3s_settings' file. (Line:$LINENO)"
+  h2 "Install K3s cluster with $amount_nodes nodes. Cluster plan from '$cluster_plan_file' file. (Line:$LINENO)"
 fi
 
 # export KUBECONFIG=/mnt/d/dev/homelab/k3s/kubeconfig
@@ -395,7 +395,7 @@ else
   err_and_exit "Error: Invalid input for amount_nodes: '$amount_nodes'." ${LINENO}
 fi
 
-amount_nodes_max=$(yq '.node | length' < $k3s_settings)
+amount_nodes_max=$(yq '.node | length' < $cluster_plan_file)
 if [[ $amount_nodes -gt $amount_nodes_max ]]; then
   err_and_exit "Error: Amount of real nodes is less than requested. Real: '$amount_nodes_max', requested: '$amount_nodes'." ${LINENO}
 fi
@@ -461,8 +461,8 @@ fi
 
 if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; then # install on nodes
   # Nodes
-  #readarray nodes < <(yq '.nodes[] |= sort_by(.node_id)' < $k3s_settings)
-  readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
+  #readarray nodes < <(yq '.nodes[] |= sort_by(.node_id)' < $cluster_plan_file)
+  readarray nodes < <(yq -o=j -I=0 '.node[]' < $cluster_plan_file)
 
   i_node=0
   for node in "${nodes[@]}"; do
@@ -496,17 +496,17 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
   if [ $opt_install_remove -eq 1 ]; then
     unset KUBECONFIG
     #rm $HOME/.kube/$cluster_name
-    inf "Kubernetes cluster '$cluster_name' is uninstalled from servers described in cluster plan YAML file '$k3s_settings'\n"
+    inf "Kubernetes cluster '$cluster_name' is uninstalled from servers described in cluster plan YAML file '$cluster_plan_file'\n"
     exit 1
   fi
   export KUBECONFIG=~/.kube/$cluster_name
   run "line '$LINENO';wait_kubectl_can_connect_cluster"
   if [ $opt_install_new -eq 1 ]; then
-    inf "New kubernetes cluster '$cluster_name' is installed on servers described in cluster plan YAML file '$k3s_settings'\n"
+    inf "New kubernetes cluster '$cluster_name' is installed on servers described in cluster plan YAML file '$cluster_plan_file'\n"
     inf "To use kubectl: Run 'export KUBECONFIG=~/.kube/$cluster_name' or 'ek $cluster_name'\n"
   fi
   if [ $opt_install_upgrade -eq 1 ]; then
-    inf "Kubernetes cluster '$cluster_name' is updated on servers described in cluster plan YAML file '$k3s_settings'\n"
+    inf "Kubernetes cluster '$cluster_name' is updated on servers described in cluster plan YAML file '$cluster_plan_file'\n"
   fi
   kubectl get nodes
 fi
@@ -576,15 +576,15 @@ run "line '$LINENO';kubectl create configmap -n kube-system kubevip --from-liter
 # Longhorn
 # https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
 hl.blue "$((++install_step)). Install Longhorn. (Line:$LINENO)"
-./101-longhorn/install.sh -s "${k3s_settings}" -w "${node_root_password}" -t "${install_step}" -i $longhorn_ver
+./101-longhorn/install.sh -s "${cluster_plan_file}" -w "${node_root_password}" -t "${install_step}" -i $longhorn_ver
 
 # https://wiki.musl-libc.org/building-busybox
 # https://github.com/docker-library/repo-info/blob/master/repos/busybox/remote/musl.md
-./102-busybox/install.sh -s "${k3s_settings}" -w "${node_root_password}" -t "${install_step}" -i $busybox_ver
+./102-busybox/install.sh -s "${cluster_plan_file}" -w "${node_root_password}" -t "${install_step}" -i $busybox_ver
 
 # Velero backup/restore
 hl.blue "$((++install_step)). Install Velero backup/restore. (Line:$LINENO)"
-#./velero/install.sh -s "${k3s_settings}" -w "${node_root_password}" -t "${install_step}" -i $longhorn_ver
+#./velero/install.sh -s "${cluster_plan_file}" -w "${node_root_password}" -t "${install_step}" -i $longhorn_ver
 ./velero/install.sh -t "${install_step}" -i $velero_ver
 
 exit

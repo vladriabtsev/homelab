@@ -332,7 +332,7 @@ then
 fi
 velero_number_exclusive_params=0
 plan_is_provided=0
-if ! [[ -z $k3s_settings ]]; then 
+if ! [[ -z $cluster_plan_file ]]; then 
   $plan_is_provided=1; 
 fi
 while getopts "ovdhw:t:i:u:g:" opt

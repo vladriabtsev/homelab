@@ -1,0 +1,74 @@
+# https://github.com/SynologyOpenSource/synology-csi
+folder_with_dsm_secrets: ${HOME}/.ssh/synology-csi-secrets # folder with client-info.yam file
+
+# Prefix 'csi_synology_' will be used to convert all root scalar fields to bash variables
+snapshot_use: 1
+#csi_synology_ver: v1.2.0 # auto upgrade to latest if empty
+
+# Synology node settings
+host_protocol_class_reclaimPolicy: Delete # default for all internal elements
+host_protocol_class_allowVolumeExpansion: 'false' # default for all internal elements
+hosts:
+# Bash variable prefix 'csi_synology_host_'
+- name: office
+  dsm_ip4: 192.168.100.227
+  protocol_class_location: /volume3 # 'volume1' without spaces!!! default for all internal elements
+  protocols:
+  # Bash variable prefix 'csi_synology_host_protocol_'
+  # - name: synology-csi-iscsi #ISCSI
+  #   class_fsType: 'btrfs' # default for all internal elements
+  #   classes:
+  #   # Bash variable prefix 'csi_synology_host_protocol_class_'
+  #   - name: tmp
+  #     #fsType: From default for class.
+  #     #location: From default for protocol_class.
+  #     reclaimPolicy: Delete
+  #     allowVolumeExpansion: false
+  #   - name: retain
+  #     fsType: 'btrfs'
+  #     location: /volume1
+  #     reclaimPolicy: Retain
+  #     allowVolumeExpansion: false
+  #   - name: retain-exp
+  #     reclaimPolicy: Retain
+  #     allowVolumeExpansion: true
+  - name: synology-csi-smb
+    secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
+    secret_pass_folder: # secret from 'pass' password manager folder with username.txt and password.txt secrets
+    classes:
+    - name: tmp
+      #location: From default for protocol_class.
+      reclaimPolicy: Delete
+      allowVolumeExpansion: false
+    - name: retain
+      reclaimPolicy: Retain
+      allowVolumeExpansion: false
+    - name: retain-exp
+      #location: From default for protocol_class.
+      reclaimPolicy: Retain
+      allowVolumeExpansion: true
+  - name: synology-csi-nfs
+    classes:
+    - name: tmp
+      mountPermissions: '0755'
+      mountOptions_nfsvers: 4.1
+      reclaimPolicy: Delete
+      allowVolumeExpansion: false
+    - name: retain
+      #location: /volume1
+      reclaimPolicy: Retain
+      allowVolumeExpansion: false
+    - name: retain-exp
+      #location: /volume1
+      reclaimPolicy: Retain
+      allowVolumeExpansion: true
+# - name: backup2
+#   dsm_ip4: 192.168.100.223
+#   dsm_port: 5100
+#   https: true
+#   folder_with_dsm_secrets: ${HOME}/.ssh/k3s-HA-csi-synology-secrets # folder with client-info.yam file
+#   protocols:
+#   - name: synology-csi-nfs
+#     location: /volume1
+#   - name: synology-csi-smb
+#     location: /volume1

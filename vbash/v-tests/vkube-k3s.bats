@@ -56,40 +56,6 @@ setup() {
 # https://rnemet.dev/posts/k3d/
 # docker exec k3d-test-server-0 crictl images
 
-# bats test_tags=tag:core
-@test "k3d core installation" {
-  #if kubectl cluster-info; then
-    echo "      k3d cluster delete test" >&3
-    run k3d cluster delete test
-  #fi
-  echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --core" >&3
-  run ../vkube --cluster-plan k3d-test --trace k3s install --core
-  sleep 20
-  assert_success
-
-  # https://github.com/bats-core/bats-assert#partial-matching
-  echo '         Testing...' >&3
-  sleep 60
-  DETIK_CLIENT_NAMESPACE="kube-system"
-  echo '         Testing traefik' >&3
-  run verify "there are 1 pods named '^traefik'"
-  assert_success
-  run try "at most 10 times every 30s to get pods named '^traefik' and verify that 'status' is 'running'"
-  assert_success
-  run verify "'status' is 'running' for pods named '^traefik'"
-  assert_success
-
-  run verify "there is 1 storageclass named 'local-path'"
-  [ "$status" -eq 0 ]
-
-  run vkube-k3s.is-namespace-exist "csi-nfs"
-  [ "$status" -eq 1 ]
-  run vkube-k3s.is-namespace-exist "csi-smb"
-  [ "$status" -eq 1 ]
-  run vkube-k3s.is-namespace-exist "synology-csi"
-  [ "$status" -eq 1 ]
-}
-
 #region secret
   #bats test_tags=tag:secret
   @test "vkube-k3s.secret-create-from-folder: without namespace" {
@@ -189,6 +155,40 @@ setup() {
     assert_success
   }
 #endregion secret
+
+# bats test_tags=tag:core
+@test "k3d core installation" {
+  #if kubectl cluster-info; then
+    echo "      k3d cluster delete test" >&3
+    run k3d cluster delete test
+  #fi
+  echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --core" >&3
+  run ../vkube --cluster-plan k3d-test --trace k3s install --core
+  sleep 20
+  assert_success
+
+  # https://github.com/bats-core/bats-assert#partial-matching
+  echo '         Testing...' >&3
+  sleep 60
+  DETIK_CLIENT_NAMESPACE="kube-system"
+  echo '         Testing traefik' >&3
+  run verify "there are 1 pods named '^traefik'"
+  assert_success
+  run try "at most 10 times every 30s to get pods named '^traefik' and verify that 'status' is 'running'"
+  assert_success
+  run verify "'status' is 'running' for pods named '^traefik'"
+  assert_success
+
+  run verify "there is 1 storageclass named 'local-path'"
+  [ "$status" -eq 0 ]
+
+  run vkube-k3s.is-namespace-exist "csi-nfs"
+  [ "$status" -eq 1 ]
+  run vkube-k3s.is-namespace-exist "csi-smb"
+  [ "$status" -eq 1 ]
+  run vkube-k3s.is-namespace-exist "synology-csi"
+  [ "$status" -eq 1 ]
+}
 
 #region storage install and uninstall
   # bats test_tags=tag:storage-separate
@@ -625,8 +625,8 @@ setup() {
   skip
   # https://bats-core.readthedocs.io/en/stable/writing-tests.html
   ##########################################################################################
-  echo "      Step $[step=$step+1]. ../vkube --trace synology-csi install ../v-tests/synology-csi/synology-csi-plan.yaml --secret-folder ~/.ssh/k3s-HA-csi-synology-secrets" >&3
-  run ../vkube --trace synology-csi install ../v-tests/synology-csi/synology-csi-plan.yaml --secret-folder "~/.ssh/k3s-HA-csi-synology-secrets"
+  echo "      Step $[step=$step+1]. ../vkube --trace synology-csi install ../v-tests/cluster-storage-plan.yaml --secret-folder ~/.ssh/k3s-HA-csi-synology-secrets" >&3
+  run ../vkube --trace synology-csi install ../v-tests/cluster-storage-plan.yaml --secret-folder "~/.ssh/k3s-HA-csi-synology-secrets"
   # https://github.com/bats-core/bats-assert#partial-matching
   #echo '# text' >&3
   assert_success

@@ -44,18 +44,18 @@ function vkube-k3s.check-cluster-plan-path() {
   # https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_07_01.html
   if [[ -a ${args[--cluster-plan]} ]]; then # file exists
     # shellcheck disable=SC2154
-    k3s_settings=${args[--cluster-plan]}
+    cluster_plan_file=${args[--cluster-plan]}
   else # file is not exists
     if ! [[ ${args[--cluster-plan]} == *"/"* ]]; then # check if path is simple word
       # trying to find 'vkube-data' in folder with vkube script
-      __tmp="${vkube_folder}/vkube-data/${args[--cluster-plan]}/${args[--cluster-plan]}.yaml"
+      __tmp="${vkube_folder}/vkube-data/${args[--cluster-plan]}/cluster-plan.yaml"
       if [[ -a $__tmp ]]; then # file exists
-        k3s_settings=$__tmp
+        cluster_plan_file=$__tmp
       else
         # trying to find 'vkube-data' in current folder
-        __tmp2="${PWD}/vkube-data/${args[--cluster-plan]}/${args[--cluster-plan]}.yaml"
+        __tmp2="${PWD}/vkube-data/${args[--cluster-plan]}/cluster-plan.yaml"
         if [[ -a $__tmp2 ]]; then # file exists
-          k3s_settings=$__tmp2
+          cluster_plan_file=$__tmp2
         else
           vlib.error-printf "Can't find cluster plan file based on cluster plan parameter '%s'\n  Checked files '%s'\n  and '%s'" "${args[--cluster-plan]}" "$__tmp" "$__tmp2" >&2
         fi
@@ -65,8 +65,8 @@ function vkube-k3s.check-cluster-plan-path() {
     fi
   fi
   # find vkube data folder
-  #echo $k3s_settings
-  vkube_data_folder=$(dirname $k3s_settings)
+  #echo $cluster_plan_file
+  vkube_data_folder=$(dirname $cluster_plan_file)
   #echo $vkube_data_folder
 }
 function vkube-k3s.cluster-plan-read() {
@@ -77,15 +77,15 @@ function vkube-k3s.cluster-plan-read() {
   csi_driver_nfs_namespace="kube-system"
   csi_driver_smb_namespace="kube-system"
 
-  if [[ $(yq --exit-status 'tag == "!!map" or tag== "!!seq"' $k3s_settings > /dev/null) ]]; then
-    err_and_exit "Error: Invalid format for YAML file: '$k3s_settings'." ${LINENO}
+  if [[ $(yq --exit-status 'tag == "!!map" or tag== "!!seq"' $cluster_plan_file > /dev/null) ]]; then
+    err_and_exit "Error: Invalid format for YAML file: '$cluster_plan_file'." ${LINENO}
   fi
 
   # All root scalar settings from yaml file to bash variables
   # https://github.com/jasperes/bash-yaml
   # https://suriyakrishna.github.io/shell-scripting/2021/03/28/shell-scripting-yaml-configuration
   # https://www.baeldung.com/linux/yq-utility-processing-yaml
-  eval "$( yq '.[] |(( select(kind == "scalar") | key + "='\''" + . + "'\''"))'  < $k3s_settings)"
+  eval "$( yq '.[] |(( select(kind == "scalar") | key + "='\''" + . + "'\''"))'  < $cluster_plan_file)"
 
   if ! test -e ~/tmp; then  mkdir ~/tmp;  fi
 }
@@ -368,7 +368,7 @@ function install_first_node() {
   # https://docs.k3s.io/cli/certificate#certificate-authority-ca-certificates
   # https://github.com/k3s-io/k3s/blob/master/contrib/util/generate-custom-ca-certs.sh
   # https://blog.chkpwd.com/posts/k3s-ha-installation-kube-vip-and-metallb/
-  if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$k3s_settings'." ${LINENO}; fi
+  if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$cluster_plan_file'." ${LINENO}; fi
   cluster_node_ip=$node_ip4
   if [ $kube_vip_use -eq 1 ]; then
     gen_kube_vip_manifest
@@ -543,7 +543,7 @@ function vkube-k3s.install() {
   # echo "      longhorn_use=$longhorn_use" >&3
   # echo "      install_storage_at_least_one=$install_storage_at_least_one" >&3
 
-  local data_folder=$(dirname "${k3s_settings}")
+  local data_folder=$(dirname "${cluster_plan_file}")
   vlib.trace "data folder=$data_folder"
 
   # Amount of nodes
@@ -553,7 +553,7 @@ function vkube-k3s.install() {
     err_and_exit "Error: Invalid input for amount_nodes: '$amount_nodes'." ${LINENO}
   fi
 
-  amount_nodes_max=$(yq '.node | length' < $k3s_settings)
+  amount_nodes_max=$(yq '.node | length' < $cluster_plan_file)
   if [[ $amount_nodes -gt $amount_nodes_max ]]; then
     err_and_exit "Error: Amount of real nodes is less than requested. Real: '$amount_nodes_max', requested: '$amount_nodes'." ${LINENO}
   fi
@@ -561,7 +561,7 @@ function vkube-k3s.install() {
   if [[ -n  $install_core ]]; then
     case $kubernetes_type in
       k3s )
-        h2 "Install K3s cluster '$cluster_name' with $amount_nodes nodes. Cluster plan from '$k3s_settings' file. (Line:$LINENO)"
+        h2 "Install K3s cluster '$cluster_name' with $amount_nodes nodes. Cluster plan from '$cluster_plan_file' file. (Line:$LINENO)"
         # export KUBECONFIG=/mnt/d/dev/homelab/k3s/kubeconfig
         # kubectl config use-context local
         # kubectl get node -o wide
@@ -594,7 +594,7 @@ function vkube-k3s.install() {
         fi
       ;;
       k3d )
-        h2 "Install K3d cluster '$cluster_name' with $amount_nodes nodes. Cluster plan from '$k3s_settings' file. (Line:$LINENO)"
+        h2 "Install K3d cluster '$cluster_name' with $amount_nodes nodes. Cluster plan from '$cluster_plan_file' file. (Line:$LINENO)"
         run "line '$LINENO';k3d cluster create $cluster_name --wait"
         #export KUBECONFIG=~/.kube/$cluster_name
       ;;
@@ -604,7 +604,7 @@ function vkube-k3s.install() {
       * )
         err_and_exit "Unsupported kubernetes type '$kubernetes_type'. Expected: k3s, k3d" ${LINENO};
     esac
-    inf "New kubernetes cluster '$cluster_name' is installed on servers described in cluster plan YAML file '$k3s_settings'\n"
+    inf "New kubernetes cluster '$cluster_name' is installed on servers described in cluster plan YAML file '$cluster_plan_file'\n"
     inf "To use kubectl: Run 'export KUBECONFIG=~/.kube/$cluster_name' or 'ek $cluster_name'\n"
 
     kubectl get nodes
@@ -630,15 +630,15 @@ function vkube-k3s.install() {
   # Longhorn
   # https://longhorn.io/docs/1.7.2/deploy/install/install-with-kubectl/
   hl.blue "$((++install_step)). Install Longhorn. (Line:$LINENO)"
-  ./101-longhorn/install.sh -s "${k3s_settings}" -w "${node_root_password}" -t "${install_step}" -i $longhorn_ver
+  ./101-longhorn/install.sh -s "${cluster_plan_file}" -w "${node_root_password}" -t "${install_step}" -i $longhorn_ver
 
   # https://wiki.musl-libc.org/building-busybox
   # https://github.com/docker-library/repo-info/blob/master/repos/busybox/remote/musl.md
-  ./102-busybox/install.sh -s "${k3s_settings}" -w "${node_root_password}" -t "${install_step}" -i $busybox_ver
+  ./102-busybox/install.sh -s "${cluster_plan_file}" -w "${node_root_password}" -t "${install_step}" -i $busybox_ver
 
   # Velero backup/restore
   hl.blue "$((++install_step)). Install Velero backup/restore. (Line:$LINENO)"
-  #./velero/install.sh -s "${k3s_settings}" -w "${node_root_password}" -t "${install_step}" -i $longhorn_ver
+  #./velero/install.sh -s "${cluster_plan_file}" -w "${node_root_password}" -t "${install_step}" -i $longhorn_ver
   ./velero/install.sh -t "${install_step}" -i $velero_ver
 
   # Rancher
@@ -943,7 +943,7 @@ function vkube-k3s.csi-synology-install() {
   local synology_csi_plan=${args[plan]}
   vlib.trace "vkube_data_folder=${vkube_data_folder}"
   if [[ -z $synology_csi_plan ]]; then
-    synology_csi_plan="${vkube_data_folder}/synology-csi/synology-csi-plan.yaml"
+    synology_csi_plan="${vkube_data_folder}/cluster-storage-plan.yaml"
   fi
   vlib.trace "synology_csi_plan=${synology_csi_plan}"
   run "line '$LINENO';vlib.is-file-exists-with-trace '${synology_csi_plan}'"
@@ -1026,16 +1026,16 @@ function vkube-k3s.csi-synology-install() {
         vlib.trace "storage class name=$csi_synology_host_protocol_class_name"
         #vlib.trace "reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
         if [[ -z $csi_synology_host_protocol_class_location ]]; then
-          err_and_exit "Empty location. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Empty location. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         fi
         if [[ -z $csi_synology_host_protocol_class_reclaimPolicy ]]; then
-          err_and_exit "Empty reclaimPolicy. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Empty reclaimPolicy. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         fi
         if [[ -z $csi_synology_host_protocol_class_allowVolumeExpansion ]]; then
-          err_and_exit "Empty allowVolumeExpansion. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Empty allowVolumeExpansion. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         fi
         # if [[ -z $csi_synology_host_protocol_class_mountPermissions ]]; then
-        #   err_and_exit "Empty mountPermissions. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        #   err_and_exit "Empty mountPermissions. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         # fi
         case $csi_synology_host_protocol_name in
           synology-csi-iscsi )
@@ -1129,9 +1129,9 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
   done
   #set +x
   #vlib.trace "generated storage classes=\n$txt"
-  run "line '$LINENO';echo '$txt' > '$data_folder/generated-synology-csi-storage-classes.yaml'"
+  run "line '$LINENO';echo '$txt' > '$data_folder/../generated-synology-csi-storage-classes.yaml'"
   #run "line '$LINENO';kubectl apply edit-last-applied -f '$data_folder/generated-storage-classes.yaml'"
-  run "line '$LINENO';kubectl apply -f '$data_folder/generated-synology-csi-storage-classes.yaml'"
+  run "line '$LINENO';kubectl apply -f '$data_folder/../generated-synology-csi-storage-classes.yaml'"
 
   local deploy_k8s_version="v1.20"
   inf "synology-csi (Line:$LINENO)\n"
@@ -1410,8 +1410,8 @@ spec:
 
   # ${args[--storage-class]}
 
-  # if ! [[ -e ${k3s_settings} ]]; then
-  #   err_and_exit "Cluster plan file '${k3s_settings}' is not found" ${LINENO};
+  # if ! [[ -e ${cluster_plan_file} ]]; then
+  #   err_and_exit "Cluster plan file '${cluster_plan_file}' is not found" ${LINENO};
   # fi
   # #echo $node_root_password
   # if [[ -z $node_root_password ]]; then
@@ -1593,8 +1593,8 @@ function install-k3s() {
   fi
 
   # Nodes
-  #readarray nodes < <(yq '.nodes[] |= sort_by(.node_id)' < $k3s_settings)
-  readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
+  #readarray nodes < <(yq '.nodes[] |= sort_by(.node_id)' < $cluster_plan_file)
+  readarray nodes < <(yq -o=j -I=0 '.node[]' < $cluster_plan_file)
 
   if test -e "${HOME}/.kube/${cluster_name}"; then 
     # https://www.geeksforgeeks.org/bash-script-read-user-input/
@@ -1635,7 +1635,7 @@ node_disks()
   declare -a -g node_mnt_path_array
   # https://mikefarah.gitbook.io/yq/usage/tips-and-tricks
   #echo $i_node
-  readarray disks < <(yq -o=j -I=0 ".node[$i_node].node_storage[]" < $k3s_settings)
+  readarray disks < <(yq -o=j -I=0 ".node[$i_node].node_storage[]" < $cluster_plan_file)
   local i_disk=0
   for disk in "${disks[@]}"; do
     eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$disk)"
@@ -1760,8 +1760,8 @@ EOF1
 
 longhorn-install() {
   hl.blue "$parent_step$((++install_step)). Longhorn installation. (Line:$LINENO)"
-  if ! [[ -e ${k3s_settings} ]]; then
-    err_and_exit "Cluster plan file '${k3s_settings}' is not found" ${LINENO};
+  if ! [[ -e ${cluster_plan_file} ]]; then
+    err_and_exit "Cluster plan file '${cluster_plan_file}' is not found" ${LINENO};
   fi
 
   if command kubectl get deploy longhorn-ui -n longhorn-system &> /dev/null; then
@@ -1773,11 +1773,11 @@ longhorn-install() {
 
   declare -A node_disk_config
 
-  readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
+  readarray nodes < <(yq -o=j -I=0 '.node[]' < $cluster_plan_file)
   i_node=0
   for node in "${nodes[@]}"; do
     eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
-    readarray disks < <(yq -o=j -I=0 ".node[$i_node].node_storage[]" < $k3s_settings)
+    readarray disks < <(yq -o=j -I=0 ".node[$i_node].node_storage[]" < $cluster_plan_file)
     vlib.trace "disk amount=${#disks[@]}"
     if [[ ${#disks[@]} -gt 0 ]]; then
       node_root_password=$(vkube-k3s.get-node-admin-password)
@@ -2026,7 +2026,7 @@ function install-storage() {
 
   # kubectl get pods --all-namespaces -l app=controller,app.kubernetes.io/name=synology-csi -o yaml | grep image:
 
-  local data_folder=$(dirname "${k3s_settings}")
+  local data_folder=$(dirname "${cluster_plan_file}")
   vlib.trace "data folder=$data_folder"
 
   if [ $local_storage_use -eq 1 ]; then
@@ -2074,7 +2074,7 @@ volumeBindingMode: WaitForFirstConsumer\""
       #       elif [[ -n $csi_driver_smb_secret_pass_folder ]]; then
       #         vkube-k3s.secret-create-from-pass-folder "$csi_driver_smb_secret_folder"
       #       else
-      #         err_and_exit "Both 'csi_driver_smb_secret_folder' and 'csi_driver_smb_secret_pass_folder' are empty in cluster plan '$k3s_settings'"
+      #         err_and_exit "Both 'csi_driver_smb_secret_folder' and 'csi_driver_smb_secret_pass_folder' are empty in cluster plan '$cluster_plan_file'"
       #       fi
       run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
       run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb -n ${csi_driver_smb_namespace} --version $csi_driver_smb_ver"
@@ -2128,24 +2128,24 @@ volumeBindingMode: WaitForFirstConsumer\""
   #vlib.trace "default reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
   declare -A host_names_dic=()
   #declare -A folder_cred_dic=()
-  readarray storage_servers < <(yq -o=j -I=0 '.storage_servers[]' < $k3s_settings)
+  readarray storage_servers < <(yq -o=j -I=0 '.storage_servers[]' < $cluster_plan_file)
   vlib.trace "storage servers count=${#storage_servers[@]}"
   for storage_server in "${storage_servers[@]}"; do
     # Host level scalar settings
     eval "$( yq '.[] | ( select(kind == "scalar") | "storage_server_" + key + "='\''" + . + "'\''")' <<<$storage_server)"
     vlib.trace "storage server name=$storage_server_name"
     if [[ -z $storage_server_name ]]; then
-      err_and_exit "Empty host name. Configuration YAML file: '${k3s_settings}'." ${LINENO}
+      err_and_exit "Empty host name. Configuration YAML file: '${cluster_plan_file}'." ${LINENO}
     fi
     if [[ -v host_names_dic["${storage_server_name}"] ]]; then
       vlib.trace "host names(${#host_names_dic[@]})=" "${!host_names_dic[@]}"
-      err_and_exit "Host name is not unique. Configuration YAML file: '${k3s_settings}'. Host name '$storage_server_name'." ${LINENO}
+      err_and_exit "Host name is not unique. Configuration YAML file: '${cluster_plan_file}'. Host name '$storage_server_name'." ${LINENO}
     fi
     host_names_dic["${storage_server_name}"]='y'
     readarray storage_server_protocols < <(echo $storage_server | yq -o=j -I=0 ".protocols[]")
     vlib.trace "storage protocols count=${#storage_server_protocols[@]}"
     if [[ ${#storage_server_protocols[@]} -eq 0 ]]; then
-      err_and_exit "There are no storage protocol for host. Configuration YAML file: '${k3s_settings}'. Host '$storage_server_name'." ${LINENO}
+      err_and_exit "There are no storage protocol for host. Configuration YAML file: '${cluster_plan_file}'. Host '$storage_server_name'." ${LINENO}
     fi
     i_protocol=-1
     #vlib.trace "reclaimPolicy=$storage_server_protocol_class_reclaimPolicy"
@@ -2158,20 +2158,20 @@ volumeBindingMode: WaitForFirstConsumer\""
       eval "$( yq '.[] | ( select(kind == "scalar") | "storage_server_protocol_" + key + "='\''" + . + "'\''")' <<<$storage_server_protocol)"
       vlib.trace "storage protocol name=$storage_server_protocol_name"
       if [[ -z $storage_server_protocol_name ]]; then
-        err_and_exit "Empty protocol name. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'." ${LINENO}
+        err_and_exit "Empty protocol name. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'." ${LINENO}
       fi
       if [[ -v protocol_names["${storage_server_protocol_name}"] ]]; then
         #echo "${!protocol_names[@]}" "${protocol_names[@]}"
         vlib.trace "protocol names(${#protocol_names[@]})=" "${!protocol_names[@]}"
         #vlib.trace "storage host=$storage_server"
         #vlib.trace "storage protocol=$storage_server_protocol"
-        err_and_exit "Storage protocol name is not unique. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol name '$storage_server_protocol_name'." ${LINENO}
+        err_and_exit "Storage protocol name is not unique. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol name '$storage_server_protocol_name'." ${LINENO}
       fi
       protocol_names["${storage_server_protocol_name}"]='y'
       readarray storage_server_protocol_classes < <(echo $storage_server_protocol | yq -o=j -I=0 ".classes[]")
       vlib.trace "storage classes count=${#storage_server_protocol_classes[@]}"
       if [[ ${#storage_server_protocol_classes[@]} -eq 0 ]]; then
-        err_and_exit "There are no storage class for protocol. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'." ${LINENO}
+        err_and_exit "There are no storage class for protocol. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'." ${LINENO}
       fi
       #vlib.trace "reclaimPolicy=$storage_server_protocol_class_reclaimPolicy"
       for storage_server_protocol_class in "${storage_server_protocol_classes[@]}"; do
@@ -2182,22 +2182,22 @@ volumeBindingMode: WaitForFirstConsumer\""
         vlib.trace "storage class name=$storage_server_protocol_class_name"
         #vlib.trace "reclaimPolicy=$storage_server_protocol_class_reclaimPolicy"
         if [[ -z $storage_server_protocol_secret_folder && -z $storage_server_protocol_secret_pass_folder ]]; then
-          err_and_exit "Both 'secret_folder' and 'secret_pass_folder' are empty. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Both 'secret_folder' and 'secret_pass_folder' are empty. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         fi
         if [[ -n $storage_server_protocol_secret_folder && -n $storage_server_protocol_secret_pass_folder ]]; then
-          err_and_exit "Both 'secret_folder' and 'secret_pass_folder' are not empty. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Both 'secret_folder' and 'secret_pass_folder' are not empty. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         fi
         if [[ -z $storage_server_protocol_class_location ]]; then
-          err_and_exit "Empty location. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Empty location. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         fi
         if [[ -z $storage_server_protocol_class_reclaimPolicy ]]; then
-          err_and_exit "Empty reclaimPolicy. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Empty reclaimPolicy. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         fi
         if [[ -z $storage_server_protocol_class_allowVolumeExpansion ]]; then
-          err_and_exit "Empty allowVolumeExpansion. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Empty allowVolumeExpansion. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         fi
         # if [[ -z $storage_server_protocol_class_mountPermissions ]]; then
-        #   err_and_exit "Empty mountPermissions. Configuration YAML file: '${k3s_settings}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        #   err_and_exit "Empty mountPermissions. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
         # fi
         
         # if ! [[ -v folder_cred_dic["${secret_folder_name}"] ]]; then
@@ -2231,7 +2231,7 @@ volumeBindingMode: WaitForFirstConsumer\""
 
               storage_class="$storage_server_name-csi-driver-nfs-$storage_server_protocol_class_name"
               #echo "        storage_class=$storage_class"  >&3
-              [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$k3s_settings'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
+              [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$cluster_plan_file'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
               #region
               txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
 kind: StorageClass
@@ -2285,7 +2285,7 @@ mountOptions:
 
               storage_class="$storage_server_name-csi-driver-smb-$storage_server_protocol_class_name"
               #echo "        storage_class=$storage_class"  >&3
-              [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$k3s_settings'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
+              [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$cluster_plan_file'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
               #region
               txt+="${separator}apiVersion: storage.k8s.io/v1 # line:${LINENO}
 kind: StorageClass
@@ -2339,7 +2339,7 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
         separator="---
 "
         #endregion
-        [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$k3s_settings'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
+        [[ -z $storage_class ]] && err_and_exit "Storage class name is empty. Cluster plan: '$cluster_plan_file'. Storage server: '$storage_server_name'. Protocol name: '$storage_server_protocol_name'"
         run "line '$LINENO';kubectl delete storageclass $storage_class --wait --ignore-not-found=true"
       done
     done

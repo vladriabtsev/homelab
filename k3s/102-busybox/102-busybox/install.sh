@@ -39,8 +39,8 @@ busybox-install-new()
   # https://rguske.github.io/post/using-windows-smb-shares-in-kubernetes/
   # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
 
-  if ! [[ -e ${k3s_settings} ]]; then
-    err_and_exit "Cluster plan file '${k3s_settings}' is not found" ${LINENO};
+  if ! [[ -e ${cluster_plan_file} ]]; then
+    err_and_exit "Cluster plan file '${cluster_plan_file}' is not found" ${LINENO};
   fi
   #echo $node_root_password
   if [[ -z $node_root_password ]]; then
@@ -188,7 +188,7 @@ then
 fi
 busybox_number_exclusive_params=0
 plan_is_provided=0
-if ! [[ -z $k3s_settings ]]; then 
+if ! [[ -z $cluster_plan_file ]]; then 
   $plan_is_provided=1; 
 fi
 while getopts "ovdhs:n:w:t:i:u:g:" opt
@@ -196,7 +196,7 @@ do
   case $opt in
     s )
       if [[ $plan_is_provided -eq 1 ]]; then err_and_exit "Cluster plan is provided already" ${LINENO} "$0"; fi
-      k3s_settings="$OPTARG"
+      cluster_plan_file="$OPTARG"
       plan_is_provided=1
       vlib.cluster_plan_read
     ;;

@@ -27,7 +27,7 @@ node_disks()
   declare -a -g node_mnt_path_array
   # https://mikefarah.gitbook.io/yq/usage/tips-and-tricks
   #echo $i_node
-  readarray disks < <(yq -o=j -I=0 ".node[$i_node].node_storage[]" < $k3s_settings)
+  readarray disks < <(yq -o=j -I=0 ".node[$i_node].node_storage[]" < $cluster_plan_file)
   local i_disk=0
   for disk in "${disks[@]}"; do
     eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$disk)"
@@ -151,8 +151,8 @@ node_disks()
 }
 gitea-install-new()
 {
-  if ! [[ -e ${k3s_settings} ]]; then
-    err_and_exit "Cluster plan file '${k3s_settings}' is not found" ${LINENO};
+  if ! [[ -e ${cluster_plan_file} ]]; then
+    err_and_exit "Cluster plan file '${cluster_plan_file}' is not found" ${LINENO};
   fi
   #echo $node_root_password
   if [[ -z $node_root_password ]]; then
@@ -173,7 +173,7 @@ gitea-install-new()
 
   declare -A node_disk_config
 
-  readarray nodes < <(yq -o=j -I=0 '.node[]' < $k3s_settings)
+  readarray nodes < <(yq -o=j -I=0 '.node[]' < $cluster_plan_file)
   i_node=0
   for node in "${nodes[@]}"; do
     eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
@@ -475,7 +475,7 @@ then
 fi
 gitea_number_exclusive_params=0
 plan_is_provided=0
-if ! [[ -z $k3s_settings ]]; then 
+if ! [[ -z $cluster_plan_file ]]; then 
   $plan_is_provided=1; 
 fi
 while getopts "ovdhs:w:t:i:u:g:" opt
@@ -483,7 +483,7 @@ do
   case $opt in
     s )
       if [[ $plan_is_provided -eq 1 ]]; then err_and_exit "Cluster plan is provided already" ${LINENO} "$0"; fi
-      k3s_settings="$OPTARG"
+      cluster_plan_file="$OPTARG"
       plan_is_provided=1
       vlib.cluster_plan_read
     ;;
