@@ -48,23 +48,6 @@ commands:
 - name: storage-speed
   help: Test speed for storage storage class
   flags:
-  - long: --all-drivers
-    help: Test speed for all general storage drivers
-  - long: --local
-    help: Test speed for local storage
-    conflicts: [--all-drivers]
-  - long: --csi-driver-nfs
-    help: Test speed for CSI driver NFS storage
-    conflicts: [--all-drivers]
-  - long: --csi-driver-smb
-    help: Test speed for CSI driver SMB storage
-    conflicts: [--all-drivers]
-  - long: --csi-synology
-    help: Test speed for Synology CSI storage (NFS, SMB, ISCSI)
-    conflicts: [--all-drivers]
-  - long: --longhorn
-    help: Test speed for Longhorn storage
-    conflicts: [--all-drivers]
   - long: --storage-class
     help: Storage class name
     arg: name

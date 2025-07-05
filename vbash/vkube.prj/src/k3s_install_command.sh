@@ -7,5 +7,7 @@ vlib.trace "$(inspect_args)"
 
 # shellcheck source=/dev/null
 source "${VBASH}/vkube-k3s.bash"
+vkube-k3s.command-init
+
 #echo "      vkube-k3s.install()" >&3
 vkube-k3s.install

@@ -898,38 +898,29 @@ function vlib.wait-for-success() {
   #echo "$#"
   #echo "$*"
 
-  #echo "$OPTIND"
-
-  local isopt=0
+  OPTIND=0
   while getopts "t:p:ov" opt
   do
     case $opt in
       t )
-        isopt=1
         wait_timeout=$OPTARG
       ;;
       p )
-        isopt=1
         wait_check_period=$OPTARG
       ;;
       o ) 
-        isopt=1
         opt_show_output='show-output-on'
       ;;
       v ) 
-        isopt=1
         verbose-on
       ;;
-      \? ) 
+      * ) 
       echo "Wrong parameter '$opt'"
       echo "For help: $(basename $0) -h"
       return 1
     esac
   done
-  #echo "$OPTIND"
-  if [[ $isopt -gt 0 ]]; then
-    shift $((OPTIND-1))
-  fi
+  shift $((OPTIND-1))
 
   if [ -z "$1" ]; then
     echo "Function 'vlib.wait-for-success' is expecting <bash command> parameter"
@@ -979,35 +970,29 @@ function vlib.wait-for-error() {
     return 1 # Exit and explain usage.
   fi
 
-  local isopt=0
+  OPTIND=0
   while getopts "est:p:ov" opt
   do
     case $opt in
       t )
-        isopt=1
         wait_timeout=$OPTARG
       ;;
       p )
-        isopt=1
         wait_check_period=$OPTARG
       ;;
       o ) 
-        isopt=1
         opt_show_output='show-output-on'
       ;;
       v ) 
-        isopt=1
         verbose-on
       ;;
-      \? ) 
+      * ) 
       echo "Wrong parameter '$opt'"
       echo "For help: $(basename $0) -h"
       return 1
     esac
   done
-  if [[ $isopt -gt 0 ]]; then
-    shift $((OPTIND-1))
-  fi
+  shift $((OPTIND-1))
 
   if [ -z "$1" ]; then
     echo "Function 'vlib.wait-for-error' is expecting <bash command> parameter"

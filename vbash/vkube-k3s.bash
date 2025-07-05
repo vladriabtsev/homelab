@@ -37,9 +37,8 @@ function vkube-k3s.is-app-ready() {
   return 0
 }
 function vkube-k3s.check-cluster-plan-path() {
-  vlib.trace "${args[--cluster-plan]}"
   if [[ -z ${args[--cluster-plan]} ]]; then
-    vlib.error-printf "Flag --cluster-plan is required.\n" >&2
+    err_and_exit "Flag --cluster-plan is required.\n"
   fi
   # https://tldp.org/LDP/Bash-Beginners-Guide/html/sect_07_01.html
   if [[ -a ${args[--cluster-plan]} ]]; then # file exists
@@ -57,7 +56,7 @@ function vkube-k3s.check-cluster-plan-path() {
         if [[ -a $__tmp2 ]]; then # file exists
           cluster_plan_file=$__tmp2
         else
-          vlib.error-printf "Can't find cluster plan file based on cluster plan parameter '%s'\n  Checked files '%s'\n  and '%s'" "${args[--cluster-plan]}" "$__tmp" "$__tmp2" >&2
+          err_and_exit "Can't find cluster plan file based on cluster plan parameter '${args[--cluster-plan]}'\n  Checked files '$__tmp'\n  and '$__tmp2'"
         fi
       fi
     else
@@ -65,9 +64,8 @@ function vkube-k3s.check-cluster-plan-path() {
     fi
   fi
   # find vkube data folder
-  #echo $cluster_plan_file
   vkube_data_folder=$(dirname $cluster_plan_file)
-  #echo $vkube_data_folder
+  vlib.trace "vkube_data_folder=$vkube_data_folder"
 }
 function vkube-k3s.cluster-plan-read() {
   # YML,JSON,XML,LUA,TOML https://mikefarah.gitbook.io/yq/how-it-works
@@ -468,10 +466,6 @@ function _install_all() {
 function vkube-k3s.install() {
   start_time=$(date +%s)
   install_step=0
-
-  vkube-k3s.check-cluster-plan-path
-
-  vkube-k3s.cluster-plan-read
 
   local __install_all=1
   install_storage_at_least_one=0
@@ -1188,10 +1182,11 @@ function vkube-k3s.csi-synology-uninstall() {
   fi
 }
 function vkube-k3s.storage-speedtest-job-create() {
-  [[ -z $1 ]] && vlib.error-printf "Missing \$1 namespace parameter"
-  [[ -z $2 ]] && vlib.error-printf "Missing \$2 storage class name parameter"
-  [[ -z $3 ]] && vlib.error-printf "Missing \$3 access mode parameter"
+  [[ -z $1 ]] && err_and_exit "Missing \$1 namespace parameter"
+  [[ -z $2 ]] && err_and_exit "Missing \$2 storage class name parameter"
+  [[ -z $3 ]] && err_and_exit "Missing \$3 access mode parameter"
   #[[ -z $3 ]] && vlib.error-printf "Missing \$3 storage size parameter"
+  [[ -z $vkube_data_folder ]] && err_and_exit "Missing \$data_folder"
 
   # https://www.talos.dev/v1.10/kubernetes-guides/configuration/synology-csi/
 
@@ -1251,8 +1246,10 @@ spec:
   vkube-k3s.is-namespace-exist-or-create $1
   vlib.trace "jobs=$txt"
   #kubectl apply -f - <<<"${txt}"
-  echo "$txt" > "$data_folder/storage-speed/generated-$2-write-read-job.yaml"
-  kubectl apply -f "$data_folder/storage-speed/generated-$2-write-read-job.yaml"
+  #run "line '$LINENO';echo '$txt' > '$vkube_data_folder/storage-speed/generated-$2-write-read-job.yaml'"
+  #run "line '$LINENO';kubectl apply -f '$vkube_data_folder/storage-speed/generated-$2-write-read-job.yaml'"
+  echo "$txt" > "$vkube_data_folder/storage-speed/generated-$2-write-read-job.yaml"
+  kubectl apply -f "$vkube_data_folder/storage-speed/generated-$2-write-read-job.yaml"
 }
 function vkube-k3s.busybox-install() {
   declare _storage_classes=()
@@ -2370,33 +2367,29 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
 }
 function vkube-k3s.-internal-storage-speed-test() {
   # $1 - storage driver
-  local storage="$1"
-  vlib.h1 "Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
-  #echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
-  kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
-  kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
-  run vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce
-  assert_success
-  vlib.h2  'Waiting...' >&3
+  local storage_class="$1"
+  #vlib.h1 "Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce"
+  vlib.h2  "Deleting previous speed test job for storage class '$storage_class'..."
+  kubectl delete job '${storage}-write-read' -n storage-speedtest --ignore-not-found=true
+  kubectl delete pvc '${storage}-test-pvc' -n storage-speedtest --ignore-not-found=true
+  sleep 5
+  #vlib.wait-for-error -p 5 -t 300 "kubectl get job ${storage_class}-write-read -n storage-speedtest"
+  vlib.h2  "Creating speed test job for storage class '$storage_class'..."
+  vkube-k3s.storage-speedtest-job-create storage-speedtest $storage_class ReadWriteOnce
   sleep 15
-  DETIK_CLIENT_NAMESPACE="storage-speedtest"
-  run try "at most 5 times every 30s to get pods named '^$storage-write-read' and verify that '.status.phase' is 'Succeeded'"
-  assert_success
+  #vlib.wait-for-success -p 10 -t 200 "kubectl get job ${storage_class}-write-read -n storage-speedtest"
   # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
-  kubectl wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!
-  assert_success
-  vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
+  #run "line '$LINENO';kubectl --timeout=600s wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!"
+  vlib.h2  "Waiting job completition..."
+  kubectl --timeout=600s wait --for=condition=Completed job/${storage_class}-write-read -n storage-speedtest & completion_pid=$!
+  vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs -l app=$storage_class-storage-speedtest,job=write-read)"
 }
 function vkube-k3s.storage-speed-test {
-  hl.blue "$((++install_step)). Storage class speed test. (Line:$LINENO)"
+  #hl.blue "$((++install_step)). Storage class speed test. (Line:$LINENO)"
+  vkube-k3s.-internal-storage-speed-test "${args[--storage-class]}"
+}
+function vkube-k3s.command-init() {
+  vkube-k3s.check-cluster-plan-path
 
-  vkube-k3s.-internal-storage-speed-test "local-path"
-  vkube-k3s.-internal-storage-speed-test "office-csi-driver-nfs-retain"
-  vkube-k3s.-internal-storage-speed-test "office-csi-driver-smb-tmp"
-  vkube-k3s.-internal-storage-speed-test "office-synology-csi-nfs-retain"
-  vkube-k3s.-internal-storage-speed-test "office-synology-csi-smb-tmp"
-  if kubectl get ns/longhorn-system; then
-    vkube-k3s.-internal-storage-speed-test "longhorn"
-  fi
-
+  vkube-k3s.cluster-plan-read
 }

@@ -5,6 +5,7 @@ vlib.trace "$(inspect_args)"
 
 # shellcheck source=/dev/null
 source "${VBASH}/vkube-k3s.bash"
+vkube-k3s.command-init
 
 #csi_synology_ver=${args[release]}
 csi_synology_secret_folder=${args[--secret-folder]}
