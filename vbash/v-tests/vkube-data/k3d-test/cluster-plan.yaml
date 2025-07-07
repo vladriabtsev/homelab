@@ -1,13 +1,13 @@
 cluster_name: test
+amount_nodes: 1 #3
 kubernetes_type: k3d # k3s, k3d, k8s
+k3d_ver: v5.8.3 # https://github.com/k3d-io/k3d/releases
+k3s_ver: v1.33.0+k3s1 # https://github.com/k3s-io/k3s/releases
+cert_name: id_rsa
 #cluster_token: kuku
 #cluster_token_file: ~/cluster_token_file
-amount_nodes: 1 #3
 # can be overridden by node settings
 node_user: vlad
-# https://github.com/k3s-io/k3s/releases
-k3s_ver: v1.33.0+k3s1 # v1.32.4+k3s1 v1.32.2+k3s1 v1.30.10+k3s1 # v1.31.6+k3s1 # v1.32.2+k3s1
-cert_name: id_rsa
 # https://github.com/kube-vip/kube-vip/releases
 kube_vip_use: 1
 kube_vip_ver: v0.9.1  # auto upgrade to latest if empty

@@ -252,6 +252,7 @@ testvercomp() {
 #endregion echo
 
 #region text
+  # bats test_tags=tag:text
   @test "text: count lines" {
     local txt="first line
   second line
@@ -262,6 +263,7 @@ testvercomp() {
     #echo "$cnt"
     [ $cnt -eq 3 ]
   }
+  # bats test_tags=tag:text
   @test "text: delete 'second line'" {
     local txt="first line
   second line
@@ -271,6 +273,7 @@ testvercomp() {
     local cnt=$(echo "$txt2" | wc -l)
     [ $cnt -eq 2 ]
   }
+  # bats test_tags=tag:text
   @test "text: delete two 'second line'" {
     local txt="first line
   second line
@@ -281,6 +284,7 @@ testvercomp() {
     local cnt=$(echo "$txt2" | wc -l)
     [ $cnt -eq 2 ]
   }
+  # bats test_tags=tag:text
   @test "text: delete 'second 99bb8649-3ded-404d-ad68-ce454262dfbb'" {
     local txt="first 2c30133e-3ab3-4171-bc9d-73bb9a50df3b
   second 99bb8649-3ded-404d-ad68-ce454262dfbb
@@ -290,7 +294,82 @@ testvercomp() {
     local cnt=$(echo "$txt2" | wc -l)
     [ $cnt -eq 2 ]
   }
+  # bats test_tags=tag:text
+  @test "text: bash extract substring between two strings" {
+    # Parameter expansion is best for simple, fixed start/end strings and when avoiding external commands is desired.
+    text="This is the string with the [desired_text] inside."
+    start_delimiter="["
+    end_delimiter="]"
+
+    temp_string=${text#*$start_delimiter}
+    result_string=${temp_string%%$end_delimiter*}
+
+    run echo "$result_string"
+    #echo "output=$output" >&3
+    assert_success
+    assert_output "desired_text"
+  }
+  # bats test_tags=tag:text
+  @test "text: sed extract substring between two strings" {
+    # sed offers more flexibility with regular expressions and is good for more complex patterns or when working with files.
+    text="This is the string with the [desired_text] inside."
+    start_pattern="\[" # Escape special characters if needed
+    end_pattern="\]"   # Escape special characters if needed
+
+    result_string=$(echo "$text" | sed -n "s/.*$start_pattern\(.*\)$end_pattern.*/\1/p")
+
+    run echo "$result_string"
+    #echo "output=$output" >&3
+    assert_success
+    assert_output "desired_text"
+  }
+  # bats test_tags=tag:text
+  @test "text: awk extract substring between two strings" {
+    # awk is excellent when the start and end strings can be treated as delimiters for field separation.
+    # https://www.geeksforgeeks.org/linux-unix/awk-command-unixlinux-examples/
+    # https://www.gnu.org/software/gawk/manual/gawk.html
+    text="This is the string with the [desired_text] inside."
+    start_delimiter="["
+    end_delimiter="]"
+
+    result_string=$(echo "$text" | awk -F"${start_delimiter}|${end_delimiter}" '{print $2}')
+
+    run echo "$result_string"
+    echo "output=$output" >&3
+    assert_success
+    assert_output "desired_text"
+  }
+  # bats test_tags=tag:text
+  @test "text: grep extract substring between two strings" {
+    # grep -P provides the power of PCRE for advanced pattern matching, including lookarounds.
+    text="This is the string with the [desired_text] inside."
+    start_pattern="\[" # Escape special characters if needed
+    end_pattern="\]"   # Escape special characters if needed
+
+    result_string=$(echo "$text" | grep -oP "(?<=${start_pattern}).*?(?=${end_pattern})")
+
+    run echo "$result_string"
+    #echo "output=$output" >&3
+    assert_success
+    assert_output "desired_text"
+  }
 #endregion text
+
+#region command version
+  # bats test_tags=tag:one
+  @test "kubectl version" {
+    # https://www.geeksforgeeks.org/linux-unix/awk-command-unixlinux-examples/
+    # https://www.gnu.org/software/gawk/manual/gawk.html
+
+    result_string=$(kubectl version | awk '/Client Version:/ {print $3}')
+    assert_success
+    run echo "$result_string"
+    #echo "output=$output" >&3
+    assert_success
+    #assert_output "desired_text"
+  }
+
+#endregion command version
 
 #region wait-for 
   # bats test_tags=tag:wait

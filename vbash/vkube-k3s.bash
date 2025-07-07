@@ -87,30 +87,11 @@ function vkube-k3s.cluster-plan-read() {
 
   if ! test -e ~/tmp; then  mkdir ~/tmp;  fi
 }
-function vkube-k3s.get-node-admin-password() {
-  local password
-  if [[ -n $node_admin_password_secret_file_path ]]; then
-    vlib.is-dir-exists-with-trace "$node_admin_password_secret_file_path"
-    password="$(vlib.secret-get-text-from-file $node_admin_password_secret_file_path)"
-  elif [[ -n $nodes_admin_password_secret_file_path ]]; then
-    vlib.is-dir-exists-with-trace "$nodes_admin_password_secret_file_path"
-    password="$(vlib.secret-get-text-from-file $nodes_admin_password_secret_file_path)"
-  elif [[ -n $node_admin_password_secret_pass_path ]]; then
-    vlib.is-pass-dir-exists-with-trace "$node_admin_password_secret_pass_path"
-    password="$(vlib.secret-get-text-from-pass $node_admin_password_secret_pass_path)"
-  elif [[ -n $nodes_admin_password_secret_pass_path ]]; then
-    vlib.is-pass-dir-exists-with-trace "$nodes_admin_password_secret_pass_path"
-    password="$(vlib.secret-get-text-from-pass $nodes_admin_password_secret_pass_path)"
-  else
-    err_and_exit "Node admin secret folder setting are missing. Both 'nodes_admin_password_secret_file_path' and 'node_admin_password_secret_file_path' are empty."
-  fi
-  echo "$password"
-}
 function vkube-k3s.is-namespace-exist {
   [ -z "$1" ] && err_and_exit "Missing namespace name \$1 parameter."
   if ! (kubectl get namespace "$1" > /dev/null ); then return 1; fi
 }
-function vkube-k3s.is-namespace-exist-or-create {
+function vkube-k3s.namespace-create-if-not-exist {
   [ -z "$1" ] && err_and_exit "Missing namespace name \$1 parameter."
   if ! (kubectl get namespace "$1" > /dev/null ); then 
     kubectl create namespace "$1"; 
@@ -192,7 +173,7 @@ function vkube-k3s.secret-create-from-folder {
   #echo "path=$path" >&3
   vlib.trace "secret folder eval path=$path"
   vkube-k3s.check-dir-data-for-secrets-with-trace "$path"
-  vkube-k3s.is-namespace-exist-or-create $1
+  vkube-k3s.namespace-create-if-not-exist $1
   kubectl delete secret $2 -n $1 --ignore-not-found=true
   kubectl create secret generic $2 -n $1 --from-file=username=$path/username.txt --from-file=password=$path/password.txt
 }
@@ -210,53 +191,133 @@ function vkube-k3s.secret-create-from-pass-folder {
   username="$(vlib.secret-get-text-from-pass $3/username.txt)"
   local password
   password="$(vlib.secret-get-text-from-pass $3/password.txt)"
-  vkube-k3s.is-namespace-exist-or-create $1
+  vkube-k3s.namespace-create-if-not-exist $1
   kubectl delete secret $2 -n $1 --ignore-not-found=true
   kubectl create secret generic $2 -n $1 --from-literal=username=$username --from-literal=password=$password
 }
+function vkube-k3s.get-node-admin-password() {
+  local password
+  if [[ -n $node_admin_password_secret_file_path ]]; then
+    vlib.is-dir-exists-with-trace "$node_admin_password_secret_file_path"
+    password="$(vlib.secret-get-text-from-file $node_admin_password_secret_file_path)"
+  elif [[ -n $nodes_admin_password_secret_file_path ]]; then
+    vlib.is-dir-exists-with-trace "$nodes_admin_password_secret_file_path"
+    password="$(vlib.secret-get-text-from-file $nodes_admin_password_secret_file_path)"
+  elif [[ -n $node_admin_password_secret_pass_path ]]; then
+    vlib.is-pass-dir-exists-with-trace "$node_admin_password_secret_pass_path"
+    password="$(vlib.secret-get-text-from-pass $node_admin_password_secret_pass_path)"
+  elif [[ -n $nodes_admin_password_secret_pass_path ]]; then
+    vlib.is-pass-dir-exists-with-trace "$nodes_admin_password_secret_pass_path"
+    password="$(vlib.secret-get-text-from-pass $nodes_admin_password_secret_pass_path)"
+  else
+    err_and_exit "Node admin secret folder setting are missing. Both 'nodes_admin_password_secret_file_path' and 'node_admin_password_secret_file_path' are empty."
+  fi
+  echo "$password"
+}
 function vkube-k3s.install_tools() {
-    # For testing purposes - in case time is wrong due to VM snapshots
-    sudo timedatectl set-ntp off
-    sudo timedatectl set-ntp on
+  # For testing purposes - in case time is wrong due to VM snapshots
+  sudo timedatectl set-ntp off
+  sudo timedatectl set-ntp on
 
-    # Copy SSH certs to ~/.ssh and change permissions
-    if [[ -z $cert_name ]]; then
-      run "line '$LINENO';cp /home/$user/ssh/{$certName,$certName.pub} /home/$user/.ssh"
-      run "line '$LINENO';chmod 600 /home/$user/.ssh/$certName"
-      run "line '$LINENO';chmod 644 /home/$user/.ssh/$certName.pub"
+  local _flag_precheck=0
+  local ver_curr
+
+  # Copy SSH certs to ~/.ssh and change permissions
+  # if ! [[ -z $cert_name ]]; then
+  #   run "line '$LINENO';cp $HOME/ssh/{$certName,$certName.pub} $HOME/.ssh"
+  #   run "line '$LINENO';chmod 600 $HOME/.ssh/$certName"
+  #   run "line '$LINENO';chmod 644 $HOME/.ssh/$certName.pub"
+  #   # run "line '$LINENO';cp /home/$user/ssh/{$certName,$certName.pub} /home/$user/.ssh"
+  #   # run "line '$LINENO';chmod 600 /home/$user/.ssh/$certName"
+  #   # run "line '$LINENO';chmod 644 /home/$user/.ssh/$certName.pub"
+  # fi
+
+  # Check jq
+  if ! echo '{"foo": 0}' | jq . &> /dev/null; then
+    _flag_precheck=1
+    err_and_exit "Tool 'jq' is not found. Need to be installed. See: https://github.com/jqlang/jq"
+  # else
+  #   ver_curr=$(jq | awk '/version/ {print $7}')
+  #   vlib.trace "Current jq version=$ver_curr"
+  #   vlib.check-github-release-version 'jq' https://api.github.com/repos/jqlang/jq/releases 'ver_curr'
+  fi
+
+  # Install kubectl if not already present
+  if ! command -v kubectl version > /dev/null 2> /dev/null; then
+    _flag_precheck=1
+    warn "Tool 'kubectl' is not found. Need to be installed.\n"
+    # echo -e " Kubectl not found, installing ..."
+    # run "line '$LINENO';curl -LO 'https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl'"
+    # run "line '$LINENO';sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl"
+  else
+    ver_curr=$(kubectl version | awk '/Client Version:/ {print $3}')
+    vlib.trace "Current kubectl version=$ver_curr"
+    vlib.check-github-release-version 'kubectl' https://api.github.com/repos/kubernetes/kubernetes/releases 'ver_curr'
+  fi
+
+  # Install helm
+  if ! command -v helm version &> /dev/null; then
+    # echo -e " Helm not found, installing ..."
+    # # run "line '$LINENO';curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
+    # # run "line '$LINENO';chmod 700 get_helm.sh"
+    # # run "line '$LINENO';./get_helm.sh"
+    # # run "line '$LINENO';rm ./get_helm.sh"
+    # curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    # chmod 700 get_helm.sh
+    # ./get_helm.sh
+    # rm ./get_helm.sh
+
+    _flag_precheck=1
+    warn "Tool 'helm' is not found. Need to be installed.\n"
+  else
+    ver_curr=$(helm version | awk -F '\"' '{print $2}')
+    vlib.trace "Current helm version=$ver_curr"
+    vlib.check-github-release-version 'helm' https://api.github.com/repos/helm/helm/releases 'ver_curr'
+  fi
+
+  if [[ "$kubernetes_type" = "k3d" ]]; then
+    # Install k3d
+    if ! command -v k3d version &> /dev/null; then
+      _flag_precheck=1
+      warn "Tool 'k3d' is not found. Need to be installed.\n"
+      # echo -e " k3d not found, installing ..."
+      # if [ -z $k3d_ver ]; then # latest version
+      #   wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+      # else # specific version
+      #   wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=$k3d_ver bash
+      # fi
+    else
+      ver_curr=$(k3d version | awk '/k3d version/ {print $3}')
+      vlib.trace "Current k3d version=$ver_curr"
+      vlib.check-github-release-version 'k3d' https://api.github.com/repos/k3d-io/k3d/releases 'ver_curr'
+      #ver_curr=$(k3d version | awk '/k3s version/ {print $2}')
     fi
-
-    # Install k3sup to local machine if not already present
+  else
+    # Install k3sup
     if ! command -v k3sup version &> /dev/null; then
-      run "line '$LINENO';curl -sLS https://get.k3sup.dev | sh"
-      run "line '$LINENO';sudo install k3sup /usr/local/bin/"
+      _flag_precheck=1
+      warn "Tool 'k3sup' is not found. Need to be installed. See: https://github.com/alexellis/k3sup\n"
+      # run "line '$LINENO';curl -sLS https://get.k3sup.dev | sh"
+      # run "line '$LINENO';sudo install k3sup /usr/local/bin/"
+    else
+      ver_curr=$(k3sup version | awk '/Version:/ {print $2}')
+      vlib.trace "Current k3sup version=$ver_curr"
+      vlib.check-github-release-version 'k3sup' https://api.github.com/repos/alexellis/k3sup/releases 'ver_curr'
     fi
+  fi
 
-    # Install Kubectl if not already present
-    if ! command -v kubectl version &> /dev/null; then
-      echo -e " Kubectl not found, installing ..."
-      run "line '$LINENO';curl -LO 'https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl'"
-      run "line '$LINENO';sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl"
-    fi
-
-    # Install helm
-    if ! command -v helm version &> /dev/null; then
-      echo -e " Helm not found, installing ..."
-      run "line '$LINENO';curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
-      run "line '$LINENO';chmod 700 get_helm.sh"
-      run "line '$LINENO';./get_helm.sh"
-      run "line '$LINENO';rm ./get_helm.sh"
-    fi
-
-    # Install brew https://brew.sh/
-    if ! command -v brew help &> /dev/null; then
-      err_and_exit "Homebrew not found, please install ..."  ${LINENO} "$0"
-      #/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-      #run "line '$LINENO';curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
-      #run "line '$LINENO';chmod 700 install.sh"
-      #run "line '$LINENO';./install.sh"
-      #run "line '$LINENO';rm ./install.sh"
-    fi
+  # Install brew https://brew.sh/
+  # if ! command -v brew help &> /dev/null; then
+  #   err_and_exit "Homebrew not found, please install ..."  ${LINENO} "$0"
+  #   #/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  #   #run "line '$LINENO';curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+  #   #run "line '$LINENO';chmod 700 install.sh"
+  #   #run "line '$LINENO';./install.sh"
+  #   #run "line '$LINENO';rm ./install.sh"
+  # fi
+  if [[ $_flag_precheck -eq 1 ]]; then
+    err_and_exit "Some tools are required to be installed."
+  fi
 }
 function gen_kube_vip_manifest() {
   #local version
@@ -540,6 +601,8 @@ function vkube-k3s.install() {
   local data_folder=$(dirname "${cluster_plan_file}")
   vlib.trace "data folder=$data_folder"
 
+  vkube-k3s.install_tools
+
   # Amount of nodes
   if [[ $amount_nodes =~ ^[0-9]{1,3}$ && $amount_nodes -gt 0 ]]; then
     inf "               amount_nodes: '$amount_nodes'\n"
@@ -563,7 +626,6 @@ function vkube-k3s.install() {
         # /usr/local/bin/k3s-uninstall.sh
         # /usr/local/bin/k3s-agent-uninstall.sh
 
-        vkube-k3s.install_tools
         install-k3s
         export KUBECONFIG=~/.kube/$cluster_name
         run "line '$LINENO';wait_kubectl_can_connect_cluster"
@@ -671,7 +733,7 @@ function vkube-k3s.install() {
   if [ -z $argo_cd_ver ]; then
   argo_cd_ver=$argo_cd_latest
   fi
-  run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create argocd"
+  run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist argocd"
   kubectl "line '$LINENO';kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/$argo_cd_ver/manifests/install.yaml"
   kubectl "line '$LINENO';kubectl apply -f ./argocd/svc.yaml"
 
@@ -692,7 +754,7 @@ function vkube-k3s.install() {
   #if ! [ "$rancher_latest" == "$rancher_ver" ]; then
   #  warn "Latest version of Rancher: '$rancher_latest', but installing: '$rancher_ver'\n"
   #fi
-  run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create cattle-system"
+  run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist cattle-system"
   # helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
   #run kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml
 
@@ -958,7 +1020,7 @@ function vkube-k3s.csi-synology-install() {
 
   csi_synology_namespace="synology-csi"
   vlib.trace "csi_synology_namespace=${csi_synology_namespace}"
-  run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $csi_synology_namespace"
+  run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist $csi_synology_namespace"
 
   readarray csi_synology_hosts < <(yq -o=j -I=0 ".hosts[]" "${synology_csi_plan}")
   vlib.trace "storage hosts count=${#csi_synology_hosts[@]}"
@@ -1243,7 +1305,7 @@ spec:
       restartPolicy: Never
 "
   #endregion read and write jobs
-  vkube-k3s.is-namespace-exist-or-create $1
+  vkube-k3s.namespace-create-if-not-exist $1
   vlib.trace "jobs=$txt"
   #kubectl apply -f - <<<"${txt}"
   #run "line '$LINENO';echo '$txt' > '$vkube_data_folder/storage-speed/generated-$2-write-read-job.yaml'"
@@ -1396,7 +1458,7 @@ spec:
   #endregion
   txt_deploy+="$txt_deploy_vol"
   vlib.trace "generated PVCs=\n$txt"
-  run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create ${args[--namespace]}"
+  run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist ${args[--namespace]}"
   run "line '$LINENO';kubectl apply -f - <<<\"${txt}\""
 
   hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
@@ -1529,20 +1591,57 @@ function vkube-k3s.busybox-uninstall() {
   run "line '$LINENO';kubectl delete namespace busybox-system"
 }
 function install-k3s() {
-  # K3S Version
-  k3s_latest=$(curl -sL https://api.github.com/repos/k3s-io/k3s/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-  if [ -z $k3s_ver ]; then
-    k3s_ver=$k3s_latest
-  fi
-  if [[ $k3s_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
-    inf "                    k3s_ver: '$k3s_ver'\n"
-  else
-    err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
-  fi
-  if ! [ "$k3s_latest" == "$k3s_ver" ]; then
-    warn "Latest version of K3s: '$k3s_latest', but installing: '$k3s_ver'\n"
-  fi
+  
+  case $kubernetes_type in
+    k3s )
+      # k3s Version
+      k3s_latest=$(curl -sL https://api.github.com/repos/k3s-io/k3s/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+      if [ -z $k3s_ver ]; then
+        k3s_ver=$k3s_latest
+      fi
+      if [[ $k3s_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
+        inf "                    k3s_ver: '$k3s_ver'\n"
+      else
+        err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
+      fi
+      if ! [ "$k3s_latest" == "$k3s_ver" ]; then
+        warn "Latest version of K3s: '$k3s_latest', but installing: '$k3s_ver'\n"
+      fi
+    ;;
+    k3d )
+      # k3d Version
+      run vlib.check-github-release-version 'k3d' https://api.github.com/repos/k3d-io/k3d/releases 'k3d_ver'
 
+      k3d_latest=$(curl -sL https://api.github.com/repos/k3d-io/k3d/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+      if [ -z $k3d_ver ]; then
+        k3d_ver=$k3d_latest
+      fi
+
+      k3s_latest=$(curl -sL https://api.github.com/repos/k3s-io/k3s/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+      if [ -z $k3s_ver ]; then
+        k3s_ver=$k3s_latest
+      else
+        run vlib.check-github-release-version 'k3sup' https://api.github.com/repos/alexellis/k3sup/releases 'k3s_ver'
+      fi
+      if [[ $k3s_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
+        inf "                    k3s_ver: '$k3s_ver'\n"
+      else
+        err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
+      fi
+      if ! [ "$k3s_latest" == "$k3s_ver" ]; then
+        warn "Latest version of K3s: '$k3s_latest', but installing: '$k3s_ver'\n"
+      fi
+
+      local ver_curr
+      ver_curr=$(k3sup version | awk '/Version:/ {print $2}')
+      run vlib.check-github-release-version 'k3sup' https://api.github.com/repos/alexellis/k3sup/releases 'ver_curr'
+
+    ;;
+    * ) 
+      err_and_exit "Error: Wrong 'kubernetes_type: $kubernetes_type' in cluster plan file. Expecting k3s or k3d."
+    ;;
+  esac
+  
   # kube vip
   if [[ $kube_vip_use -eq 1 ]]; then
     #kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r ".[0].name")
@@ -1817,11 +1916,12 @@ longhorn-install() {
   # https://stackoverflow.com/questions/53536907/kubectl-wait-for-condition-complete-timeout-30s
   run "line '$LINENO';vlib.wait-for-success -t 600 'kubectl get deployment longhorn-driver-deployer -n longhorn-system'"
   #run "line '$LINENO';sleep 120"
-  run "line '$LINENO';kubectl wait --for=condition=Available deployment/longhorn-driver-deployer -n longhorn-system --timeout=600s"
-  run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-attacher -n longhorn-system --timeout=600s"
-  run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-provisioner -n longhorn-system --timeout=600s"
-  run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-resizer -n longhorn-system --timeout=600s"
-  run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-snapshotter -n longhorn-system --timeout=600s"
+  run "line '$LINENO';kubectl wait --for=condition=Available deployment/longhorn-driver-deployer -n longhorn-system --timeout=30m"
+  run "line '$LINENO';sleep 200"
+  run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-attacher -n longhorn-system --timeout=30m"
+  run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-provisioner -n longhorn-system --timeout=30m"
+  run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-resizer -n longhorn-system --timeout=30m"
+  run "line '$LINENO';kubectl wait --for=condition=Available deployment/csi-snapshotter -n longhorn-system --timeout=30m"
 
   #run "helm upgrade longhorn longhorn/longhorn --namespace longhorn-system --values ./values.yaml --version $longhorn_ver"
 
@@ -2045,7 +2145,7 @@ volumeBindingMode: WaitForFirstConsumer\""
     run vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
     #echo ${csi_driver_nfs_ver:1}
     if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n ${csi_driver_nfs_namespace} | wc -l) -eq 0 ]]; then
-      run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $csi_driver_nfs_namespace"
+      run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist $csi_driver_nfs_namespace"
       # eval "csi_driver_nfs_secret_folder=$csi_driver_nfs_secret_folder"
       # run "line '$LINENO';vkube-k3s.check-data-dir-for-secrets '$csi_driver_nfs_secret_folder'"
       run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
@@ -2063,7 +2163,7 @@ volumeBindingMode: WaitForFirstConsumer\""
     run vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
     #echo $csi_driver_smb_ver
     if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n ${csi_driver_smb_namespace} | wc -l) -eq 0 ]]; then
-      run "line '$LINENO';vkube-k3s.is-namespace-exist-or-create $csi_driver_smb_namespace"
+      run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist $csi_driver_smb_namespace"
       #       if [[ -n $csi_driver_smb_secret_folder ]]; then
       #         eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
       #         vkube-k3s.vkube-k3s.check-dir-data-for-secrets "$csi_driver_smb_secret_folder"

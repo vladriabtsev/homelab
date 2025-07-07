@@ -166,6 +166,37 @@ https://www.twingate.com/docs/guides
 
 ### WSL
 
+* [Advanced settings configuration in WSL](https://learn.microsoft.com/en-us/windows/wsl/wsl-config)
+* [Welcome to WSLg](https://github.com/microsoft/wslg?tab=readme-ov-file#installing-wslg)
+* General additional Linux components for dev env in WSL distro
+  * Copy .ssl from Ubuntu
+    * `sudo chown -R owner:users directory`
+    * `sudo chmod -R o-rwx directory` remove access for other users
+    * `sudo chmod -R g-rwx directory` remove access for groups
+    * `sudo chmod -R u+rwX directory` add read/write file and read/write/exec access for user only
+* [openSUSE](https://en.opensuse.org/openSUSE:WSL)
+  * [Install and Set Up kubectl on Linux](https://v1-32.docs.kubernetes.io/docs/tasks/tools/install-kubectl-linux/)
+    * `cat <<EOF | sudo tee /etc/zypp/repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/
+enabled=1
+gpgcheck=1
+gpgkey=https://pkgs.k8s.io/core:/stable:/v1.32/rpm/repodata/repomd.xml.key
+EOF`
+    * `sudo zypper update`
+    * `sudo zypper install -y kubectl`
+  * [Install k3d](https://k3d.io/stable/)
+    * Specific release `wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.0.0 bash`
+    * Latest `wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash`
+  * ??? [Backup and migrate Kubernetes resources and persistent volumes](https://velero.io/)
+  * `sudo yast2`
+    * password-store [pass](https://www.passwordstore.org/)
+    * yq [yq](https://github.com/mikefarah/yq)
+* Ubuntu
+  * `sudo apt-get install`
+    * pass
+
 [DNS settings:](https://superuser.com/questions/1533291/how-do-i-change-the-dns-settings-for-wsl2)
 
 1 Turn off generation of /etc/resolv.conf by adding in /etc/wsl.conf: edit `[network]`, `generateResolvConf = false`

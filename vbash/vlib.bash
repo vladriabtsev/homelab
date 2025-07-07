@@ -428,9 +428,26 @@ function vlib.trace() {
   #echo "is trace: '$__is_trace'"
   [[ $__is_trace -eq 0 ]] && return 0
   if [[ ${#BASH_LINENO[@]} -gt 1 ]]; then
-    echo "$(green 'Trace:') $(green "$@") # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}, from file: ${BASH_SOURCE[2]}, line: ${BASH_LINENO[1]}"
+    #echo "$(green 'Trace:') $(green "$@") # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}, from file: ${BASH_SOURCE[2]}, line: ${BASH_LINENO[1]}"
+    echo "$(green 'Trace:') $(green "$@")"
+    echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
+    echo "  # file: ${BASH_SOURCE[2]}, line: ${BASH_LINENO[1]}, func: ${FUNCNAME[2]}"
   else
-    echo "$(green 'Trace:') $(green "$@") # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
+    echo "$(green 'Trace:') $(green "$@")"
+    echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
+  fi
+}
+function vlib.trace-yellow() {
+  #echo "is trace: '$__is_trace'"
+  [[ $__is_trace -eq 0 ]] && return 0
+  if [[ ${#BASH_LINENO[@]} -gt 1 ]]; then
+    #echo "$(green 'Trace:') $(green "$@") # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}, from file: ${BASH_SOURCE[2]}, line: ${BASH_LINENO[1]}"
+    echo "$(yellow 'Trace:') $(yellow "$@")"
+    echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
+    echo "  # file: ${BASH_SOURCE[2]}, line: ${BASH_LINENO[1]}, func: ${FUNCNAME[2]}"
+  else
+    echo "$(yellow 'Trace:') $(yellow "$@")"
+    echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
   fi
 }
 function vlib.error-printf() {
@@ -447,7 +464,6 @@ function vlib.error-printf() {
 
 # https://opensource.com/article/22/7/print-stack-trace-bash-scripts
 function _trap_failure() {
-  #echo "_trap_failure()"
   #set +xv # turns off debug logging, just in case
   ERR_LINENO=$1
   ERR_CODE=$2 # capture last command exit code
@@ -707,6 +723,24 @@ function vlib.bashly-init-command() {
   #if [[ ${args[--verbose]} || ${args[--debug]} || ${args[--xtrace]} ]]; then
   #  inspect_args
   #fi
+
+  ##############################
+  #   Debug variable changes   #
+  ##############################
+  # _monitored_variable_name="amount_nodes" # Change variable name as parameter
+  # trap 'vlib._monitor_variable_change' DEBUG   # Uncomment 'trap' line
+  # vlib.trace "_monitored_variable_name=$_monitored_variable_name"
+}
+vlib._monitor_variable_change() {
+  local new_value
+  local str="new_value=\"\${${_monitored_variable_name}}\""
+  #vlib.trace-yellow "DEBUG str='$str'"
+  eval "$str"
+  #vlib.trace-yellow "DEBUG new_value='$new_value'"
+  if [[ "${new_value}" != "${__old_monitored_variable}" ]]; then
+    vlib.trace-yellow "Variable '$_monitored_variable_name' changed from '${__old_monitored_variable}' to '${new_value}'"
+    __old_monitored_variable="${new_value}"
+  fi
 }
 # https://www.baeldung.com/linux/compare-dot-separated-version-string
 function vlib.vercomp() {
@@ -756,6 +790,7 @@ function vlib.check-github-release-version() {
     echo $usage
     err_and_exit "Missing third parameter"
   fi
+  #set -x
   #longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
   local latest=$(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
   if ! [ -z $latest ]; then
@@ -764,11 +799,14 @@ function vlib.check-github-release-version() {
     if [ -z $ver ]; then ver=$latest; fi
     if ! [ -z $ver2 ]; then
       if ! [ "$latest" == "$ver" ]; then
-        warn "Latest version of $name: '$latest', but installing: '$ver'\n"
+        warn "Latest version of $1: '$latest', but current: '$ver'\n"
       fi
     fi
     eval "$3=$ver"
+  else
+    err_and_exit "Latest version of $1 is not found"
   fi
+  #set +x
 }
 # Waits until the user presses any key to continue.
 function vlib.press-any-key() {

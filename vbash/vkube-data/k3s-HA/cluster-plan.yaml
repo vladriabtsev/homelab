@@ -6,7 +6,7 @@ amount_nodes: 3 #3
 # can be overridden by node settings
 node_user: vlad
 # https://github.com/k3s-io/k3s/releases
-k3s_ver: v1.33.1+k3s1 # v1.32.4+k3s1 v1.32.2+k3s1 v1.30.10+k3s1 # v1.31.6+k3s1 # v1.32.2+k3s1
+k3s_ver: v1.33.2+k3s1 # v1.32.4+k3s1 v1.32.2+k3s1 v1.30.10+k3s1 # v1.31.6+k3s1 # v1.32.2+k3s1
 cert_name: id_rsa
 # https://github.com/kube-vip/kube-vip/releases
 kube_vip_use: 1
