@@ -116,6 +116,8 @@ if ! shopt -oq posix; then
   fi
 fi
 
+#export TERM=screen-256color # tmux terminal description
+#export TERM=screen-256color-bce # use if tmux is not clearing the background colors correctly
 export GOROOT=/usr/local/go-1.23.4
 export GOPATH=$HOME/go
 export PATH=$GOPATH/bin:$GOROOT/bin:"$PATH:/snap/bin":$PATH

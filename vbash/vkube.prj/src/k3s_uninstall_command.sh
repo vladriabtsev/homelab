@@ -156,7 +156,7 @@ install_first_node()
     # https://blog.chkpwd.com/posts/k3s-ha-installation-kube-vip-and-metallb/
     if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$cluster_plan_file'." ${LINENO}; fi
     cluster_node_ip=$node_ip4
-    if [ $kube_vip_use -eq 1 ]; then
+    if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
       gen_kube_vip_manifest
     fi
     install_k3s_cmd_parm="server \
@@ -295,7 +295,7 @@ if ! [ "$k3s_latest" == "$k3s_ver" ]; then
 fi
 
 # kube vip
-if [[ $kube_vip_use -eq 1 ]]; then
+if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
   #kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r ".[0].name")
   kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
   if [ -z $kube_vip_ver ]; then
@@ -402,7 +402,7 @@ h2 "$((++install_step)). Install the storage drivers and classes. (Line:$LINENO)
 #     # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
 #   fi
 # fi
-if [ $csi_driver_smb_use -eq 1 ]; then
+if [ -n "$csi_driver_smb_use" ] && [ "$csi_driver_smb_use" -eq 1 ]; then
   # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/deploy/example/e2e_usage.md
   # https://rguske.github.io/post/using-windows-smb-shares-in-kubernetes/
   # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
@@ -422,7 +422,7 @@ if [ $csi_driver_smb_use -eq 1 ]; then
   # kubectl -n kube-system edit secrets smb-csi-creds
   # kubectl delete secret smb-csi-creds -n kube-system
 fi
-if [ $csi_driver_nfs_use -eq 1 ]; then
+if [ -n "$csi_driver_nfs_use" ] && [ "$csi_driver_nfs_use" -eq 1 ]; then
   vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
   #echo $csi_driver_nfs_ver
   if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=$csi_driver_nfs_ver -n kube-system | wc -l) -eq 0 ]]; then
@@ -431,7 +431,7 @@ if [ $csi_driver_nfs_use -eq 1 ]; then
     # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
   fi
 fi
-if [ $nfs_subdir_external_provisioner_use -eq 1 ]; then
+if [ -n "$nfs_subdir_external_provisioner_use" ] && [ "$nfs_subdir_external_provisioner_use" -eq 1 ]; then
   vlib.check-github-release-version 'nfs_subdir_external_provisioner' https://api.github.com/repos/kubernetes-sigs/nfs-subdir-external-provisioner/releases 'nfs_subdir_external_provisioner_ver'
   #echo $nfs_subdir_external_provisioner_ver
   if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$nfs_subdir_external_provisioner_ver -n kube-system | wc -l) -eq 0 ]]; then
@@ -474,7 +474,7 @@ h2 "$((++install_step)). Install Rancher. (Line:$LINENO)"
 ./105-rancher/install.sh -i $rancher_ver
 
 # pi-hole
-if [[ $pi_hole_use -eq 1 ]]; then
+if [ -n "$pi_hole_use" ] && [ "$pi_hole_use" -eq 1 ]; then
   h2 "$((++install_step)). Install Pi-hole. (Line:$LINENO)"
   ./101-pi-hole/install.sh -i $pi_hole_ver
 fi

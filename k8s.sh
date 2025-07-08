@@ -155,7 +155,7 @@ alias uekns='unset KUBE_NAMESPACE'
 # }
 
 # export kubeconfig
-ek() { set -x
+ek() { 
     if [ -n "$1" ]; then
         CONFIG=$(rg --max-depth 3 -l '^kind: Config$' $HOME/.kube/ 2>/dev/null \
             | grep $1)

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-  #while [[ $(kubectl get pods -l app=nginx -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; do
+  #while [[ $(kubectl get pods -l app=nginx -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}' > /dev/null 2> /dev/null) != "True" ]]; do
   # sleep 1
   #done
   # kubectl -n kube-system get secret smb-csi-creds -o jsonpath='{.data}'
@@ -242,7 +242,8 @@ function vkube-k3s.install_tools() {
   #   vlib.check-github-release-version 'jq' https://api.github.com/repos/jqlang/jq/releases 'ver_curr'
   fi
 
-  # Install kubectl if not already present
+  # Check kubectl
+  # https://v1-32.docs.kubernetes.io/docs/tasks/tools/install-kubectl-linux/
   if ! command -v kubectl version > /dev/null 2> /dev/null; then
     _flag_precheck=1
     warn "Tool 'kubectl' is not found. Need to be installed.\n"
@@ -255,7 +256,7 @@ function vkube-k3s.install_tools() {
     vlib.check-github-release-version 'kubectl' https://api.github.com/repos/kubernetes/kubernetes/releases 'ver_curr'
   fi
 
-  # Install helm
+  # Check helm
   if ! command -v helm version &> /dev/null; then
     # echo -e " Helm not found, installing ..."
     # # run "line '$LINENO';curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
@@ -315,7 +316,7 @@ function vkube-k3s.install_tools() {
   #   #run "line '$LINENO';./install.sh"
   #   #run "line '$LINENO';rm ./install.sh"
   # fi
-  if [[ $_flag_precheck -eq 1 ]]; then
+  if [ -n "$_flag_precheck" ] && [ $_flag_precheck -eq 1 ]; then
     err_and_exit "Some tools are required to be installed."
   fi
 }
@@ -429,7 +430,7 @@ function install_first_node() {
   # https://blog.chkpwd.com/posts/k3s-ha-installation-kube-vip-and-metallb/
   if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$cluster_plan_file'." ${LINENO}; fi
   cluster_node_ip=$node_ip4
-  if [ $kube_vip_use -eq 1 ]; then
+  if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
     gen_kube_vip_manifest
   fi
   install_k3s_cmd_parm="server --token kuku --cluster-init --disable traefik --disable servicelb --write-kubeconfig-mode 644 --tls-san $cluster_node_ip"
@@ -632,12 +633,12 @@ function vkube-k3s.install() {
 
         # https://kube-vip.io/docs/usage/cloud-provider/
         # https://kube-vip.io/docs/usage/cloud-provider/#install-the-kube-vip-cloud-provider
-        if [ $kube_vip_use -eq 1 ]; then
+        if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
           hl.blue "$((++install_step)). Install the kube-vip Cloud Provider. (Line:$LINENO)"
           inf "kube-vip (Line:$LINENO)\n"
           run vlib.check-github-release-version 'kube-vip' https://api.github.com/repos/kube-vip/kube-vip/releases 'kube_vip_ver'
           #echo ${kube_vip_ver}
-          if [[ $(kubectl get pods -lapp.kubernetes.io/name=kube-vip-ds,app.kubernetes.io/version=${kube_vip_ver} -n kube-system | wc -l) -eq 0 ]]; then
+          if [[ $(kubectl get pods -lapp.kubernetes.io/name=kube-vip-ds,app.kubernetes.io/version=${kube_vip_ver} -n kube-system > /dev/null 2> /dev/null | wc -l) -eq 0 ]]; then
             run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
             run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs --namespace kube-system --version $csi_driver_nfs_ver"
             # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
@@ -702,7 +703,7 @@ function vkube-k3s.install() {
   ./105-rancher/install.sh -i $rancher_ver
 
   # pi-hole
-  if [[ $pi_hole_use -eq 1 ]]; then
+  if [ -n "$pi_hole_use" ] && [ "$pi_hole_use" -eq 1 ]; then
   hl.blue "$((++install_step)). Install Pi-hole. (Line:$LINENO)"
   ./101-pi-hole/install.sh -i $pi_hole_ver
   fi
@@ -1193,20 +1194,20 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
   inf "synology-csi (Line:$LINENO)\n"
   #run vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
   # echo $csi_synology_ver
-  if [[ $(kubectl get pods -l app=controller,app.kubernetes.io/name=synology-csi -n $csi_synology_namespace | wc -l) -eq 0 ]]; then # not installed yet
+  if [[ $(kubectl get pods -l app=controller,app.kubernetes.io/name=synology-csi -n $csi_synology_namespace > /dev/null 2> /dev/null | wc -l) -eq 0 ]]; then # not installed yet
     eval "csi_synology_folder_with_dsm_secrets=$csi_synology_folder_with_dsm_secrets"
     vlib.trace "csi_synology_folder_with_dsm_secrets=$csi_synology_folder_with_dsm_secrets"
 
     # /etc/synology/client-info.yml
 
-    if kubectl get secret -n $csi_synology_namespace client-info-secret > /dev/null ; then
+    if kubectl get secret -n $csi_synology_namespace client-info-secret > /dev/null 2> /dev/null ; then
       run "line '$LINENO';kubectl delete secret -n $csi_synology_namespace client-info-secret --ignore-not-found=true"
     fi
     run "line '$LINENO';kubectl create secret -n $csi_synology_namespace generic client-info-secret --from-file="$csi_synology_folder_with_dsm_secrets/client-info.yml""
     #run "line '$LINENO';vkube-k3s.secret-create $csi_synology_namespace client-info-secret $csi_synology_folder_with_dsm_secrets/client-info.yml"
     run "line '$LINENO';kubectl apply -f $vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version"
 
-    if [ $csi_synology_snapshot_use -eq 1 ]; then
+    if [ -n "$csi_synology_snapshot_use" ] && [ "$csi_synology_snapshot_use" -eq 1 ]; then
       inf "Snapshort CRD and controller (Line:$LINENO)\n"
       run "line '$LINENO';kubectl apply -f '$vkube_data_folder/synology-csi/synology CRDs'"
       run "line '$LINENO';kubectl apply -f '$vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version/snapshotter/snapshotter.yaml'"
@@ -1237,7 +1238,7 @@ function vkube-k3s.csi-synology-uninstall() {
   local deploy_k8s_version="v1.20"
   inf "Uninstall synology-csi (Line:$LINENO)\n"
   run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version' --ignore-not-found"
-  if [ $csi_synology_snapshot_use -eq 1 ]; then
+  if [ -n "$csi_synology_snapshot_use" ] && [ "$csi_synology_snapshot_use" -eq 1 ]; then
     run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version/snapshotter/volume-snapshot-class.yml' --ignore-not-found"
     run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version/snapshotter/snapshotter.yaml' --ignore-not-found"
     run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/synology CRDs' --ignore-not-found"
@@ -1643,7 +1644,7 @@ function install-k3s() {
   esac
   
   # kube vip
-  if [[ $kube_vip_use -eq 1 ]]; then
+  if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
     #kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r ".[0].name")
     kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
     if [ -z $kube_vip_ver ]; then
@@ -1962,8 +1963,8 @@ longhorn-install() {
 
   # https://longhorn.io/docs/1.7.3/deploy/accessing-the-ui/longhorn-ingress/
   run "line '$LINENO';echo \"${longhorn_ui_admin_name}:$(openssl passwd -stdin -apr1 <<< ${longhorn_ui_admin_password})\" > ${HOME}/tmp/auth"
-  #run "line '$LINENO';kubectl -n longhorn-system create secret generic longhorn-ui-auth-basic --from-file=${HOME}/tmp/auth"
-  run "line '$LINENO';vkube-k3s.secret-create longhorn-system longhorn-ui-auth-basic ${HOME}/tmp/auth"
+  run "line '$LINENO';kubectl -n longhorn-system create secret generic longhorn-ui-auth-basic --from-file=${HOME}/tmp/auth"
+  #run "line '$LINENO';vkube-k3s.secret-create longhorn-system longhorn-ui-auth-basic ${HOME}/tmp/auth"
   run "line '$LINENO';rm ${HOME}/tmp/auth"
   run "line '$LINENO';kubectl -n longhorn-system apply -f ./101-longhorn/longhorn-ui-auth-basic.yaml"
 
@@ -2123,10 +2124,7 @@ function install-storage() {
 
   # kubectl get pods --all-namespaces -l app=controller,app.kubernetes.io/name=synology-csi -o yaml | grep image:
 
-  local data_folder=$(dirname "${cluster_plan_file}")
-  vlib.trace "data folder=$data_folder"
-
-  if [ $local_storage_use -eq 1 ]; then
+  if [ -n "$local_storage_use" ] && [ "$local_storage_use" -eq 1 ]; then
     inf "local (Line:$LINENO)\n"
     #region local storage
     run "line '$LINENO';kubectl apply -f - <<<\"apiVersion: storage.k8s.io/v1
@@ -2137,32 +2135,33 @@ provisioner: kubernetes.io/no-provisioner # indicates that this StorageClass doe
 volumeBindingMode: WaitForFirstConsumer\""
     #endregion local storage
   fi
-  if [ $csi_driver_nfs_use -eq 1 ]; then
+  if [ -n "$csi_driver_nfs_use" ] && [ "$csi_driver_nfs_use" -eq 1 ]; then
     inf "csi-driver-nfs (Line:$LINENO)\n"
     # https://github.com/kubernetes-csi/csi-driver-nfs
     # https://rudimartinsen.com/2024/01/09/nfs-csi-driver-kubernetes/
     # https://microk8s.io/docs/how-to-nfs
     run vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
     #echo ${csi_driver_nfs_ver:1}
-    if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n ${csi_driver_nfs_namespace} | wc -l) -eq 0 ]]; then
+    if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n ${csi_driver_nfs_namespace} > /dev/null 2> /dev/null | wc -l) -eq 0 ]]; then
       run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist $csi_driver_nfs_namespace"
       # eval "csi_driver_nfs_secret_folder=$csi_driver_nfs_secret_folder"
       # run "line '$LINENO';vkube-k3s.check-data-dir-for-secrets '$csi_driver_nfs_secret_folder'"
       run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
+      vlib.trace "csi_driver_nfs_ver=$csi_driver_nfs_ver"
       run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs -n ${csi_driver_nfs_namespace} --version $csi_driver_nfs_ver"
       # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
     else
       inf "... already installed. (Line:$LINENO)\n"
     fi
   fi
-  if [ $csi_driver_smb_use -eq 1 ]; then
+  if [ -n "$csi_driver_smb_use" ] && [ "$csi_driver_smb_use" -eq 1 ]; then
     inf "csi-driver-smb (Line:$LINENO)\n"
     # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/deploy/example/e2e_usage.md
     # https://rguske.github.io/post/using-windows-smb-shares-in-kubernetes/
     # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
     run vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
     #echo $csi_driver_smb_ver
-    if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n ${csi_driver_smb_namespace} | wc -l) -eq 0 ]]; then
+    if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n ${csi_driver_smb_namespace} > /dev/null 2> /dev/null | wc -l) -eq 0 ]]; then
       run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist $csi_driver_smb_namespace"
       #       if [[ -n $csi_driver_smb_secret_folder ]]; then
       #         eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
@@ -2193,15 +2192,15 @@ volumeBindingMode: WaitForFirstConsumer\""
     # kubectl -n kube-system edit secrets smb-csi-creds
     # kubectl delete secret smb-csi-creds -n kube-system
   fi
-  if [ $csi_synology_use -eq 1 ]; then
+  if [ -n "$csi_synology_use" ] && [ "$csi_synology_use" -eq 1 ]; then
     vkube-k3s.csi-synology-install
   fi
-  if [ $nfs_subdir_external_provisioner_use -eq 1 ]; then
+  if [ -n "$nfs_subdir_external_provisioner_use" ] && [ "$nfs_subdir_external_provisioner_use" -eq 1 ]; then
     inf "nfs-subdir-external-provisioner (Line:$LINENO)\n"
     run vlib.check-github-release-version 'nfs_subdir_external_provisioner' https://api.github.com/repos/kubernetes-sigs/nfs-subdir-external-provisioner/releases 'nfs_subdir_external_provisioner_ver'
     #echo $nfs_subdir_external_provisioner_ver
-    #if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$nfs_subdir_external_provisioner_ver -n kube-system | wc -l) -eq 0 ]]; then
-    if [[ $(kubectl get pods -lapp=nfs-subdir-external-provisioner -n kube-system | wc -l) -eq 0 ]]; then
+    #if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$nfs_subdir_external_provisioner_ver -n kube-system > /dev/null 2> /dev/null | wc -l) -eq 0 ]]; then
+    if [[ $(kubectl get pods -lapp=nfs-subdir-external-provisioner -n kube-system > /dev/null 2> /dev/null | wc -l) -eq 0 ]]; then
       run "line '$LINENO';helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/"
       # helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace kube-system --set image.tag=4.0.18 --set nfs.server=192.168.100.227 --set nfs.path=/volume1/k8s-nfs-ext
       run "line '$LINENO';helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner --namespace kube-system \
@@ -2311,7 +2310,7 @@ volumeBindingMode: WaitForFirstConsumer\""
         case $storage_server_protocol_name in
           csi-driver-nfs )
             #echo "      csi-driver-nfs use=$csi_driver_nfs_use"  >&3
-            if [ $csi_driver_nfs_use -eq 1 ]; then
+            if [ -n "$csi_driver_nfs_use" ] && [ "$csi_driver_nfs_use" -eq 1 ]; then
               secret_name="storage-${storage_server_name}-csi-driver-nfs"
               run vkube-k3s.secret-create "$csi_driver_nfs_namespace" "$secret_name" "$storage_server_protocol_secret_folder" "$storage_server_protocol_secret_pass_folder"
 
@@ -2365,7 +2364,7 @@ mountOptions:
           ;;
           csi-driver-smb )
             #echo "      csi-driver-smb use=$csi_driver_smb_use"  >&3
-            if [ $csi_driver_smb_use -eq 1 ]; then
+            if [ -n "$csi_driver_smb_use" ] && [ "$csi_driver_smb_use" -eq 1 ]; then
               vlib.trace "secret_folder_name=$secret_folder_name"
               vlib.trace "storage_server_protocol_class_smb_vers=$storage_server_protocol_class_smb_vers"
               secret_name="storage-${storage_server_name}-csi-driver-smb"
@@ -2445,19 +2444,19 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
   #echo "txt=$txt"  >&3
   if [[ ${#txt} -gt 0 ]]; then
     #vlib.trace "generated storage classes=\n$txt"
-    run "line '$LINENO';echo '$txt' > '$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
-    #run "line '$LINENO';kubectl apply edit-last-applied -f '$data_folder/generated-storage-classes.yaml'"
-    run "line '$LINENO';kubectl apply -f '$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
+    run "line '$LINENO';echo '$txt' > '$vkube_data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
+    #run "line '$LINENO';kubectl apply edit-last-applied -f '$vkube_data_folder/generated-storage-classes.yaml'"
+    run "line '$LINENO';kubectl apply -f '$vkube_data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
   fi
   #run "line '$LINENO';kubectl apply -f $VBASH/../k3s/storage-classes.yaml"
   case $kubernetes_type in
     k3s )
-      if [[ $longhorn_use -eq 1 ]]; then
+      if [ -n "$longhorn_use" ] && [ "$longhorn_use" -eq 1 ]; then
         longhorn-install
       fi
     ;;
     k3d )
-      if [[ $longhorn_use -eq 1 ]]; then
+      if [ -n "$longhorn_use" ] && [ "$longhorn_use" -eq 1 ]; then
         longhorn-install
       fi
     ;;

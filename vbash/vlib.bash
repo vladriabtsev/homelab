@@ -428,7 +428,6 @@ function vlib.trace() {
   #echo "is trace: '$__is_trace'"
   [[ $__is_trace -eq 0 ]] && return 0
   if [[ ${#BASH_LINENO[@]} -gt 1 ]]; then
-    #echo "$(green 'Trace:') $(green "$@") # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}, from file: ${BASH_SOURCE[2]}, line: ${BASH_LINENO[1]}"
     echo "$(green 'Trace:') $(green "$@")"
     echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
     echo "  # file: ${BASH_SOURCE[2]}, line: ${BASH_LINENO[1]}, func: ${FUNCNAME[2]}"
@@ -780,31 +779,35 @@ function vlib.check-github-release-version() {
   usage="Usage: $(basename $0) name github_releases_url name_of_version_variable"
   if [ -z "$1" ]; then
     echo $usage
-    err_and_exit "Missing first parameter"
+    err_and_exit "Missing \$1 - name"
   fi
   if [ -z "$2" ]; then
     echo $usage
-    err_and_exit "Missing second parameter"
+    # Sample: https://api.github.com/repos/longhorn/longhorn/releases
+    err_and_exit "Missing \$2 - github releases url"
   fi
   if [ -z "$3" ]; then
     echo $usage
-    err_and_exit "Missing third parameter"
+    err_and_exit "Missing \$3 - name of global variable used to return latest version"
   fi
   #set -x
   #longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-  local latest=$(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
+  local latest
+  latest=$(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
   if ! [ -z $latest ]; then
     eval local ver2=\"\$$3\"
     local ver=$ver2
     if [ -z $ver ]; then ver=$latest; fi
     if ! [ -z $ver2 ]; then
       if ! [ "$latest" == "$ver" ]; then
-        warn "Latest version of $1: '$latest', but current: '$ver'\n"
+        readarray -t releases < <(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0:3]")
+        inf "Latest 3 versions of '$1' releases: ${releases[*]}\n"
+        warn "Latest version of '$1': '$latest', but current: '$ver'\n"
       fi
     fi
     eval "$3=$ver"
   else
-    err_and_exit "Latest version of $1 is not found"
+    err_and_exit "Latest version of $1 is not found. Github URL: $2"
   fi
   #set +x
 }
