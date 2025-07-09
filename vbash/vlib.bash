@@ -791,18 +791,29 @@ function vlib.check-github-release-version() {
     err_and_exit "Missing \$3 - name of global variable used to return latest version"
   fi
   #set -x
-  #longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
   local latest
-  latest=$(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
+  if [ -z "$4" ]; then
+    latest=$(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
+  else
+    latest=$(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+  fi
   if ! [ -z $latest ]; then
+    if [ -z "$4" ]; then
+      readarray -t releases < <(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0:3]")
+    else
+      readarray -t releases < <(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0:3]")
+    fi
     eval local ver2=\"\$$3\"
     local ver=$ver2
-    if [ -z $ver ]; then ver=$latest; fi
+    if [ -z $ver ]; then 
+      ver=$latest; 
+      inf "Requested version of '$1' is empty. Will use '$ver' version. Latest: ${releases[*]}\n"
+    else
+      inf "Requested version of '$1' is '$ver'. Latest: ${releases[*]}\n"
+    fi
     if ! [ -z $ver2 ]; then
       if ! [ "$latest" == "$ver" ]; then
-        readarray -t releases < <(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0:3]")
-        inf "Latest 3 versions of '$1' releases: ${releases[*]}\n"
-        warn "Latest version of '$1': '$latest', but current: '$ver'\n"
+        warn "Latest version of '$1': '$latest', but current or requested: '$ver'\n"
       fi
     fi
     eval "$3=$ver"

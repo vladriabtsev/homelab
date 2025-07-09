@@ -390,7 +390,7 @@ install_tools
 
 # Amount of nodes
 if [[ $amount_nodes =~ ^[0-9]{1,3}$ && $amount_nodes -gt 0 ]]; then
-  inf "               amount_nodes: '$amount_nodes'\n"
+  inf "amount_nodes: '$amount_nodes'\n"
 else
   err_and_exit "Error: Invalid input for amount_nodes: '$amount_nodes'." ${LINENO}
 fi

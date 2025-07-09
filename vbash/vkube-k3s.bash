@@ -498,7 +498,6 @@ function _install_all() {
   i_node=0
   for node in "${nodes[@]}"; do
       eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
-      #inf "          k3s_node: id='$node_id', ip4='$node_ip4', eth='$kube_vip_interface', control plane='$node_is_control_plane', worker='$node_is_worker', name='$node_name', user='$node_user'"
       # k3s installation
       if [[ $i_node -eq 0 ]]; then # first cluster node
       first_node_address=$node_ip4
@@ -606,7 +605,7 @@ function vkube-k3s.install() {
 
   # Amount of nodes
   if [[ $amount_nodes =~ ^[0-9]{1,3}$ && $amount_nodes -gt 0 ]]; then
-    inf "               amount_nodes: '$amount_nodes'\n"
+    inf "amount_nodes: '$amount_nodes'\n"
   else
     err_and_exit "Error: Invalid input for amount_nodes: '$amount_nodes'." ${LINENO}
   fi
@@ -636,7 +635,7 @@ function vkube-k3s.install() {
         if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
           hl.blue "$((++install_step)). Install the kube-vip Cloud Provider. (Line:$LINENO)"
           inf "kube-vip (Line:$LINENO)\n"
-          run vlib.check-github-release-version 'kube-vip' https://api.github.com/repos/kube-vip/kube-vip/releases 'kube_vip_ver'
+          vlib.check-github-release-version 'kube-vip' https://api.github.com/repos/kube-vip/kube-vip/releases 'kube_vip_ver'
           #echo ${kube_vip_ver}
           if [[ $(kubectl get pods -lapp.kubernetes.io/name=kube-vip-ds,app.kubernetes.io/version=${kube_vip_ver} -n kube-system > /dev/null 2> /dev/null | wc -l) -eq 0 ]]; then
             run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
@@ -708,32 +707,9 @@ function vkube-k3s.install() {
   ./101-pi-hole/install.sh -i $pi_hole_ver
   fi
 
-
-  # longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-  # if [ -z $longhorn_ver ]; then
-  #   longhorn_ver=$longhorn_latest
-  # fi
-  # if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
-  #   warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
-  # fi
-  # run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
-  # # https://longhorn.io/docs/1.7.2/advanced-resources/longhornctl/install-longhornctl/
-  # if ! ($(longhornctl version > /dev/null ) || $(longhornctl version) != $longhorn_ver ); then
-  #   # Download the release binary.
-  #   run "line '$LINENO';curl -LO "https://github.com/longhorn/cli/releases/download/$longhorn_ver/longhornctl-linux-${ARCH}""
-  #   # Download the checksum for your architecture.
-  #   run line '$LINENO';curl -LO "https://github.com/longhorn/cli/releases/download/$longhorn_ver/longhornctl-linux-${ARCH}.sha256"
-  #   # Verify the downloaded binary matches the checksum.
-  #   run line '$LINENO';echo "$(cat longhornctl-linux-${ARCH}.sha256 | awk '{print $1}') longhornctl-linux-${ARCH}" | sha256sum --check
-  #   run line '$LINENO';sudo install longhornctl-linux-${ARCH} /usr/local/bin/longhornctl;longhornctl version
-  # fi
-
   # https://argo-cd.readthedocs.io/en/stable/
   hl.blue "$((++install_step)). Install Argo CD. (Line:$LINENO)"
-  argo_cd_latest=$(curl -sL https://api.github.com/repos/argoproj/argo-cd/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-  if [ -z $argo_cd_ver ]; then
-  argo_cd_ver=$argo_cd_latest
-  fi
+  vlib.check-github-release-version 'argocd' https://api.github.com/repos/argoproj/argo-cd/releases 'argo_cd_latest'
   run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist argocd"
   kubectl "line '$LINENO';kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/$argo_cd_ver/manifests/install.yaml"
   kubectl "line '$LINENO';kubectl apply -f ./argocd/svc.yaml"
@@ -747,10 +723,7 @@ function vkube-k3s.install() {
 
   # https://ranchermanager.docs.rancher.com/getting-started/installation-and-upgrade/install-upgrade-on-a-kubernetes-cluster
   hl.blue "$((++install_step)). Install Rancher. (Line:$LINENO)"
-  rancher_latest=$(curl -sL https://api.github.com/repos/rancher/rancher/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-  if [ -z $rancher_ver ]; then
-  rancher_ver=$rancher_latest
-  fi
+  vlib.check-github-release-version 'rancher' https://api.github.com/repos/rancher/rancher/releases 'rancher_latest'
   helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
   #if ! [ "$rancher_latest" == "$rancher_ver" ]; then
   #  warn "Latest version of Rancher: '$rancher_latest', but installing: '$rancher_ver'\n"
@@ -1192,7 +1165,7 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
 
   local deploy_k8s_version="v1.20"
   inf "synology-csi (Line:$LINENO)\n"
-  #run vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
+  #vlib.check-github-release-version 'synology-csi' https://api.github.com/repos/SynologyOpenSource/synology-csi/releases 'csi_synology_ver'
   # echo $csi_synology_ver
   if [[ $(kubectl get pods -l app=controller,app.kubernetes.io/name=synology-csi -n $csi_synology_namespace > /dev/null 2> /dev/null | wc -l) -eq 0 ]]; then # not installed yet
     eval "csi_synology_folder_with_dsm_secrets=$csi_synology_folder_with_dsm_secrets"
@@ -1596,47 +1569,17 @@ function install-k3s() {
   case $kubernetes_type in
     k3s )
       # k3s Version
-      k3s_latest=$(curl -sL https://api.github.com/repos/k3s-io/k3s/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-      if [ -z $k3s_ver ]; then
-        k3s_ver=$k3s_latest
-      fi
-      if [[ $k3s_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
-        inf "                    k3s_ver: '$k3s_ver'\n"
-      else
+      vlib.check-github-release-version 'k3s' https://api.github.com/repos/k3s-io/k3s/releases 'k3s_ver'
+      if ! [[ $k3s_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
         err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
-      fi
-      if ! [ "$k3s_latest" == "$k3s_ver" ]; then
-        warn "Latest version of K3s: '$k3s_latest', but installing: '$k3s_ver'\n"
       fi
     ;;
     k3d )
       # k3d Version
-      run vlib.check-github-release-version 'k3d' https://api.github.com/repos/k3d-io/k3d/releases 'k3d_ver'
-
-      k3d_latest=$(curl -sL https://api.github.com/repos/k3d-io/k3d/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-      if [ -z $k3d_ver ]; then
-        k3d_ver=$k3d_latest
+      vlib.check-github-release-version 'k3d' https://api.github.com/repos/k3d-io/k3d/releases 'k3d_ver'
+      if ! [[ $k3d_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
+        err_and_exit "Error: Invalid input for k3s_ver: '$k3d_ver'." ${LINENO}
       fi
-
-      k3s_latest=$(curl -sL https://api.github.com/repos/k3s-io/k3s/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-      if [ -z $k3s_ver ]; then
-        k3s_ver=$k3s_latest
-      else
-        run vlib.check-github-release-version 'k3sup' https://api.github.com/repos/alexellis/k3sup/releases 'k3s_ver'
-      fi
-      if [[ $k3s_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
-        inf "                    k3s_ver: '$k3s_ver'\n"
-      else
-        err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
-      fi
-      if ! [ "$k3s_latest" == "$k3s_ver" ]; then
-        warn "Latest version of K3s: '$k3s_latest', but installing: '$k3s_ver'\n"
-      fi
-
-      local ver_curr
-      ver_curr=$(k3sup version | awk '/Version:/ {print $2}')
-      run vlib.check-github-release-version 'k3sup' https://api.github.com/repos/alexellis/k3sup/releases 'ver_curr'
-
     ;;
     * ) 
       err_and_exit "Error: Wrong 'kubernetes_type: $kubernetes_type' in cluster plan file. Expecting k3s or k3d."
@@ -1645,49 +1588,21 @@ function install-k3s() {
   
   # kube vip
   if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
-    #kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r ".[0].name")
-    kvversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-    if [ -z $kube_vip_ver ]; then
-      $kube_vip_ver=$kvversion_latest
-    fi
+    vlib.check-github-release-version 'kube vip' https://api.github.com/repos/kube-vip/kube-vip/releases 'kube_vip_ver'
     # Version of Kube-VIP to deploy
-    if [[ $kube_vip_ver =~ ^v[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
-      inf "               kube_vip_ver: '$kube_vip_ver'\n"
-    else
+    if ! [[ $kube_vip_ver =~ ^v[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
       err_and_exit "Error: Invalid input for kube_vip_ver: '$kube_vip_ver'." ${LINENO}
     fi
-    if ! [ "$kvversion_latest" == "$kube_vip_ver" ]; then
-      warn "Latest version kube-vip: '$kvversion_latest', but installing: '$kube_vip_ver'\n"
-    fi
-
-    # kube-vip-cloud-provider
-    #kvcloudversion_latest=$(curl -sL https://api.github.com/repos/kube-vip/kube-vip-cloud-provider/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
-    #if [ -z $kube_vip_cloud_provider_ver ]; then
-    #  $kube_vip_cloud_provider_ver=$kvcloudversion_latest
-    #fi
-    #inf "kube_vip_cloud_provider_ver: '$kube_vip_cloud_provider_ver'\n"
-    #if ! [ "$kvcloudversion_latest" == "$kube_vip_cloud_provider_ver" ]; then
-    #  warn "Latest version kube-vip-cloud-provider: '$kvcloudversion_latest', but installing: '$kube_vip_cloud_provider_ver'\n"
-    #fi
-
     # Kube-VIP mode
     if ! [[ "$kube_vip_mode" == "ARP" || "BGP" ]]; then
       err_and_exit "Error: Invalid kube_vip_mode: '$kube_vip_mode'. Expected 'ARP' or 'BGP'." ${LINENO}
     fi
-    inf "              kube_vip_mode: '$kube_vip_mode'\n"
+    inf "kube_vip_mode: '$kube_vip_mode'\n"
   fi
 
 
   # MetalLB
-  #metal_lb_latest=$(curl -sL https://api.github.com/repos/metallb/metallb/releases | jq -r ".[0].tag_name")
-  metal_lb_latest=$(curl -sL https://api.github.com/repos/metallb/metallb/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-  if [ -z $metal_lb_ver ]; then
-    $metal_lb_ver=$metal_lb_latest
-  fi
-  inf "               metal_lb_ver: '$metal_lb_ver'\n"
-  if ! [ "$metal_lb_latest" == "$metal_lb_ver" ]; then
-    warn "Latest version MetalLB: '$metal_lb_latest', but installing: '$metal_lb_ver'\n"
-  fi
+  vlib.check-github-release-version 'MetalLB' https://api.github.com/repos/metallb/metallb/releases 'metal_lb_ver' 1
 
   # Nodes
   #readarray nodes < <(yq '.nodes[] |= sort_by(.node_id)' < $cluster_plan_file)
@@ -1710,19 +1625,6 @@ function install-k3s() {
     done
   else
     _install_all
-  fi
-}
-#region Longhorn
-longhorn-check-version()
-{
-  #longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
-  longhorn_latest=$(curl -sL https://api.github.com/repos/longhorn/longhorn/releases | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
-  longhorn_ver="$1"
-  if [ -z $longhorn_ver ]; then longhorn_ver=$longhorn_latest; fi
-  if ! [ -z $2 ]; then
-    if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
-      warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
-    fi
   fi
 }
 node_disks()
@@ -2140,14 +2042,14 @@ volumeBindingMode: WaitForFirstConsumer\""
     # https://github.com/kubernetes-csi/csi-driver-nfs
     # https://rudimartinsen.com/2024/01/09/nfs-csi-driver-kubernetes/
     # https://microk8s.io/docs/how-to-nfs
-    run vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
+    vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
+    vlib.trace "csi_driver_nfs_ver=$csi_driver_nfs_ver"
     #echo ${csi_driver_nfs_ver:1}
     if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n ${csi_driver_nfs_namespace} > /dev/null 2> /dev/null | wc -l) -eq 0 ]]; then
       run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist $csi_driver_nfs_namespace"
       # eval "csi_driver_nfs_secret_folder=$csi_driver_nfs_secret_folder"
       # run "line '$LINENO';vkube-k3s.check-data-dir-for-secrets '$csi_driver_nfs_secret_folder'"
       run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
-      vlib.trace "csi_driver_nfs_ver=$csi_driver_nfs_ver"
       run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs -n ${csi_driver_nfs_namespace} --version $csi_driver_nfs_ver"
       # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
     else
@@ -2159,7 +2061,7 @@ volumeBindingMode: WaitForFirstConsumer\""
     # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/deploy/example/e2e_usage.md
     # https://rguske.github.io/post/using-windows-smb-shares-in-kubernetes/
     # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
-    run vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
+    vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
     #echo $csi_driver_smb_ver
     if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n ${csi_driver_smb_namespace} > /dev/null 2> /dev/null | wc -l) -eq 0 ]]; then
       run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist $csi_driver_smb_namespace"
@@ -2197,7 +2099,7 @@ volumeBindingMode: WaitForFirstConsumer\""
   fi
   if [ -n "$nfs_subdir_external_provisioner_use" ] && [ "$nfs_subdir_external_provisioner_use" -eq 1 ]; then
     inf "nfs-subdir-external-provisioner (Line:$LINENO)\n"
-    run vlib.check-github-release-version 'nfs_subdir_external_provisioner' https://api.github.com/repos/kubernetes-sigs/nfs-subdir-external-provisioner/releases 'nfs_subdir_external_provisioner_ver'
+    vlib.check-github-release-version 'nfs_subdir_external_provisioner' https://api.github.com/repos/kubernetes-sigs/nfs-subdir-external-provisioner/releases 'nfs_subdir_external_provisioner_ver'
     #echo $nfs_subdir_external_provisioner_ver
     #if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=$nfs_subdir_external_provisioner_ver -n kube-system > /dev/null 2> /dev/null | wc -l) -eq 0 ]]; then
     if [[ $(kubectl get pods -lapp=nfs-subdir-external-provisioner -n kube-system > /dev/null 2> /dev/null | wc -l) -eq 0 ]]; then
