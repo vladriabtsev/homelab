@@ -1,4 +1,4 @@
-apiVersion: storage.k8s.io/v1 # line:2412
+apiVersion: storage.k8s.io/v1 # line:2301
 kind: StorageClass
 metadata:
   name: office-csi-driver-smb-tmp
@@ -29,25 +29,4 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
   - mfsymlinks
   - cache=strict
   - noserverino  # required to prevent data corruption
----
-apiVersion: storage.k8s.io/v1 # line:2342
-kind: StorageClass
-metadata:
-  name: office-csi-driver-nfs-retain
-  labels:
-    vkube/storage-type: csi-driver-nfs
-provisioner: nfs.csi.k8s.io
-parameters: # https://github.com/kubernetes-csi/csi-driver-nfs
-  server: 192.168.100.227
-  share: "/volume1/csi-driver-nfs"
-  # csi.storage.k8s.io/provisioner-secret is only needed for providing mountOptions in DeleteVolume
-  # csi.storage.k8s.io/provisioner-secret-name: "mount-options"
-  # csi.storage.k8s.io/provisioner-secret-namespace: "default"
-  # ??? mountPermissions: ""
-reclaimPolicy: Retain
-volumeBindingMode: Immediate
-#allowVolumeExpansion: false
-mountOptions:
-  - hard
-  - nfsvers=4.0
 

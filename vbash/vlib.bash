@@ -797,28 +797,31 @@ function vlib.check-github-release-version() {
   else
     latest=$(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
   fi
+  eval local ver2=\"\$$3\"
+  local ver=$ver2
   if ! [ -z $latest ]; then
     if [ -z "$4" ]; then
       readarray -t releases < <(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0:3]")
     else
       readarray -t releases < <(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0:3]")
     fi
-    eval local ver2=\"\$$3\"
-    local ver=$ver2
     if [ -z $ver ]; then 
       ver=$latest; 
       inf "Requested version of '$1' is empty. Will use '$ver' version. Latest: ${releases[*]}\n"
     else
-      inf "Requested version of '$1' is '$ver'. Latest: ${releases[*]}\n"
-    fi
-    if ! [ -z $ver2 ]; then
       if ! [ "$latest" == "$ver" ]; then
-        warn "Latest version of '$1': '$latest', but current or requested: '$ver'\n"
+        warn "Requested version of '$1' is '$ver'. Latest: ${releases[*]}\n"
+      else
+        inf "Requested version of '$1' is '$ver'. Latest: ${releases[*]}\n"
       fi
     fi
     eval "$3=$ver"
   else
-    err_and_exit "Latest version of $1 is not found. Github URL: $2"
+    if [ -z $ver ]; then 
+      err_and_exit "Latest version of $1 is not found. Github URL: $2"
+    else
+      err_and_exit "Requested version of '$1' is '$ver'. Latest version of $1 is not found. Github URL: $2"
+    fi
   fi
   #set +x
 }
@@ -1182,6 +1185,7 @@ function vlib.is-dir-exists-with-trace {
   [ -d "$1" ] || err_and_exit "Can't find '$1' directory."
   return 0
 }
+#region secret
 function vlib.is-pass-dir-exists {
   ################################################################
   #     'pass' password manager
@@ -1239,12 +1243,13 @@ function vlib.secret-get-text {
   if [[ -n $1 && -n $2 ]]; then
     err_and_exit "Both file path '\$1' and 'pass' password manager path '\$2' are not empty. Expecting only one path."
   fi
-  if [[ -n $3 ]]; then
+  if [[ -n $1 ]]; then
     vlib.secret-get-text-from-file $1
   else
     vlib.secret-get-text-from-pass $2
   fi
 }
+#endregion secret
 function vlib.exec-command {
   # Usage: vlib.exec-command ls ~
   # https://unix.stackexchange.com/questions/444946/how-can-we-run-a-command-stored-in-a-variable

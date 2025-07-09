@@ -6,7 +6,7 @@ amount_nodes: 3 #3
 # can be overridden by node settings
 node_user: vlad
 # https://github.com/k3s-io/k3s/releases
-k3s_ver: v1.32.6+k3s1
+k3s_ver: v1.33.2+k3s1
 cert_name: id_rsa
 # https://github.com/kube-vip/kube-vip/releases
 kube_vip_use: 1
@@ -98,9 +98,9 @@ node:
 local_storage_use: 1
 
 # https://github.com/kubernetes-csi/csi-driver-nfs
-csi_driver_nfs_use: 1
+csi_driver_nfs_use: 0 # ??? installed kube-system anyway
 csi_driver_nfs_ver: v4.11.0 # auto upgrade to latest if empty
-csi_driver_nfs_namespace: csi-nfs
+csi_driver_nfs_namespace: csi-nfs # kube-system # csi-nfs
 
 # # https://github.com/kubernetes-sigs/nfs-subdir-external-provisioner
 # # https://hbayraktar.medium.com/how-to-setup-dynamic-nfs-provisioning-in-a-kubernetes-cluster-cbf433b7de29
