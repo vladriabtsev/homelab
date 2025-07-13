@@ -2374,13 +2374,17 @@ function vkube-k3s.-internal-storage-speed-test() {
   # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
   #run "line '$LINENO';kubectl --timeout=600s wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!"
   vlib.h2  "Waiting job for create..."
-  kubectl wait --for=create job/${storage_class}-write-read -n storage-speedtest --timeout=600s
+  kubectl wait --for=create job/${storage_class}-write-read -n storage-speedtest -n storage-speedtest --timeout=600s
+  #kubectl wait --for=jsonpath='{.status.phase}'=Running pod/${storage_class}-write-read -n storage-speedtest --timeout=600s
+  #kubectl wait --for=create pod/${storage_class}-write-read -n storage-speedtest --timeout=600s
   vlib.h2  "Waiting job completition..."
   #vlib.wait-for-success -t 600 -p 10 "kubectl get job/${storage_class}-write-read -n storage-speedtest"
   kubectl wait --for=condition=Complete job/${storage_class}-write-read -n storage-speedtest --timeout=600s & completion_pid=$!
-  sleep 15
+  #kubectl wait --for=condition=available pod/${storage_class}-write-read -n storage-speedtest --timeout=600s
+  #sleep 30
   #vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs -l app=$storage_class-storage-speedtest,job=write-read)"
-  vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs job/${storage_class}-write-read)"
+  vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs job/${storage_class}-write-read --timestamps --follow)"
+  #vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs job/${storage_class}-write-read) --timestamps=true --follow=true"
 }
 function vkube-k3s.storage-speed-test {
   #hl.blue "$((++install_step)). Storage class speed test. (Line:$LINENO)"

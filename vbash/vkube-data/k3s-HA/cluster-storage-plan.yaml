@@ -51,7 +51,7 @@ hosts:
     classes:
     - name: tmp
       mountPermissions: '0755'
-      mountOptions_nfsvers: 4.1
+      mountOptions_nfsvers: 4.0
       reclaimPolicy: Delete
       allowVolumeExpansion: false
     - name: retain

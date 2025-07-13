@@ -59,7 +59,7 @@ parameters: # https://github.com/SynologyOpenSource/synology-csi
   location: "/volume3" # if blank, the CSI driver will choose a volume on DSM with available storage to create the volumes
   mountPermissions: "0755"
 mountOptions:
-  - nfsvers=4.1
+  - nfsvers=4
 reclaimPolicy: Delete
 allowVolumeExpansion: false
 ---
@@ -76,7 +76,7 @@ parameters: # https://github.com/SynologyOpenSource/synology-csi
   location: "/volume3" # if blank, the CSI driver will choose a volume on DSM with available storage to create the volumes
   mountPermissions: "0755"
 mountOptions:
-  - nfsvers=4.1
+  - nfsvers=4
 reclaimPolicy: Retain
 allowVolumeExpansion: false
 ---
@@ -93,7 +93,7 @@ parameters: # https://github.com/SynologyOpenSource/synology-csi
   location: "/volume3" # if blank, the CSI driver will choose a volume on DSM with available storage to create the volumes
   mountPermissions: "0755"
 mountOptions:
-  - nfsvers=4.1
+  - nfsvers=4
 reclaimPolicy: Retain
 allowVolumeExpansion: true
 
