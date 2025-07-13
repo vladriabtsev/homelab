@@ -1,3 +1,4 @@
+export TERM=xterm-256color
 # ~/.bashrc: executed by bash(1) for non-login shells.
 # see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
 # for examples
@@ -120,7 +121,8 @@ fi
 #export TERM=screen-256color-bce # use if tmux is not clearing the background colors correctly
 export GOROOT=/usr/local/go-1.23.4
 export GOPATH=$HOME/go
-export PATH=$GOPATH/bin:$GOROOT/bin:"$PATH:/snap/bin":$PATH
+export PATH=$GOPATH/bin:$GOROOT/bin:$HOME/.tmuxifier/bin:"$PATH:/snap/bin":$PATH
+export EDITOR='nano'
 
 source <(kubectl completion bash)
 source <(velero completion bash)
@@ -130,23 +132,32 @@ complete -F __start_velero v
 #alias bashly='docker run --rm -it --user $(id -u):$(id -g) --volume "$PWD:/app" dannyben/bashly'
 
 homelab() {
+  # $1 - environment: k3s-test, k3s-HA
   cd /mnt/d//dev/homelab
   cp ~/.bashrc .bashrc
   source ealias.sh
   source k8s.sh
   #sudo cp k8s.sh /usr/local/bin/
-  if [ -z "$SSH_AUTH_SOCK" ]; then
-    eval "$(ssh-agent -s)" # start ssh agent
-    ssh-add ~/.ssh/id_rsa
+#  if [ -z "$SSH_AUTH_SOCK" ]; then
+#    eval "$(ssh-agent -s)" # start ssh agent
+#    ssh-add ~/.ssh/id_rsa
+#  fi
+  if [ -n "$1" ]; then
+    if [[ "$1" = "k3s-test" ]]; then
+      cd vbash
+      cd v-tests
+    elif [[ "$1" = "k3s-HA" ]]; then
+      cd vbash
+      cd vkube.prj
+      ek k3s-HA
+    fi
   fi
-  cd vbash
-  cd vkube.prj
 }
 complete -o default -F __start_kubectl k
 #[[ -f ~/.bashmatic/init.sh ]] && source ~/.bashmatic/init.sh
 #export PATH="${PATH}:${BASHMATIC_HOME}/bin"
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-export PATH=$HOME/.local/bin:$HOME/.rubies/ruby-3.4.3/bin:$PATH
+export PATH=$HOME/.rubies/ruby-3.4.3/bin:$PATH
 export VBASH=/mnt/d/dev/homelab/vbash
 export BASHLY_SETTINGS_PATH=$VBASH/bashly-settings.yml
 export MY_LOG_DIR=$VBASH/logs/

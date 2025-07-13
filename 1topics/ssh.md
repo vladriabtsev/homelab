@@ -103,3 +103,14 @@ Consider to use [Fail2ban](https://github.com/fail2ban/fail2ban) to ban hosts th
 
 
 ssh-copy-id -i ~/.ssh/tatu-key-ecdsa user@host
+
+## SSH into BASD and WSL2 on Windows 10 from an external machine
+
+* use tailscale instead !!?
+* https://jmmv.dev/2022/02/wsl-ssh-access.html
+* https://medium.com/@wuzhenquan/windows-and-wsl-2-setup-for-ssh-remote-access-013955b2f421
+* https://randombytes.substack.com/p/bridged-networking-under-wsl
+* [SSH into BASD and WSL2 on Windows 10 from an external machine](https://www.hanselman.com/blog/the-easy-way-how-to-ssh-into-bash-and-wsl2-on-windows-10-from-an-external-machine) - latest
+  * https://www.hanselman.com/blog/how-to-ssh-into-wsl2-on-windows-10-from-an-external-machine - old
+  * https://www.hanselman.com/blog/how-to-ssh-into-a-windows-10-machine-from-linux-or-windows-or-anywhere - oldest
+* https://superuser.com/questions/1622581/ssh-into-wsl-from-another-machine-on-the-network

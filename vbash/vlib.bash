@@ -982,9 +982,9 @@ function vlib.wait-for-success() {
     return 1
   fi
 
-  echo "wait_timeout=$wait_timeout"
-  echo "wait_check_period=$wait_check_period"
-  echo "<bash command>='$1'"
+  # echo "wait_timeout=$wait_timeout"
+  # echo "wait_check_period=$wait_check_period"
+  # echo "<bash command>='$1'"
 
   #set -x
 

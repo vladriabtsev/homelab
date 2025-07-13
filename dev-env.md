@@ -14,6 +14,7 @@
       - [Kubernetes](#kubernetes)
     - [Remote access](#remote-access)
   - [My PC](#my-pc)
+    - [WSL utils](#wsl-utils)
     - [WSL](#wsl)
       - [Bash](#bash-1)
         - [Bashmatic](#bashmatic)
@@ -163,6 +164,28 @@ https://www.youtube.com/watch?v=1lZ3FQSv-wI
 https://www.twingate.com/docs/guides
 
 ## My PC
+
+### WSL utils
+
+[How do I install upstream versions of popular CLI apps?](https://askubuntu.com/questions/1446390/how-do-i-install-upstream-versions-of-popular-cli-apps-nano-htop-tmux-and-lna)
+
+* [htop](https://htop.dev/)
+* [nano](https://www.nano-editor.org/)
+* [tmux](https://github.com/tmux/tmux/wiki)
+* [Log File Navigator](https://lnav.org/)
+
+[The Tools I Use](https://nickjanetakis.com/blog/the-tools-i-use)
+
+* [neovim](https://neovim.io/)
+* [Microsoft terminal](https://github.com/microsoft/terminal)
+* [fzf](https://nickjanetakis.com/blog/fuzzy-search-your-bash-history-in-style-with-fzf)
+* [Dexpot](https://www.dexpot.de/?lang=en)
+  * [Dexpot for managing virtual work spaces](https://nickjanetakis.com/blog/see-how-virtual-desktops-let-you-get-more-done-in-less-time)
+* [Ditto](https://ditto-cp.sourceforge.io/)
+  * [Boosting Software Developer Productivity with a Clipboard Manager](https://nickjanetakis.com/blog/boosting-software-developer-productivity-with-a-clipboard-manager)
+* Finances
+  * GnuCash, Ledger or XYZ
+  * https://github.com/nickjj/plutus
 
 ### WSL
 

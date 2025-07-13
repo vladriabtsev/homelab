@@ -4,17 +4,6 @@ help: k3s kubernetes
 commands:
 - name: install
   help: Install k3s kubernetes
-  # args: &cluster_plan
-  # - name: cluster_plan
-  #   help: |-
-  #     Cluster plan:
-  #     - Explicit path to cluster plan Yaml file.
-  #     - Subfolder name of 'vkube-data' folder or subfolder 
-  #       in a current folder. Expecting to find cluster plan 
-  #       YAML file with same name as subfolder.
-
-  #     Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command itself.
-  #   default: k3s-HA
   flags:
   - long: --core
     help: Install core cluster components. Install all if --core, --storage, and --apps flags are not set.
@@ -66,7 +55,12 @@ commands:
 examples:
 - ./vkube --help
 - ./vkube --cluster-plan k3s-HA k3s install # with subfolder 'k3s-HA' in folder './vkube-data', and 'k3s-HA.yaml' cluster plan
-- ./vkube --cluster-plan ../k3s-HA.yaml k3s install # with explicit 'k3s-HA.yaml' cluster plan and path to data folder
+- ./vkube --cluster-plan k3s-HA k3s install --core --storage
+- ./vkube --trace --cluster-plan ../k3s-HA.yaml k3s install # with explicit 'k3s-HA.yaml' cluster plan and path to data folder
+- ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-csi-driver-smb-tmp
+- ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-synology-csi-smb-tmp
+- ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-synology-csi-nfs-tmp
+- ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class longhorn-nvme
 - ./vkube k3s upgrade
 - ./vkube k3s backup
 - ./vkube k3s restore

@@ -1,6 +1,9 @@
 #!/usr/bin/env bats
 # k8s bash tests: ./bats/bin/bats ./vkube-k3s.bats --filter-status failed
 # k8s bash tests: ./bats/bin/bats ./vkube-k3s.bats --filter-tags tag:test
+# k8s bash tests: ./bats/bin/bats ./vkube-k3s.bats --filter-tags tag:core
+# k8s bash tests: ./bats/bin/bats ./vkube-k3s.bats --filter-tags tag:storage
+# k8s bash tests: ./bats/bin/bats ./vkube-k3s.bats --filter-tags tag:storage-speed
 # https://bats-core.readthedocs.io/en/stable/installation.html#linux-distribution-package-manager
 # https://bats-core.readthedocs.io/en/stable/writing-tests.html#run-test-other-commands
 # https://github.com/ztombol/bats-docs?tab=readme-ov-file#installation
@@ -572,9 +575,10 @@ setup() {
 #endregion general storage tests
 
 # bats test_tags=tag:storage-speed
-@test "../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'local-path'" {
-  skip "not returning from test, not starting next test"
+@test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'local-path'" {
+  #skip "not returning from test, not starting next test"
   run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'local-path' >&3
+  echo "output=$output" >&3
 
   # next lines never finish test execution
   # run ../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'local-path' >&3
@@ -583,38 +587,42 @@ setup() {
 }
 
 # bats test_tags=tag:storage-speed
-@test "../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'office-csi-driver-nfs-retain'" {
-  skip "not returning from test, not starting next test"
-  run ../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'office-csi-driver-nfs-retain'
+@test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-nfs-retain'" {
+  #skip "not returning from test, not starting next test"
+  run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-nfs-retain'
   assert_success
-  echo "output=$output"
+  #echo "output=$output"
+  echo "output=$output" >&3
 }
 
 # bats test_tags=tag:storage-speed
-@test "../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'office-csi-driver-smb-tmp'" {
-  skip "not returning from test, not starting next test"
-  run ../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'office-csi-driver-smb-tmp'
+@test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-smb-tmp'" {
+  #skip "not returning from test, not starting next test"
+  run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-smb-tmp'
   assert_success
-  echo "output=$output"
+  #echo "output=$output"
+  echo "output=$output" >&3
 }
 
 # bats test_tags=tag:storage-speed
-@test "../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'office-synology-csi-nfs-retain'" {
-  skip "not returning from test, not starting next test"
-  run ../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'office-synology-csi-nfs-retain'
+@test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-synology-csi-nfs-retain'" {
+  #skip "not returning from test, not starting next test"
+  run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-synology-csi-nfs-retain'
   assert_success
-  echo "output=$output"
+  #echo "output=$output"
+  echo "output=$output" >&3
 }
 
 # bats test_tags=tag:storage-speed
-@test "../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'longhorn'" {
-  skip "not returning from test, not starting next test"
+@test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'longhorn'" {
+  #skip "not returning from test, not starting next test"
   if ! kubectl get ns/longhorn-system; then
     skip "Longhorn is not installed"
   fi
-  run ../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'longhorn'
+  run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'longhorn'
   assert_success
-  echo "output=$output"
+  #echo "output=$output"
+  echo "output=$output" >&3
 }
 
 # # bats test_tags=tag:storage-speed

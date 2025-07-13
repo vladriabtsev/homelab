@@ -622,7 +622,10 @@ function vkube-k3s.install() {
 
         # /usr/local/bin/k3s-uninstall.sh
         # /usr/local/bin/k3s-agent-uninstall.sh
-
+        if [ -z "$SSH_AUTH_SOCK" ]; then
+          eval "$(ssh-agent -s)" # start ssh agent
+          ssh-add ~/.ssh/id_rsa
+        fi
         install-k3s
         export KUBECONFIG=~/.kube/$cluster_name
         run "line '$LINENO';wait_kubectl_can_connect_cluster"
@@ -2370,9 +2373,14 @@ function vkube-k3s.-internal-storage-speed-test() {
   #vlib.wait-for-success -p 10 -t 200 "kubectl get job ${storage_class}-write-read -n storage-speedtest"
   # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
   #run "line '$LINENO';kubectl --timeout=600s wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!"
+  vlib.h2  "Waiting job for create..."
+  kubectl wait --for=create job/${storage_class}-write-read -n storage-speedtest --timeout=600s
   vlib.h2  "Waiting job completition..."
-  kubectl --timeout=600s wait --for=condition=Completed job/${storage_class}-write-read -n storage-speedtest & completion_pid=$!
-  vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs -l app=$storage_class-storage-speedtest,job=write-read)"
+  #vlib.wait-for-success -t 600 -p 10 "kubectl get job/${storage_class}-write-read -n storage-speedtest"
+  kubectl wait --for=condition=Complete job/${storage_class}-write-read -n storage-speedtest --timeout=600s & completion_pid=$!
+  sleep 15
+  #vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs -l app=$storage_class-storage-speedtest,job=write-read)"
+  vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs job/${storage_class}-write-read)"
 }
 function vkube-k3s.storage-speed-test {
   #hl.blue "$((++install_step)). Storage class speed test. (Line:$LINENO)"
