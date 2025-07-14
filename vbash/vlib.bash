@@ -629,7 +629,7 @@ function vlib.bashly-init-command() {
       vlib.trace "Pure bash without framework"
       vlib.bashly-init-error-handler
     ;;
-    \? ) 
+    * ) 
       err_and_exit "Wrong --framework argument ${args[framework-type]}. Expecting bashmatic, bsfl or none." ${LINENO} "$0"
     ;;
   esac

@@ -147,11 +147,18 @@ homelab() {
       cd vbash
       cd v-tests
       echo "For k3d-test: ./bats/bin/bats ./vkube-k3s.bats --filter-tags tag:tagname"
-      echo "  Tag names: core, storage, storage-separate, storage-speed"
+      echo "  Tag names: secret, core, storage, storage-separate, storage-speed"
     elif [[ "$1" = "k3s-HA" ]]; then
       cd vbash
-      #cd vkube.prj
       ek k3s-HA
+      echo "Examples: ./vkube --cluster-plan k3s-HA k3s install --core --storage"
+      echo "./vkube --cluster-plan k3s-HA k3s install --storage-classes-only"
+      echo "./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-synology-csi-nfs-tmp"
+      echo "./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class longhorn-nvme --distr busybox"
+    elif [[ "$1" = "vkube" ]]; then
+      cd vbash
+      cd vkube.prj
+      echo "Examples: bashly generate"
     else
       echo "Wrong name of preconfigured environment '$1'. Expected: 'k3d-test', 'k3s-HA'"
     fi

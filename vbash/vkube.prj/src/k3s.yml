@@ -44,8 +44,8 @@ commands:
   - long: --distr
     help: Container OS
     arg: name
-    allowed: [ubuntu-xenial, busybox]
-    default: ubuntu-xenial
+    allowed: [alpine, ubuntu-xenial, busybox]
+    default: alpine
 
 - name: upgrade
   help: Upgrade k3s kubernetes
@@ -67,7 +67,7 @@ examples:
 - ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-csi-driver-smb-tmp # run speed test for 'office-csi-driver-smb-tmp' storage class
 - ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-synology-csi-smb-tmp
 - ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-synology-csi-nfs-tmp
-- ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class longhorn-nvme
+- ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class longhorn-nvme --distr busybox
 - ./vkube k3s upgrade
 - ./vkube k3s backup
 - ./vkube k3s restore

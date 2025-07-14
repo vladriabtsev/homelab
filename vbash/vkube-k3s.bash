@@ -2342,7 +2342,14 @@ function vkube-k3s.storage-speedtest-job-create() {
   [[ -z $3 ]] && err_and_exit "Missing \$3 access mode parameter"
   [[ -z $vkube_data_folder ]] && err_and_exit "Missing \$data_folder"
 
+  if [[ $(kubectl get storageclass $2 -A 2> /dev/null | wc -l) -eq 0 ]]; then
+    err_and_exit "Storage class '$2' is not found in cluster." ${LINENO};
+  fi
+
   # https://www.talos.dev/v1.10/kubernetes-guides/configuration/synology-csi/
+
+  # https://fio.readthedocs.io/en/latest/fio_doc.html
+  # https://vineetcic.medium.com/disk-benchmarking-using-fio-c71e0ce0d47c
 
   #region read and write jobs
   txt="kind: PersistentVolumeClaim
@@ -2373,61 +2380,79 @@ spec:
         job: write-read
     spec:
       containers:
-      - name: write-read
-        image: ubuntu:xenial
+      - name: write-read"
+  vlib.trace "--distr=${args[--distr]}"
+  case ${args[--distr]} in
+    alpine )
+      txt+="
+        image: alpine:latest
         command: ["sh", "-c"]
         args:
         - |
-          # apt-get install -y iozone3
-          # echo '  iozone -t1 -i0 -i2 -r1k -s1g -F /tmp/testfile:'
-          # iozone -t1 -i0 -i2 -r1k -s1g -F /tmp/testfile
-          echo '  Sequential writing results:'
-          dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 oflag=dsync
-          echo '  Sequential reading results:'
+          echo '--distro alpine:'
+          #apk update
+          apk add fio
+          echo '############ dd results ############'
+          echo ' Sequential writing results (dd):'
+          dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 #oflag=dsync
+          echo '  Sequential reading results (dd):'
           # flush buffers or disk caches #
           #echo 3 | tee /proc/sys/vm/drop_caches
           dd if=/mnt/pv/test.img of=/dev/null bs=8k
+
+          echo '############ fio results ############'
+          fio --filename=test --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --name=test
         volumeMounts:
         - mountPath: "/mnt/pv"
-          name: test-volume
-      volumes:
-      - name: test-volume
-        persistentVolumeClaim:
-          claimName: $2-test-pvc
-      restartPolicy: Never
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: $2-busybox-write-read
-  namespace: $1
-spec:
-  template:
-    metadata:
-      name: $2-busybox-write-read
-      namespace: $1
-      labels:
-        app: $2-storage-speedtest
-        job: write-read
-    spec:
-      containers:
-      - name: write-read
+          name: test-volume"
+    ;;
+    busybox )
+      txt+="
         image: busybox:musl
         command: ["sh", "-c"]
         args:
         - |
+          echo ' --distro busybox:'
+          echo '############ dd results ############'
+          echo '  Sequential writing results (dd):'
+          dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 #oflag=dsync
+          echo '  Sequential reading results (dd):'
+          # flush buffers or disk caches #
+          #echo 3 | tee /proc/sys/vm/drop_caches
+          dd if=/mnt/pv/test.img of=/dev/null bs=8k
+
+          echo '############ fio results ############'
+          fio --filename=test --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --name=test
+        volumeMounts:
+        - mountPath: "/mnt/pv"
+          name: test-volume"
+    ;;
+    ubuntu-xenial )
+      txt+="
+        image: ubuntu:xenial
+        command: ["sh", "-c"]
+        args:
+        - |
+          echo '--distro ubuntu:'
+          echo '############ dd results ############'
           # apt-get install -y iozone3
           # echo '  iozone -t1 -i0 -i2 -r1k -s1g -F /tmp/testfile:'
           # iozone -t1 -i0 -i2 -r1k -s1g -F /tmp/testfile
-          echo '  Sequential writing results:'
+          echo '  Sequential writing results (dd):'
           dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 oflag=dsync
-          echo '  Sequential reading results:'
+          echo '  Sequential reading results (dd):'
           # flush buffers or disk caches #
           #echo 3 | tee /proc/sys/vm/drop_caches
           dd if=/mnt/pv/test.img of=/dev/null bs=8k
         volumeMounts:
         - mountPath: "/mnt/pv"
-          name: test-volume
+          name: test-volume"
+    ;;
+    * ) 
+      err_and_exit "Wrong --distr argument ${args[--distr]}. Expecting busybox, bsfl or none." ${LINENO} "$0"
+    ;;
+  esac
+      txt+="
       volumes:
       - name: test-volume
         persistentVolumeClaim:
@@ -2450,26 +2475,15 @@ function vkube-k3s.-internal-storage-speed-test() {
   vlib.h2  "Deleting previous speed test job for storage class '$storage_class'..."
   kubectl delete job '${storage}-write-read' -n storage-speedtest --ignore-not-found=true
   kubectl delete pvc '${storage}-test-pvc' -n storage-speedtest --ignore-not-found=true
-  sleep 5
-  #vlib.wait-for-error -p 5 -t 300 "kubectl get job ${storage_class}-write-read -n storage-speedtest"
+  #sleep 5
   vlib.h2  "Creating speed test job for storage class '$storage_class'..."
   vkube-k3s.storage-speedtest-job-create storage-speedtest $storage_class ReadWriteOnce
-  sleep 15
-  #vlib.wait-for-success -p 10 -t 200 "kubectl get job ${storage_class}-write-read -n storage-speedtest"
+  #sleep 15
   # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
-  #run "line '$LINENO';kubectl --timeout=600s wait --for=condition=Completed job/${storage}-write-read -n storage-speedtest & completion_pid=$!"
-  vlib.h2  "Waiting job for create..."
-  kubectl wait --for=create job/${storage_class}-write-read -n storage-speedtest -n storage-speedtest --timeout=600s
-  #kubectl wait --for=jsonpath='{.status.phase}'=Running pod/${storage_class}-write-read -n storage-speedtest --timeout=600s
-  #kubectl wait --for=create pod/${storage_class}-write-read -n storage-speedtest --timeout=600s
+  vlib.wait-for-success -p 10 -t 200 "kubectl get job/${storage_class}-write-read -n storage-speedtest"
   vlib.h2  "Waiting job completition..."
-  #vlib.wait-for-success -t 600 -p 10 "kubectl get job/${storage_class}-write-read -n storage-speedtest"
-  kubectl wait --for=condition=Complete job/${storage_class}-write-read -n storage-speedtest --timeout=600s & completion_pid=$!
-  #kubectl wait --for=condition=available pod/${storage_class}-write-read -n storage-speedtest --timeout=600s
-  #sleep 30
-  #vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs -l app=$storage_class-storage-speedtest,job=write-read)"
-  vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs job/${storage_class}-write-read --timestamps --follow)"
-  #vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs job/${storage_class}-write-read) --timestamps=true --follow=true"
+  kubectl wait --for=condition=Complete job/${storage_class}-write-read -n storage-speedtest --timeout=600s
+  vlib.echo -b -i "    " --fg=green "$(kubectl -n storage-speedtest logs job/${storage_class}-write-read --follow)"
 }
 function vkube-k3s.storage-speed-test {
   #hl.blue "$((++install_step)). Storage class speed test. (Line:$LINENO)"

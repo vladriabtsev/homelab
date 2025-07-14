@@ -194,7 +194,7 @@ vkube_k3s_usage() {
     printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class\n  office-csi-driver-smb-tmp\n"
     printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class\n  office-synology-csi-smb-tmp\n"
     printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class\n  office-synology-csi-nfs-tmp\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class longhorn-nvme\n"
+    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class longhorn-nvme\n  --distr busybox\n"
     printf "  ./vkube k3s upgrade\n"
     printf "  ./vkube k3s backup\n"
     printf "  ./vkube k3s restore\n"
@@ -298,8 +298,8 @@ vkube_k3s_storage_speed_usage() {
     # :flag.usage
     printf "  %s\n" "$(magenta "--distr NAME")"
     printf "    Container OS\n"
-    printf "    %s\n" "Allowed: ubuntu-xenial, busybox"
-    printf "    %s\n" "Default: ubuntu-xenial"
+    printf "    %s\n" "Allowed: alpine, ubuntu-xenial, busybox"
+    printf "    %s\n" "Default: alpine"
     echo
 
     # :command.usage_fixed_flags
@@ -1193,11 +1193,11 @@ vkube_k3s_storage_speed_parse_requirements() {
   fi
 
   # :command.default_assignments
-  [[ -n ${args['--distr']:-} ]] || args['--distr']="ubuntu-xenial"
+  [[ -n ${args['--distr']:-} ]] || args['--distr']="alpine"
 
   # :command.whitelist_filter
-  if [[ ${args['--distr']:-} ]] && [[ ! ${args['--distr']:-} =~ ^(ubuntu-xenial|busybox)$ ]]; then
-    printf "%s\n" "--distr must be one of: ubuntu-xenial, busybox" >&2
+  if [[ ${args['--distr']:-} ]] && [[ ! ${args['--distr']:-} =~ ^(alpine|ubuntu-xenial|busybox)$ ]]; then
+    printf "%s\n" "--distr must be one of: alpine, ubuntu-xenial, busybox" >&2
     exit 1
   fi
 
