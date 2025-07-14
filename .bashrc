@@ -143,13 +143,17 @@ homelab() {
 #    ssh-add ~/.ssh/id_rsa
 #  fi
   if [ -n "$1" ]; then
-    if [[ "$1" = "k3s-test" ]]; then
+    if [[ "$1" = "k3d-test" ]]; then
       cd vbash
       cd v-tests
+      echo "For k3d-test: ./bats/bin/bats ./vkube-k3s.bats --filter-tags tag:tagname"
+      echo "  Tag names: core, storage, storage-separate, storage-speed"
     elif [[ "$1" = "k3s-HA" ]]; then
       cd vbash
-      cd vkube.prj
+      #cd vkube.prj
       ek k3s-HA
+    else
+      echo "Wrong name of preconfigured environment '$1'. Expected: 'k3d-test', 'k3s-HA'"
     fi
   fi
 }

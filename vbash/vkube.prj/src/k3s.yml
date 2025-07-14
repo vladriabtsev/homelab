@@ -7,26 +7,26 @@ commands:
   flags:
   - long: --core
     help: Install core cluster components. Install all if --core, --storage, and --apps flags are not set.
+  - long: --storage-classes-only
+    help: Generate only storage classes for general storage drivers. Dangerous if these classes already in use.
+    conflicts: [--storage --local --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn]
   - long: --storage
     help: All general storage drivers according cluster plan.
-  - long: --storage-all-drivers
-    help: All general storage drivers. Overriding storage use in cluster plan.
-    conflicts: [--storage]
   - long: --local
     help: Local storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
-    conflicts: [--storage --storage-all-drivers]
+    conflicts: [--storage]
   - long: --csi-driver-nfs
     help: CSI driver NFS storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
-    conflicts: [--storage --storage-all-drivers]
+    conflicts: [--storage]
   - long: --csi-driver-smb
     help: CSI driver SMB storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
-    conflicts: [--storage --storage-all-drivers]
+    conflicts: [--storage]
   - long: --csi-synology
     help: Synology CSI storage (NFS, SMB, ISCSI). Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
-    conflicts: [--storage --storage-all-drivers]
+    conflicts: [--storage]
   - long: --longhorn
     help: Longhorn storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
-    conflicts: [--storage --storage-all-drivers]
+    conflicts: [--storage]
   - long: --app
     help: All applications. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
 
@@ -41,6 +41,11 @@ commands:
     help: Storage class name
     arg: name
     required: true
+  - long: --distr
+    help: Container OS
+    arg: name
+    allowed: [ubuntu-xenial, busybox]
+    default: ubuntu-xenial
 
 - name: upgrade
   help: Upgrade k3s kubernetes
@@ -55,9 +60,11 @@ commands:
 examples:
 - ./vkube --help
 - ./vkube --cluster-plan k3s-HA k3s install # with subfolder 'k3s-HA' in folder './vkube-data', and 'k3s-HA.yaml' cluster plan
-- ./vkube --cluster-plan k3s-HA k3s install --core --storage
+- ./vkube --cluster-plan k3s-HA k3s install --core --storage # install only kubernetes and general storage drivers
 - ./vkube --trace --cluster-plan ../k3s-HA.yaml k3s install # with explicit 'k3s-HA.yaml' cluster plan and path to data folder
-- ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-csi-driver-smb-tmp
+- ./vkube --cluster-plan k3s-HA k3s install --csi-driver-smb # install only csi-driver-smb storage driver
+- ./vkube --cluster-plan k3s-HA k3s install --storage-classes-only # regenerate and install only storage classes
+- ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-csi-driver-smb-tmp # run speed test for 'office-csi-driver-smb-tmp' storage class
 - ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-synology-csi-smb-tmp
 - ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-synology-csi-nfs-tmp
 - ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class longhorn-nvme

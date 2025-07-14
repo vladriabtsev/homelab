@@ -436,6 +436,11 @@ function vlib.trace() {
     echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
   fi
 }
+function vlib.trace-no-stack() {
+  #echo "is trace: '$__is_trace'"
+  [[ $__is_trace -eq 0 ]] && return 0
+  echo "$(green 'Trace:') $(green "$@")"
+}
 function vlib.trace-yellow() {
   #echo "is trace: '$__is_trace'"
   [[ $__is_trace -eq 0 ]] && return 0

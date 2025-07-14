@@ -8,6 +8,9 @@ environment_variables:
 
 flags:
 #- import: src/common_flags.yml
+- long: --force
+  help: Force operation without warning
+
 - long: --verbose
   help: Enabling verbose Mode (set -v, print every line before it's processed)
 

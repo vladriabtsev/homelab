@@ -207,7 +207,7 @@ setup() {
     #vkube-k3s.-internal-storage-speed-test "local-path"
     run ../vkube --cluster-plan k3d-test --trace k3s storage-speed-test "local-path" --csi-driver-nfs
   }
-  # bats test_tags=tag:storage-separate-one
+  # bats test_tags=tag:storage-separate
   # https://rudimartinsen.com/2024/01/09/nfs-csi-driver-kubernetes/
   # https://github.com/kubernetes-csi/csi-driver-nfs
   @test "storage: install-uninstall nfs" {
@@ -354,6 +354,16 @@ setup() {
   }
 #endregion storage install and uninstall
 
+# bats test_tags=tag:storage-classes-only
+@test "storage-classes: regenerate" {
+  echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-classes-only" >&3
+  run ../vkube --cluster-plan k3d-test --trace k3s install --storage-classes-only
+  sleep 10
+  assert_success
+  run verify "there is 1 storageclass named 'local-storage'"
+  [ "$status" -eq 0 ]
+}
+
 # bats test_tags=tag:storage
 @test "k3d general storage installation" {
   echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage" >&3
@@ -389,7 +399,75 @@ setup() {
   run try "at most 5 times every 30s to get pods named '^synology-csi-controller' and verify that 'status' is 'running'"
   assert_success
 }
+
 #region general storage speed tests
+
+  # bats test_tags=tag:storage-speed
+  @test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'local-path'" {
+    #skip "not returning from test, not starting next test"
+    run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'local-path' >&3
+    echo "output=$output" >&3
+
+    # next lines never finish test execution
+    # run ../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'local-path' >&3
+    # assert_success
+    # echo "output=$output"
+  }
+
+  # bats test_tags=tag:storage-speed
+  @test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-nfs-retain'" {
+    #skip "not returning from test, not starting next test"
+    run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-nfs-retain'
+    assert_success
+    #echo "output=$output"
+    echo "output=$output" >&3
+  }
+
+  # bats test_tags=tag:storage-speed
+  @test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-smb-tmp'" {
+    #skip "not returning from test, not starting next test"
+    run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-smb-tmp'
+    assert_success
+    #echo "output=$output"
+    echo "output=$output" >&3
+  }
+
+  # bats test_tags=tag:storage-speed
+  @test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-synology-csi-nfs-retain'" {
+    #skip "not returning from test, not starting next test"
+    run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-synology-csi-nfs-retain'
+    assert_success
+    #echo "output=$output"
+    echo "output=$output" >&3
+  }
+
+  # bats test_tags=tag:storage-speed
+  @test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'longhorn'" {
+    #skip "not returning from test, not starting next test"
+    if ! kubectl get ns/longhorn-system; then
+      skip "Longhorn is not installed"
+    fi
+    run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'longhorn'
+    assert_success
+    #echo "output=$output"
+    echo "output=$output" >&3
+  }
+
+  # # bats test_tags=tag:storage-speed
+  # @test "k3(s/d) general storage speed tests" {
+  #   vkube-k3s.-internal-storage-speed-test "local-path"
+  #   vkube-k3s.-internal-storage-speed-test "office-csi-driver-nfs-retain"
+  #   vkube-k3s.-internal-storage-speed-test "office-csi-driver-smb-tmp"
+  #   vkube-k3s.-internal-storage-speed-test "office-synology-csi-nfs-retain"
+  #   vkube-k3s.-internal-storage-speed-test "office-synology-csi-smb-tmp"
+  #   if kubectl get ns/longhorn-system; then
+  #     vkube-k3s.-internal-storage-speed-test "longhorn"
+  #   fi
+  # }
+
+#endregion general storage speed tests
+
+#region general storage speed tests ???
   # https://kubernetes.io/docs/concepts/storage/volumes/
   # # bats test_tags=tag:speed
   # @test "storage: local-path tests" {
@@ -572,70 +650,7 @@ setup() {
   #   assert_success
   #   echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
   # } 
-#endregion general storage tests
-
-# bats test_tags=tag:storage-speed
-@test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'local-path'" {
-  #skip "not returning from test, not starting next test"
-  run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'local-path' >&3
-  echo "output=$output" >&3
-
-  # next lines never finish test execution
-  # run ../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'local-path' >&3
-  # assert_success
-  # echo "output=$output"
-}
-
-# bats test_tags=tag:storage-speed
-@test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-nfs-retain'" {
-  #skip "not returning from test, not starting next test"
-  run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-nfs-retain'
-  assert_success
-  #echo "output=$output"
-  echo "output=$output" >&3
-}
-
-# bats test_tags=tag:storage-speed
-@test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-smb-tmp'" {
-  #skip "not returning from test, not starting next test"
-  run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-smb-tmp'
-  assert_success
-  #echo "output=$output"
-  echo "output=$output" >&3
-}
-
-# bats test_tags=tag:storage-speed
-@test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-synology-csi-nfs-retain'" {
-  #skip "not returning from test, not starting next test"
-  run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-synology-csi-nfs-retain'
-  assert_success
-  #echo "output=$output"
-  echo "output=$output" >&3
-}
-
-# bats test_tags=tag:storage-speed
-@test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'longhorn'" {
-  #skip "not returning from test, not starting next test"
-  if ! kubectl get ns/longhorn-system; then
-    skip "Longhorn is not installed"
-  fi
-  run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'longhorn'
-  assert_success
-  #echo "output=$output"
-  echo "output=$output" >&3
-}
-
-# # bats test_tags=tag:storage-speed
-# @test "k3(s/d) general storage speed tests" {
-#   vkube-k3s.-internal-storage-speed-test "local-path"
-#   vkube-k3s.-internal-storage-speed-test "office-csi-driver-nfs-retain"
-#   vkube-k3s.-internal-storage-speed-test "office-csi-driver-smb-tmp"
-#   vkube-k3s.-internal-storage-speed-test "office-synology-csi-nfs-retain"
-#   vkube-k3s.-internal-storage-speed-test "office-synology-csi-smb-tmp"
-#   if kubectl get ns/longhorn-system; then
-#     vkube-k3s.-internal-storage-speed-test "longhorn"
-#   fi
-# }
+#endregion general storage tests ???
 
 # bats test_tags=tag:longhorn
 @test "k3d longhorn installation" {

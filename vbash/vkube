@@ -35,6 +35,11 @@ vkube_usage() {
 
     # :command.usage_flags
     # :flag.usage
+    printf "  %s\n" "$(magenta "--force")"
+    printf "    Force operation without warning\n"
+    echo
+
+    # :flag.usage
     printf "  %s\n" "$(magenta "--verbose")"
     printf "    Enabling verbose Mode (set -v, print every line before it's processed)\n"
     echo
@@ -184,6 +189,8 @@ vkube_k3s_usage() {
     printf "  ./vkube --cluster-plan k3s-HA k3s install\n"
     printf "  ./vkube --cluster-plan k3s-HA k3s install --core --storage\n"
     printf "  ./vkube --trace --cluster-plan ../k3s-HA.yaml k3s install\n"
+    printf "  ./vkube --cluster-plan k3s-HA k3s install --csi-driver-smb\n"
+    printf "  ./vkube --cluster-plan k3s-HA k3s install --storage-classes-only\n"
     printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class\n  office-csi-driver-smb-tmp\n"
     printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class\n  office-synology-csi-smb-tmp\n"
     printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class\n  office-synology-csi-nfs-tmp\n"
@@ -216,44 +223,44 @@ vkube_k3s_install_usage() {
     echo
 
     # :flag.usage
+    printf "  %s\n" "$(magenta "--storage-classes-only")"
+    printf "    Generate only storage classes for general storage drivers. Dangerous if\n    these classes already in use.\n"
+    printf "    %s\n" "Conflicts: --storage --local --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn"
+    echo
+
+    # :flag.usage
     printf "  %s\n" "$(magenta "--storage")"
     printf "    All general storage drivers according cluster plan.\n"
     echo
 
     # :flag.usage
-    printf "  %s\n" "$(magenta "--storage-all-drivers")"
-    printf "    All general storage drivers. Overriding storage use in cluster plan.\n"
-    printf "    %s\n" "Conflicts: --storage"
-    echo
-
-    # :flag.usage
     printf "  %s\n" "$(magenta "--local")"
     printf "    Local storage. Overriding storage use in cluster plan. Install all if\n    --core, --storage, and --apps flags are not set.\n"
-    printf "    %s\n" "Conflicts: --storage --storage-all-drivers"
+    printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--csi-driver-nfs")"
     printf "    CSI driver NFS storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --apps flags are not set.\n"
-    printf "    %s\n" "Conflicts: --storage --storage-all-drivers"
+    printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--csi-driver-smb")"
     printf "    CSI driver SMB storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --apps flags are not set.\n"
-    printf "    %s\n" "Conflicts: --storage --storage-all-drivers"
+    printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--csi-synology")"
     printf "    Synology CSI storage (NFS, SMB, ISCSI). Overriding storage use in cluster\n    plan. Install all if --core, --storage, and --apps flags are not set.\n"
-    printf "    %s\n" "Conflicts: --storage --storage-all-drivers"
+    printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--longhorn")"
     printf "    Longhorn storage. Overriding storage use in cluster plan. Install all if\n    --core, --storage, and --apps flags are not set.\n"
-    printf "    %s\n" "Conflicts: --storage --storage-all-drivers"
+    printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
@@ -286,6 +293,13 @@ vkube_k3s_storage_speed_usage() {
     # :flag.usage
     printf "  %s\n" "$(magenta "--storage-class NAME (required)")"
     printf "    Storage class name\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--distr NAME")"
+    printf "    Container OS\n"
+    printf "    %s\n" "Allowed: ubuntu-xenial, busybox"
+    printf "    %s\n" "Default: ubuntu-xenial"
     echo
 
     # :command.usage_fixed_flags
@@ -598,6 +612,14 @@ parse_requirements() {
         long_usage=yes
         vkube_usage
         exit
+        ;;
+
+      # :flag.case
+      --force)
+
+        # :flag.case_no_arg
+        args['--force']=1
+        shift
         ;;
 
       # :flag.case
@@ -983,6 +1005,19 @@ vkube_k3s_install_parse_requirements() {
         ;;
 
       # :flag.case
+      --storage-classes-only)
+        # :flag.conflicts
+        if [[ -n "${args['--storage --local --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage --local --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--storage-classes-only']=1
+        shift
+        ;;
+
+      # :flag.case
       --storage)
 
         # :flag.case_no_arg
@@ -991,23 +1026,10 @@ vkube_k3s_install_parse_requirements() {
         ;;
 
       # :flag.case
-      --storage-all-drivers)
+      --local)
         # :flag.conflicts
         if [[ -n "${args['--storage']:-}" ]]; then
           printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
-          exit 1
-        fi
-
-        # :flag.case_no_arg
-        args['--storage-all-drivers']=1
-        shift
-        ;;
-
-      # :flag.case
-      --local)
-        # :flag.conflicts
-        if [[ -n "${args['--storage --storage-all-drivers']:-}" ]]; then
-          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage --storage-all-drivers" >&2
           exit 1
         fi
 
@@ -1019,8 +1041,8 @@ vkube_k3s_install_parse_requirements() {
       # :flag.case
       --csi-driver-nfs)
         # :flag.conflicts
-        if [[ -n "${args['--storage --storage-all-drivers']:-}" ]]; then
-          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage --storage-all-drivers" >&2
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
           exit 1
         fi
 
@@ -1032,8 +1054,8 @@ vkube_k3s_install_parse_requirements() {
       # :flag.case
       --csi-driver-smb)
         # :flag.conflicts
-        if [[ -n "${args['--storage --storage-all-drivers']:-}" ]]; then
-          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage --storage-all-drivers" >&2
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
           exit 1
         fi
 
@@ -1045,8 +1067,8 @@ vkube_k3s_install_parse_requirements() {
       # :flag.case
       --csi-synology)
         # :flag.conflicts
-        if [[ -n "${args['--storage --storage-all-drivers']:-}" ]]; then
-          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage --storage-all-drivers" >&2
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
           exit 1
         fi
 
@@ -1058,8 +1080,8 @@ vkube_k3s_install_parse_requirements() {
       # :flag.case
       --longhorn)
         # :flag.conflicts
-        if [[ -n "${args['--storage --storage-all-drivers']:-}" ]]; then
-          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage --storage-all-drivers" >&2
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
           exit 1
         fi
 
@@ -1134,6 +1156,20 @@ vkube_k3s_storage_speed_parse_requirements() {
         fi
         ;;
 
+      # :flag.case
+      --distr)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--distr']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--distr requires an argument: --distr NAME" >&2
+          exit 1
+        fi
+        ;;
+
       -?*)
         printf "invalid option: %s\n" "$key" >&2
         exit 1
@@ -1153,6 +1189,15 @@ vkube_k3s_storage_speed_parse_requirements() {
   # :command.required_flags_filter
   if [[ -z ${args['--storage-class']+x} ]]; then
     printf "missing required flag: --storage-class NAME\n" >&2
+    exit 1
+  fi
+
+  # :command.default_assignments
+  [[ -n ${args['--distr']:-} ]] || args['--distr']="ubuntu-xenial"
+
+  # :command.whitelist_filter
+  if [[ ${args['--distr']:-} ]] && [[ ! ${args['--distr']:-} =~ ^(ubuntu-xenial|busybox)$ ]]; then
+    printf "%s\n" "--distr must be one of: ubuntu-xenial, busybox" >&2
     exit 1
   fi
 
