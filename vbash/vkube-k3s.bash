@@ -2419,6 +2419,7 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
   esac
   kubectl get storageclasses
 }
+# TODO storage speed test job with many storage classes. Fio tests. Using ? https://github.com/louwrentius/fio-plot
 function vkube-k3s.storage-speedtest-job-create() {
   [[ -z $1 ]] && err_and_exit "Missing \$1 namespace parameter"
   [[ -z $2 ]] && err_and_exit "Missing \$2 storage class name parameter"
