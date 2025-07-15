@@ -1,7 +1,7 @@
 apiVersion: storage.k8s.io/v1 # line:1144
 kind: StorageClass
 metadata:
-  name: office-synology-csi-smb-tmp
+  name: office-synology-csi-smb-del
   labels:
     vkube/storage-type: synology-csi-smb
 provisioner: csi.san.synology.com
@@ -17,7 +17,7 @@ allowVolumeExpansion: false
 apiVersion: storage.k8s.io/v1 # line:1144
 kind: StorageClass
 metadata:
-  name: office-synology-csi-smb-retain
+  name: office-synology-csi-smb-ret
   labels:
     vkube/storage-type: synology-csi-smb
 provisioner: csi.san.synology.com
@@ -33,7 +33,7 @@ allowVolumeExpansion: false
 apiVersion: storage.k8s.io/v1 # line:1144
 kind: StorageClass
 metadata:
-  name: office-synology-csi-smb-retain-exp
+  name: office-synology-csi-smb-ret-exp
   labels:
     vkube/storage-type: synology-csi-smb
 provisioner: csi.san.synology.com
@@ -49,7 +49,7 @@ allowVolumeExpansion: true
 apiVersion: storage.k8s.io/v1 # line:1166
 kind: StorageClass
 metadata:
-  name: office-synology-csi-nfs-tmp
+  name: office-synology-csi-nfs-del
   labels:
     vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com
@@ -66,7 +66,7 @@ allowVolumeExpansion: false
 apiVersion: storage.k8s.io/v1 # line:1166
 kind: StorageClass
 metadata:
-  name: office-synology-csi-nfs-retain
+  name: office-synology-csi-nfs-ret
   labels:
     vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com
@@ -83,7 +83,7 @@ allowVolumeExpansion: false
 apiVersion: storage.k8s.io/v1 # line:1166
 kind: StorageClass
 metadata:
-  name: office-synology-csi-nfs-retain-exp
+  name: office-synology-csi-nfs-ret-exp
   labels:
     vkube/storage-type: synology-csi-nfs
 provisioner: csi.san.synology.com

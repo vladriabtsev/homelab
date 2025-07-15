@@ -1720,7 +1720,9 @@ longhorn-storage-class-create() {
     storage_class+="-exp"
   fi
   if [[ "$2" = "Delete" ]]; then
-    storage_class+="-tmp"
+    storage_class+="-del"
+  else
+    storage_class+="-ret"
   fi
   local nrepl=3
   if [ -n "$longhorn_number_of_replicas" ]; then

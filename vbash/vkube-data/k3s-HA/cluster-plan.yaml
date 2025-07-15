@@ -112,7 +112,7 @@ longhorn_ui_admin_password_secret_file_path: ${HOME}/.ssh/test-longhorn/password
 longhorn_ui_admin_password_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
 
 # https://github.com/kubernetes-csi/csi-driver-nfs
-csi_driver_nfs_use: 0 # ??? installed kube-system anyway
+csi_driver_nfs_use: 1 # ??? installed kube-system anyway
 csi_driver_nfs_ver: v4.11.0 # auto upgrade to latest if empty
 csi_driver_nfs_namespace: csi-nfs # kube-system # csi-nfs
 
@@ -148,7 +148,7 @@ storage_servers:
     secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
     secret_pass_folder: # secret from 'pass' password manager folder with username.txt and password.txt secrets
     classes:
-    - name: tmp
+    - name: del
       smb_vers: "3.0"
       location: /csi-driver-smb
       reclaimPolicy: Delete
@@ -160,7 +160,7 @@ storage_servers:
     secret_folder: ${HOME}/.ssh/office-nfs-secrets # folder with username.txt and password.txt files
     secret_pass_folder: # secret from 'pass' password manager folder with username.txt and password.txt secrets
     classes:
-    - name: retain
+    - name: ret
       location: /volume1/csi-driver-nfs
       mountOptions_nfsvers: "4.0"
       reclaimPolicy: Retain

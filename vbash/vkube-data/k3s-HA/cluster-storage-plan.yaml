@@ -36,29 +36,29 @@ hosts:
     secret_folder: ${HOME}/.ssh/office-smb-secrets # folder with username.txt and password.txt files
     secret_pass_folder: # secret from 'pass' password manager folder with username.txt and password.txt secrets
     classes:
-    - name: tmp
+    - name: del
       #location: From default for protocol_class.
       reclaimPolicy: Delete
       allowVolumeExpansion: false
-    - name: retain
+    - name: ret
       reclaimPolicy: Retain
       allowVolumeExpansion: false
-    - name: retain-exp
+    - name: ret-exp
       #location: From default for protocol_class.
       reclaimPolicy: Retain
       allowVolumeExpansion: true
   - name: synology-csi-nfs
     classes:
-    - name: tmp
+    - name: del
       mountPermissions: '0755'
       mountOptions_nfsvers: 4.0
       reclaimPolicy: Delete
       allowVolumeExpansion: false
-    - name: retain
+    - name: ret
       #location: /volume1
       reclaimPolicy: Retain
       allowVolumeExpansion: false
-    - name: retain-exp
+    - name: ret-exp
       #location: /volume1
       reclaimPolicy: Retain
       allowVolumeExpansion: true
