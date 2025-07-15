@@ -84,7 +84,7 @@ function function-with-associative-array() {
 function return-result-to-stream() {
   # $1 variable name
   local ret="func result"
-  echo ${ret}
+  echo "${ret}"
 }
 @test "return from function to stream" {
   run return-result-to-stream

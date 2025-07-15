@@ -41,9 +41,9 @@ commands:
     help: Storage class name
     arg: name
     required: true
-  - long: --distr
+  - long: --container-type
     help: Container OS
-    arg: name
+    arg: container
     allowed: [alpine, ubuntu-xenial, busybox]
     default: alpine
 

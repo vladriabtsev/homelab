@@ -50,7 +50,12 @@ node:
   node_user: vlad
   node_is_control_plane: 1
   node_is_worker: 1
-  node_storage:
+  node_storage: # lonhorn storage disks and storage classes configuration
+  # storage classes names are auto generated:
+  # - 'lonhorn-<storage_class>        # for retain storage
+  # - 'lonhorn-<storage_class>-tmp    # for temporary storage
+  # - 'lonhorn-<storage_class>exp     # for retain, expandable storage
+  # - 'lonhorn-<storage_class>exp-tmp # for retain, expandable, temporary storage
   - storage_class: nvme
     disk_uuid: 392ecee2-89cd-4866-b78f-d73e64305de3
     mnt_path: /mnt/nvme0 # 465.8G
@@ -97,6 +102,15 @@ node:
 # https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
 local_storage_use: 1
 
+# https://github.com/longhorn/longhorn
+longhorn_ver: v1.9.0 # auto upgrade to latest if empty
+longhorn_use: 1
+longhorn_number_of_replicas: 3 # storage class number of replicas
+longhorn_ui_admin_name_secret_file_path: ${HOME}/.ssh/test-longhorn/username.txt # text file path
+longhorn_ui_admin_name_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
+longhorn_ui_admin_password_secret_file_path: ${HOME}/.ssh/test-longhorn/password.txt # text file path
+longhorn_ui_admin_password_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
+
 # https://github.com/kubernetes-csi/csi-driver-nfs
 csi_driver_nfs_use: 0 # ??? installed kube-system anyway
 csi_driver_nfs_ver: v4.11.0 # auto upgrade to latest if empty
@@ -119,14 +133,6 @@ csi_driver_smb_namespace: csi-smb
 # https://github.com/SynologyOpenSource/synology-csi
 csi_synology_use: 1 # csi-synology/csi-synology-plan.yaml is expected in same folder as this file
 csi_synology_namespace: csi-synology
-
-# https://github.com/longhorn/longhorn
-longhorn_ver: v1.9.0 # auto upgrade to latest if empty
-longhorn_use: 1
-longhorn_ui_admin_name_secret_file_path: ${HOME}/.ssh/test-longhorn/username.txt # text file path
-longhorn_ui_admin_name_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
-longhorn_ui_admin_password_secret_file_path: ${HOME}/.ssh/test-longhorn/password.txt # text file path
-longhorn_ui_admin_password_secret_pass_path: # text from 'pass' password manager store (<password manager folder>/<secret name>)
 
 storage_servers:
 - name: office

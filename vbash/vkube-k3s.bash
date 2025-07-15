@@ -994,6 +994,10 @@ function vkube-k3s.csi-synology-install() {
   #   err_and_exit "Error: Not valid csi synology plan file: '${synology_csi_plan}'." ${LINENO}
   # fi
 
+  if [[ -n ${args[--force]} ]] && [[ -a "$data_folder/generated-synology-csi-storage-classes.yaml" ]]; then # file exists
+    run "line '$LINENO';kubectl delete -f '$data_folder/generated-synology-csi-storage-classes.yaml' --ignore-not-found=true"
+  fi
+
   local data_folder=$(dirname "${synology_csi_plan}")
   vlib.trace "data folder=$data_folder"
 
@@ -1175,7 +1179,6 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
     done
   done
   #set +x
-  #vlib.trace "generated storage classes=\n$txt"
   run "line '$LINENO';echo '$txt' > '$data_folder/generated-synology-csi-storage-classes.yaml'"
   #run "line '$LINENO';kubectl apply edit-last-applied -f '$data_folder/generated-storage-classes.yaml'"
   run "line '$LINENO';kubectl apply -f '$data_folder/generated-synology-csi-storage-classes.yaml'"
@@ -1707,6 +1710,56 @@ EOF1
   esac
 }
 
+longhorn-storage-class-create() {
+  # $1 - storage class name from 'cluster-plan.yaml' under node_storage
+  # $2 - reclaim policy: Delete, Retain 
+  # $3 - allow volume expansion: true, false
+  local txt=""
+  local storage_class="longhorn-$1"
+  if [[ "$3" = "true" ]]; then
+    storage_class+="-exp"
+  fi
+  if [[ "$2" = "Delete" ]]; then
+    storage_class+="-tmp"
+  fi
+  local nrepl=3
+  if [ -n "$longhorn_number_of_replicas" ]; then
+    nrepl=$longhorn_number_of_replicas
+  fi
+
+  if [[ $(kubectl get storageclass $storage_class -n longhorn 2> /dev/null | wc -l) -gt 0 ]]; then
+    if [[ -n ${args[--force]} ]]; then
+      run "line '$LINENO';kubectl delete storageclass $storage_class --wait --ignore-not-found=true"
+    else
+      err_and_exit "Storage class '$storage_class' already exists in cluster. Use --force flag to delete anyway." ${LINENO};
+    fi
+  fi
+
+  #region StorageClass
+  txt="apiVersion: storage.k8s.io/v1 # line:${LINENO}
+kind: StorageClass
+metadata:
+  name: $storage_class
+  labels:
+    vkube/storage-type: csi-driver-nfs
+provisioner: driver.longhorn.io
+reclaimPolicy: $2
+allowVolumeExpansion: $3
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: \"$nrepl\"
+  staleReplicaTimeout: \"2880\"
+  fromBackup: \"\"
+  fsType: \"ext4\"
+  mkfsParams: -I 256 -b 4096 -O ^metadata_csum,^64bit
+  diskSelector: $1
+  nodeSelector: storage
+---
+"
+  #endregion StorageClass
+
+  _gen_txt+="${txt}"
+}
 longhorn-install() {
   if [[ -z ${args[--storage-classes-only]} ]]; then
     hl.blue "$parent_step$((++install_step)). Longhorn installation. (Line:$LINENO)"
@@ -1792,59 +1845,87 @@ longhorn-install() {
     # https://longhorn.io/docs/1.8.2/deploy/accessing-the-ui/longhorn-ingress/
     run "line '$LINENO';echo \"${longhorn_ui_admin_name}:$(openssl passwd -stdin -apr1 <<< ${longhorn_ui_admin_password})\" > ${HOME}/tmp/auth"
     run "line '$LINENO';kubectl -n longhorn-system create secret generic longhorn-ui-auth-basic --from-file=${HOME}/tmp/auth"
-    #run "line '$LINENO';vkube-k3s.secret-create longhorn-system longhorn-ui-auth-basic ${HOME}/tmp/auth"
     run "line '$LINENO';rm ${HOME}/tmp/auth"
     run "line '$LINENO';kubectl -n longhorn-system apply -f $vkube_data_folder/longhorn/longhorn-ui-auth-basic.yaml"
-
     run "line '$LINENO';kubectl expose deployment longhorn-ui --port=80 --type=LoadBalancer --name=longhorn-ui -n longhorn-system --target-port=http --load-balancer-ip=192.168.100.101"
-    # kubectl expose deployment longhorn-ui --port=80 --type=LoadBalancer --name=longhorn-ui -n longhorn-system --target-port=http --load-balancer-ip=192.168.100.101
-    # kubectl -n longhorn-system get svc
-    # kubectl  -n longhorn-system describe svc longhorn-ui
-    # kubectl delete service longhorn-ui -n longhorn-system
 
     kubectl get nodes
     kubectl get svc -n longhorn-system
     echo "Longhorn UI: check all disks on all nodes are available and schedulable !!!"
   fi
 
-  if ! test -e ~/downloads; then mkdir ~/downloads; fi
-  run "line '$LINENO';curl https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/examples/storageclass.yaml -o ~/downloads/storageclass.yaml"
-  # ssd storage class
-  if [[ $(kubectl get storageclass longhorn-ssd -n longhorn 2> /dev/null | wc -l) -gt 0 ]]; then
-    if [[ -n ${args[--force]} ]]; then
-      run "line '$LINENO';kubectl delete storageclass longhorn-ssd --wait --ignore-not-found=true"
-    else
-      err_and_exit "Storage class 'longhorn-ssd' already exists in cluster. Use --force flag to delete anyway." ${LINENO};
+  # storage class generation
+  declare -A _storage_classes=()
+  readarray nodes < <(yq -o=j -I=0 '.node[]' < $cluster_plan_file)
+  i_node=0
+  for node in "${nodes[@]}"; do
+    eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$node)"
+    readarray disks < <(yq -o=j -I=0 ".node[$i_node].node_storage[]" < $cluster_plan_file)
+    if [[ ${#disks[@]} -gt 0 ]]; then
+      readarray disks < <(yq -o=j -I=0 ".node[$i_node].node_storage[]" < $cluster_plan_file)
+      local i_disk=0
+      for disk in "${disks[@]}"; do
+        eval "$( yq '.[] | ( select(kind == "scalar") | key + "='\''" + . + "'\''")' <<<$disk)"
+        _storage_classes["${storage_class}"]='y'
+      done
     fi
+    ((i_node++))
+    if [ $i_node -eq $amount_nodes ]; then break; fi
+  done
+  if [[ -n ${args[--force]} ]] && [[ -a "$data_folder/generated-longhorn-storage-classes.yaml" ]]; then # file exists
+    run "line '$LINENO';kubectl delete -f '$data_folder/generated-longhorn-storage-classes.yaml' --ignore-not-found=true"
   fi
-  run "line '$LINENO';yq -i '
-    .metadata.name = \"longhorn-ssd\" |
-    .parameters.numberOfReplicas = \"3\" |
-    .parameters.staleReplicaTimeout = \"2880\" |
-    .parameters.fsType = \"ext4\" |
-    .parameters.mkfsParams = \"-I 256 -b 4096 -O ^metadata_csum,^64bit\" |
-    .parameters.diskSelector = \"ssd\" |
-    .parameters.nodeSelector = \"storage,ssd\"
-  ' ~/downloads/storageclass.yaml"
-  run "line '$LINENO';kubectl create -f ~/downloads/storageclass.yaml"
-  # nvme storage class
-  if [[ $(kubectl get storageclass longhorn-nvme -n longhorn 2> /dev/null | wc -l) -gt 0 ]]; then
-    if [[ -n ${args[--force]} ]]; then
-      run "line '$LINENO';kubectl delete storageclass longhorn-nvme --wait --ignore-not-found=true"
-    else
-      err_and_exit "Storage class 'longhorn-nvme' already exists in cluster. Use --force flag to delete anyway." ${LINENO};
-    fi
-  fi
-  run "line '$LINENO';yq -i '
-    .metadata.name = \"longhorn-nvme\" |
-    .parameters.numberOfReplicas = \"3\" |
-    .parameters.staleReplicaTimeout = \"2880\" |
-    .parameters.fsType = \"ext4\" |
-    .parameters.mkfsParams = \"-I 256 -b 4096 -O ^metadata_csum,^64bit\" |
-    .parameters.diskSelector = \"nvme\" |
-    .parameters.nodeSelector = \"storage,nvme\"
-  ' ~/downloads/storageclass.yaml"
-  run "line '$LINENO';kubectl create -f ~/downloads/storageclass.yaml"
+  local _storage_class=""
+  _gen_txt=""
+  for _storage_class in "${!_storage_classes[@]}"; do
+    longhorn-storage-class-create "$_storage_class" 'Retain' 'false' # retain storage
+    longhorn-storage-class-create "$_storage_class" 'Retain' 'true'  # retain, expandable storage
+    longhorn-storage-class-create "$_storage_class" 'Delete' 'false' # retain, temporary storage
+    longhorn-storage-class-create "$_storage_class" 'Delete' 'true'  # retain, expandable, temporary storage
+  done
+  run "line '$LINENO';echo '$_gen_txt' > '$data_folder/generated-longhorn-storage-classes.yaml'"
+  run "line '$LINENO';kubectl apply -f '$data_folder/generated-longhorn-storage-classes.yaml'"
+
+  # return 0
+
+  # if ! test -e ~/downloads; then mkdir ~/downloads; fi
+  # run "line '$LINENO';curl https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/examples/storageclass.yaml -o ~/downloads/storageclass.yaml"
+  # # ssd storage class
+  # if [[ $(kubectl get storageclass longhorn-ssd -n longhorn 2> /dev/null | wc -l) -gt 0 ]]; then
+  #   if [[ -n ${args[--force]} ]]; then
+  #     run "line '$LINENO';kubectl delete storageclass longhorn-ssd --wait --ignore-not-found=true"
+  #   else
+  #     err_and_exit "Storage class 'longhorn-ssd' already exists in cluster. Use --force flag to delete anyway." ${LINENO};
+  #   fi
+  # fi
+  # run "line '$LINENO';yq -i '
+  #   .metadata.name = \"longhorn-ssd\" |
+  #   .parameters.numberOfReplicas = \"3\" |
+  #   .parameters.staleReplicaTimeout = \"2880\" |
+  #   .parameters.fsType = \"ext4\" |
+  #   .parameters.mkfsParams = \"-I 256 -b 4096 -O ^metadata_csum,^64bit\" |
+  #   .parameters.diskSelector = \"ssd\" |
+  #   .parameters.nodeSelector = \"storage,ssd\"
+  # ' ~/downloads/storageclass.yaml"
+  # run "line '$LINENO';kubectl create -f ~/downloads/storageclass.yaml"
+  # # nvme storage class
+  # if [[ $(kubectl get storageclass longhorn-nvme -n longhorn 2> /dev/null | wc -l) -gt 0 ]]; then
+  #   if [[ -n ${args[--force]} ]]; then
+  #     run "line '$LINENO';kubectl delete storageclass longhorn-nvme --wait --ignore-not-found=true"
+  #   else
+  #     err_and_exit "Storage class 'longhorn-nvme' already exists in cluster. Use --force flag to delete anyway." ${LINENO};
+  #   fi
+  # fi
+  # run "line '$LINENO';yq -i '
+  #   .metadata.name = \"longhorn-nvme\" |
+  #   .parameters.numberOfReplicas = \"3\" |
+  #   .parameters.staleReplicaTimeout = \"2880\" |
+  #   .parameters.fsType = \"ext4\" |
+  #   .parameters.mkfsParams = \"-I 256 -b 4096 -O ^metadata_csum,^64bit\" |
+  #   .parameters.diskSelector = \"nvme\" |
+  #   .parameters.nodeSelector = \"storage,nvme\"
+  # ' ~/downloads/storageclass.yaml"
+  # run "line '$LINENO';kubectl create -f ~/downloads/storageclass.yaml"
 
   #kubectl apply -f ./101-longhorn/test-pod-with-pvc.yaml
 
@@ -1859,8 +1940,7 @@ longhorn-install() {
   # kubectl get replicas.longhorn.io -n longhorn-system -o yaml
   # Volumes ????
 }
-longhorn-uninstall()
-{
+longhorn-uninstall() {
   hl.blue "$parent_step$((++install_step)). Uninstalling Longhorn. (Line:$LINENO)"
 
   if ! command kubectl get deploy longhorn-ui -n longhorn-system &> /dev/null; then
@@ -2109,6 +2189,9 @@ function install-storage() {
     if [[ ${#storage_server_protocols[@]} -eq 0 ]]; then
       err_and_exit "There are no storage protocol for host. Configuration YAML file: '${cluster_plan_file}'. Host '$storage_server_name'." ${LINENO}
     fi
+    if [[ -n ${args[--force]} ]] && [[ -a "$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml" ]]; then # file exists
+      run "line '$LINENO';kubectl delete -f '$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml' --ignore-not-found=true"
+    fi
     i_protocol=-1
     #vlib.trace "reclaimPolicy=$storage_server_protocol_class_reclaimPolicy"
     declare -A protocol_names=()
@@ -2315,7 +2398,6 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
   #set +x
   #echo "txt=$txt"  >&3
   if [[ ${#txt} -gt 0 ]]; then
-    #vlib.trace "generated storage classes=\n$txt"
     run "line '$LINENO';echo '$txt' > '$vkube_data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
     #run "line '$LINENO';kubectl apply edit-last-applied -f '$vkube_data_folder/generated-storage-classes.yaml'"
     run "line '$LINENO';kubectl apply -f '$vkube_data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml'"
@@ -2335,6 +2417,7 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
     * )
     ;;
   esac
+  kubectl get storageclasses
 }
 function vkube-k3s.storage-speedtest-job-create() {
   [[ -z $1 ]] && err_and_exit "Missing \$1 namespace parameter"
@@ -2343,13 +2426,20 @@ function vkube-k3s.storage-speedtest-job-create() {
   [[ -z $vkube_data_folder ]] && err_and_exit "Missing \$data_folder"
 
   if [[ $(kubectl get storageclass $2 -A 2> /dev/null | wc -l) -eq 0 ]]; then
-    err_and_exit "Storage class '$2' is not found in cluster." ${LINENO};
+    err_and_exit "Storage class '$2' is not found in cluster."
   fi
 
   # https://www.talos.dev/v1.10/kubernetes-guides/configuration/synology-csi/
 
+  # https://www.linux.com/training-tutorials/inspecting-disk-io-performance-fio/
   # https://fio.readthedocs.io/en/latest/fio_doc.html
+  # https://fio.readthedocs.io/en/latest/fio_doc.html#examples
+  # https://chiadecentral.com/fio/
+  # https://github.com/louwrentius/fio-plot
+  # https://www.tecmint.com/monitor-linux-disk-io-performance/
   # https://vineetcic.medium.com/disk-benchmarking-using-fio-c71e0ce0d47c
+  # https://github.com/abokov/ps_scripts/blob/master/Test-Disk.ps1
+  # https://sematext.com/blog/the-complete-guide-to-linux-disk-io-monitoring-alerting-and-tuning/#tuning-disk-io-for-better-performance
 
   #region read and write jobs
   txt="kind: PersistentVolumeClaim
@@ -2381,17 +2471,18 @@ spec:
     spec:
       containers:
       - name: write-read"
-  vlib.trace "--distr=${args[--distr]}"
-  case ${args[--distr]} in
+  vlib.trace "--container-type=${args[--container-type]}"
+  case ${args[--container-type]} in
     alpine )
       txt+="
         image: alpine:latest
         command: ["sh", "-c"]
         args:
         - |
-          echo '--distro alpine:'
-          #apk update
+          echo 'alpine:'
+          apk update
           apk add fio
+          echo
           echo '############ dd results ############'
           echo ' Sequential writing results (dd):'
           dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 #oflag=dsync
@@ -2399,7 +2490,7 @@ spec:
           # flush buffers or disk caches #
           #echo 3 | tee /proc/sys/vm/drop_caches
           dd if=/mnt/pv/test.img of=/dev/null bs=8k
-
+          echo
           echo '############ fio results ############'
           fio --filename=test --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --name=test
         volumeMounts:
@@ -2412,7 +2503,8 @@ spec:
         command: ["sh", "-c"]
         args:
         - |
-          echo ' --distro busybox:'
+          echo 'busybox:'
+          echo
           echo '############ dd results ############'
           echo '  Sequential writing results (dd):'
           dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 #oflag=dsync
@@ -2420,7 +2512,7 @@ spec:
           # flush buffers or disk caches #
           #echo 3 | tee /proc/sys/vm/drop_caches
           dd if=/mnt/pv/test.img of=/dev/null bs=8k
-
+          echo
           echo '############ fio results ############'
           fio --filename=test --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --name=test
         volumeMounts:
@@ -2433,7 +2525,8 @@ spec:
         command: ["sh", "-c"]
         args:
         - |
-          echo '--distro ubuntu:'
+          echo 'ubuntu-xenial:'
+          echo
           echo '############ dd results ############'
           # apt-get install -y iozone3
           # echo '  iozone -t1 -i0 -i2 -r1k -s1g -F /tmp/testfile:'
@@ -2449,7 +2542,7 @@ spec:
           name: test-volume"
     ;;
     * ) 
-      err_and_exit "Wrong --distr argument ${args[--distr]}. Expecting busybox, bsfl or none." ${LINENO} "$0"
+      err_and_exit "Wrong --container-type argument ${args[--container-type]}. Expecting alpine, busybox, or ubuntu-xenial."
     ;;
   esac
       txt+="
@@ -2472,9 +2565,17 @@ function vkube-k3s.-internal-storage-speed-test() {
   # $1 - storage driver
   local storage_class="$1"
   #vlib.h1 "Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce"
-  vlib.h2  "Deleting previous speed test job for storage class '$storage_class'..."
-  kubectl delete job '${storage}-write-read' -n storage-speedtest --ignore-not-found=true
-  kubectl delete pvc '${storage}-test-pvc' -n storage-speedtest --ignore-not-found=true
+
+  #vlib.h2  "Deleting previous speed test job for storage class '$storage_class'..."
+  #kubectl delete "job/${storage}-write-read" -n storage-speedtest --ignore-not-found=true
+
+  #vlib.wait-for-error -p 10 -t 200 "kubectl get job/${storage}-write-read -n storage-speedtest"
+  #kubectl wait --for=delete "job/${storage}-write-read" --timeout=60s
+
+  #kubectl delete "pvc/${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
+
+  #vlib.wait-for-error -p 10 -t 200 "kubectl get pvc/${storage}-test-pvc -n storage-speedtest"
+  #kubectl wait --for=delete "pvc/${storage}-test-pvc" --timeout=60s
   #sleep 5
   vlib.h2  "Creating speed test job for storage class '$storage_class'..."
   vkube-k3s.storage-speedtest-job-create storage-speedtest $storage_class ReadWriteOnce
@@ -2483,7 +2584,7 @@ function vkube-k3s.-internal-storage-speed-test() {
   vlib.wait-for-success -p 10 -t 200 "kubectl get job/${storage_class}-write-read -n storage-speedtest"
   vlib.h2  "Waiting job completition..."
   kubectl wait --for=condition=Complete job/${storage_class}-write-read -n storage-speedtest --timeout=600s
-  vlib.echo -b -i "    " --fg=green "$(kubectl -n storage-speedtest logs job/${storage_class}-write-read --follow)"
+  vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs job/${storage_class}-write-read --follow)"
 }
 function vkube-k3s.storage-speed-test {
   #hl.blue "$((++install_step)). Storage class speed test. (Line:$LINENO)"

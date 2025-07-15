@@ -296,7 +296,7 @@ vkube_k3s_storage_speed_usage() {
     echo
 
     # :flag.usage
-    printf "  %s\n" "$(magenta "--distr NAME")"
+    printf "  %s\n" "$(magenta "--container-type CONTAINER")"
     printf "    Container OS\n"
     printf "    %s\n" "Allowed: alpine, ubuntu-xenial, busybox"
     printf "    %s\n" "Default: alpine"
@@ -1157,15 +1157,15 @@ vkube_k3s_storage_speed_parse_requirements() {
         ;;
 
       # :flag.case
-      --distr)
+      --container-type)
 
         # :flag.case_arg
         if [[ -n ${2+x} ]]; then
-          args['--distr']="$2"
+          args['--container-type']="$2"
           shift
           shift
         else
-          printf "%s\n" "--distr requires an argument: --distr NAME" >&2
+          printf "%s\n" "--container-type requires an argument: --container-type CONTAINER" >&2
           exit 1
         fi
         ;;
@@ -1193,11 +1193,11 @@ vkube_k3s_storage_speed_parse_requirements() {
   fi
 
   # :command.default_assignments
-  [[ -n ${args['--distr']:-} ]] || args['--distr']="alpine"
+  [[ -n ${args['--container-type']:-} ]] || args['--container-type']="alpine"
 
   # :command.whitelist_filter
-  if [[ ${args['--distr']:-} ]] && [[ ! ${args['--distr']:-} =~ ^(alpine|ubuntu-xenial|busybox)$ ]]; then
-    printf "%s\n" "--distr must be one of: alpine, ubuntu-xenial, busybox" >&2
+  if [[ ${args['--container-type']:-} ]] && [[ ! ${args['--container-type']:-} =~ ^(alpine|ubuntu-xenial|busybox)$ ]]; then
+    printf "%s\n" "--container-type must be one of: alpine, ubuntu-xenial, busybox" >&2
     exit 1
   fi
 

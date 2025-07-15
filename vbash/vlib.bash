@@ -950,9 +950,7 @@ function vlib.wait-for-success() {
     -d # bashmatic debug
   "
   if [ $# -eq "0" ]; then # Script invoked with no command-line args?
-    echo "Error: Call 'vlib.wait-for-success' without parameters"
-    echo "$usage"
-    return 1 # Exit and explain usage.
+    err_and_exit "Error: Call 'vlib.wait-for-success' without parameters"
   fi
 
   #echo "$#"
@@ -975,9 +973,7 @@ function vlib.wait-for-success() {
         verbose-on
       ;;
       * ) 
-      echo "Wrong parameter '$opt'"
-      echo "For help: $(basename $0) -h"
-      return 1
+      err_and_exit "Wrong parameter '$opt'"
     esac
   done
   shift $((OPTIND-1))
@@ -987,22 +983,21 @@ function vlib.wait-for-success() {
     return 1
   fi
 
-  # echo "wait_timeout=$wait_timeout"
-  # echo "wait_check_period=$wait_check_period"
-  # echo "<bash command>='$1'"
+  vlib.trace "wait_timeout=$wait_timeout"
+  vlib.trace-no-stack "wait_check_period=$wait_check_period"
+  vlib.trace-no-stack "<bash command>='$1'"
 
   #set -x
 
   # https://linuxsimply.com/bash-scripting-tutorial/conditional-statements/if/if-command-fails/
   until eval "$1" &> /dev/null;
   do 
-    echo "<bash command> returned='$?'"
+    #echo "<bash command> returned='$?'"
     sleep $wait_check_period
     ((wait_time+=wait_check_period))
-    echo "total wait time=$wait_time"
+    vlib.trace-no-stack "total wait time=$wait_time"
     if [[ $wait_time -gt $wait_timeout ]]; then
-      echo "Timeout. Wait time ${wait_time} sec  ${LINENO} $0"
-      return 1
+      err_and_exit "Timeout. Wait time ${wait_time} sec"
     fi
   done
 }
@@ -1025,9 +1020,7 @@ function vlib.wait-for-error() {
     -d # bashmatic debug
   "
   if [ $# -eq "0" ]; then # Script invoked with no command-line args?
-    echo "Error: Call 'vlib.wait-for-error' without parameters"
-    echo "$usage"
-    return 1 # Exit and explain usage.
+    err_and_exit "Error: Call 'vlib.wait-for-error' without parameters"
   fi
 
   OPTIND=0
@@ -1047,9 +1040,7 @@ function vlib.wait-for-error() {
         verbose-on
       ;;
       * ) 
-      echo "Wrong parameter '$opt'"
-      echo "For help: $(basename $0) -h"
-      return 1
+      err_and_exit "Wrong parameter '$opt'"
     esac
   done
   shift $((OPTIND-1))
@@ -1059,21 +1050,20 @@ function vlib.wait-for-error() {
     return 1
   fi
 
-  echo $wait_timeout
-  echo $wait_check_period
-  echo "$1"
+  vlib.trace "wait_timeout=$wait_timeout"
+  vlib.trace-no-stack "wait_check_period=$wait_check_period"
+  vlib.trace-no-stack "<bash command>='$1'"
 
   #set -x
 
   until ! eval "$1" &> /dev/null;
   do 
-    echo $?
+    #echo $?
     sleep $wait_check_period
     ((wait_time+=wait_check_period))
-    echo $wait_time
+    vlib.trace-no-stack "total wait time=$wait_time"
     if [[ $wait_time -gt $wait_timeout ]]; then
-      echo "Timeout. Wait time ${wait_time} sec  ${LINENO} $0"
-      return 1
+      err_and_exit "Timeout. Wait time ${wait_time} sec"
     fi
   done
 }
