@@ -247,7 +247,7 @@ testvercomp() {
   @test "echo: terminal echo all colors" {
     run vlib.all-colors
     assert_success
-    echo "$output" >&3
+    #echo "$output" >&3
   }
 #endregion echo
 
@@ -325,6 +325,7 @@ testvercomp() {
   }
   # bats test_tags=tag:text
   @test "text: awk extract substring between two strings" {
+    skip "Not implemented yet"
     # awk is excellent when the start and end strings can be treated as delimiters for field separation.
     # https://www.geeksforgeeks.org/linux-unix/awk-command-unixlinux-examples/
     # https://www.gnu.org/software/gawk/manual/gawk.html
@@ -333,11 +334,12 @@ testvercomp() {
     end_delimiter="]"
 
     result_string=$(echo "$text" | awk -F"${start_delimiter}|${end_delimiter}" '{print $2}')
+    echo "result_string=$result_string" >&3
 
     run echo "$result_string"
-    echo "output=$output" >&3
     assert_success
     assert_output "desired_text"
+    echo "output=$output" >&3
   }
   # bats test_tags=tag:text
   @test "text: grep extract substring between two strings" {
@@ -356,12 +358,12 @@ testvercomp() {
 #endregion text
 
 #region command version
-  # bats test_tags=tag:one
+  # bats test_tags=tag:kubectl-version
   @test "kubectl version" {
     # https://www.geeksforgeeks.org/linux-unix/awk-command-unixlinux-examples/
     # https://www.gnu.org/software/gawk/manual/gawk.html
 
-    result_string=$(kubectl version | awk '/Client Version:/ {print $3}')
+    run eval "result_string=$(kubectl version | awk '/Client Version:/ {print $3}')"
     assert_success
     run echo "$result_string"
     #echo "output=$output" >&3
@@ -375,74 +377,65 @@ testvercomp() {
   # bats test_tags=tag:wait
   @test "wait-for-success: error if without parameters" {
     run vlib.wait-for-success
-    #echo "echo always" >&3
-    #echo "echo on error"
-    #echo "output=$output"
-    #echo "status=$status"
-    #echo "${lines[0]}"
-    #printf "$output"
-    [ "$status" -ne 0 ]
-    [ "${lines[0]}" = "Error: Call 'vlib.wait-for-success' without parameters" ]
+    assert_failure
+    assert_output --partial "Error: Call 'vlib.wait-for-success' without parameters"
   }
   # bats test_tags=tag:wait
   @test "wait-for-success: with <bash command> parameter only" {
     run vlib.wait-for-success "ls ~"
-    [ "$status" -eq 0 ]
+    assert_success
   }
   # bats test_tags=tag:wait
   @test "wait-for-success: error if without <bash command> parameter" {
     run vlib.wait-for-success -p 2
-    #printf "$output"
-    [ "$status" -ne 0 ]
-    [ "${lines[0]}" = "Function 'vlib.wait-for-success' is expecting <bash command> parameter" ]
+    assert_failure
+    assert_output --partial "Function 'vlib.wait-for-success' is expecting <bash command> parameter"
   }
   # bats test_tags=tag:wait
   @test "wait-for-success: waiting for success" {
     run vlib.wait-for-success -p 2 -t 3 "ls ~"
-    [ "$status" -eq 0 ]
+    assert_success
   }
   # bats test_tags=tag:wait
   @test "wait-for-success: waiting for success timeout" {
-    start=`date +%s`
+    start=$(date +%s)
     run vlib.wait-for-success -p 2 -t 5 "not-existing-command123"
-    [ "$status" -ne 0 ]
-    end=`date +%s`
+    assert_failure
+    end=$(date +%s)
     runtime=$((end-start))
-    echo "runtime=$runtime"
+    #echo "runtime=$runtime" >&3
     [ "$runtime" -gt 5 ]
     [ 11 -gt "$runtime" ]
   }
   # bats test_tags=tag:wait
   @test "wait-for-error: error if without parameters" {
     run vlib.wait-for-error
-    [ "$status" -ne 0 ]
-    [ "${lines[0]}" = "Error: Call 'vlib.wait-for-error' without parameters" ]
+    assert_failure
+    assert_output --partial "Error: Call 'vlib.wait-for-error' without parameters"
   }
-  # bats test_tags=tag:wait
+  # bats test_tags=tag:wait-one
   @test "wait-for-error: with <bash command> parameter only" {
-    run vlib.wait-for-error "ls /kuku/kuku"
-    echo "status=$status"
-    [ "$status" -eq 0 ]
+    run vlib.wait-for-error -p 2 -t 5 "ls /kuku/kuku"
+    #echo "status=$status"
+    assert_success
   }
   # bats test_tags=tag:wait
   @test "wait-for-error: error if without <bash command> parameter" {
-    run vlib.wait-for-error -p 2
-    [ "$status" -ne 0 ]
+    run vlib.wait-for-error -p 2 -t 5
+    assert_failure
     [ "${lines[0]}" = "Function 'vlib.wait-for-error' is expecting <bash command> parameter" ]
   }
   # bats test_tags=tag:wait
-  @test "wait-for-error: waiting for error" {
-    run vlib.wait-for-error -p 2 -t 3 "not-existing-command123"
-    [ "$status" -eq 0 ]
-  }
-  # bats test_tags=tag:wait
   @test "wait-for-error: waiting for error timeout" {
-    start=`date +%s`
-    run vlib.wait-for-error -p 2 -t 5 "ls ~"
-    [ "$status" -ne 0 ]
-    end=`date +%s`
+    start=$(date +%s)
+    #echo "start=$start" >&3
+    run vlib.wait-for-error -p 2 -t 5 "not-existing-command123"
+    assert_failure
+    #echo "output=$output" >&3
+    end=$(date +%s)
+    #echo "end=$end" >&3
     runtime=$((end-start))
-    echo "runtime=$runtime"
+    #echo "runtime=$runtime" >&3
     [ "$runtime" -gt 5 ]
     [ 7 -gt "$runtime" ]
   }

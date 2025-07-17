@@ -78,7 +78,6 @@ commands:
 - name: exec
   help: Run 'vkube exec "command"'. For test traps of vkube script
   private: true
-
   args:
   - name: command
     required: false

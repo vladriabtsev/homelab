@@ -1,0 +1,56 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: longhorn-nvme-test-pvc
+  namespace: storage-speedtest
+spec:
+  storageClassName: longhorn-nvme
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5G
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: longhorn-nvme-write-read
+  namespace: storage-speedtest
+spec:
+  template:
+    metadata:
+      name: longhorn-nvme-write-read
+      namespace: storage-speedtest
+      labels:
+        app: longhorn-nvme-storage-speedtest
+        job: write-read
+    spec:
+      containers:
+      - name: write-read
+        image: alpine:latest
+        command: [sh, -c]
+        args:
+        - |
+          echo 'alpine:'
+          apk update
+          apk add fio
+          echo
+          echo '############ dd results ############'
+          echo ' Sequential writing results (dd):'
+          dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 #oflag=dsync
+          echo '  Sequential reading results (dd):'
+          # flush buffers or disk caches #
+          #echo 3 | tee /proc/sys/vm/drop_caches
+          dd if=/mnt/pv/test.img of=/dev/null bs=8k
+          echo
+          echo '############ fio results ############'
+          fio --filename=test --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --name=test
+        volumeMounts:
+        - mountPath: /mnt/pv
+          name: test-volume
+      volumes:
+      - name: test-volume
+        persistentVolumeClaim:
+          claimName: longhorn-nvme-test-pvc
+      restartPolicy: Never
+

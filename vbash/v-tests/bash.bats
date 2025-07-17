@@ -44,6 +44,7 @@ function function-with-associative-array() {
   test="[ "${array[$two]}" == "two value" ]"
   echo "${test}" && eval "${test}" || exit 1
 }
+# TODO remove dependency on password user entry
 # bats test_tags=tag:test
 @test "associative array" {
   declare -A array=()

@@ -539,7 +539,7 @@ function vkube-k3s.install() {
     install_storage_at_least_one=1
     install_storage=1
     __install_all=0
-  elif [[ -n ${args[--local]} || -n ${args[--csi-driver-nfs]} || -n ${args[--csi-driver-smb]} || -n ${args[--csi-synology]} || -n ${args[--longhorn]} || -n ${args[--nfs-subdir-external-provisioner-use]} ]]; then
+  elif [[ -n ${args[--csi-driver-nfs]} || -n ${args[--csi-driver-smb]} || -n ${args[--csi-synology]} || -n ${args[--longhorn]} || -n ${args[--nfs-subdir-external-provisioner-use]} ]]; then
     install_storage_at_least_one=1
     local_storage_use=0
     csi_driver_nfs_use=0
@@ -548,12 +548,21 @@ function vkube-k3s.install() {
     csi_synology_use=0
     longhorn_use=0
     __install_all=0
+  # elif [[ -n ${args[--local]} || -n ${args[--csi-driver-nfs]} || -n ${args[--csi-driver-smb]} || -n ${args[--csi-synology]} || -n ${args[--longhorn]} || -n ${args[--nfs-subdir-external-provisioner-use]} ]]; then
+  #   install_storage_at_least_one=1
+  #   local_storage_use=0
+  #   csi_driver_nfs_use=0
+  #   nfs_subdir_external_provisioner_use=0
+  #   csi_driver_smb_use=0
+  #   csi_synology_use=0
+  #   longhorn_use=0
+  #   __install_all=0
   fi
-  if [[ -n ${args[--local]} ]]; then
-    install_storage_at_least_one=1
-    local_storage_use=1
-    __install_all=0
-  fi
+  # if [[ -n ${args[--local]} ]]; then
+  #   install_storage_at_least_one=1
+  #   local_storage_use=1
+  #   __install_all=0
+  # fi
   if [[ -n ${args[--csi-driver-nfs]} ]]; then
     install_storage_at_least_one=1
     csi_driver_nfs_use=1
@@ -2075,17 +2084,20 @@ function install-storage() {
 
     # kubectl get pods --all-namespaces -l app=controller,app.kubernetes.io/name=synology-csi -o yaml | grep image:
 
-    if [ -n "$local_storage_use" ] && [ "$local_storage_use" -eq 1 ]; then
-      inf "local (Line:$LINENO)\n"
-      #region local storage
-      run "line '$LINENO';kubectl apply -f - <<<\"apiVersion: storage.k8s.io/v1
-  kind: StorageClass
-  metadata:
-    name: local-storage
-  provisioner: kubernetes.io/no-provisioner # indicates that this StorageClass does not support automatic provisioning
-  volumeBindingMode: WaitForFirstConsumer\""
-      #endregion local storage
-    fi
+  #   if [ -n "$local_storage_use" ] && [ "$local_storage_use" -eq 1 ]; then
+  #     # https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
+  #     # https://www.talos.dev/v1.10/kubernetes-guides/configuration/local-storage/
+  #     inf "local (Line:$LINENO)\n"
+  #     err_and_exit "Not implemented yet"
+  #     #region local storage
+  #     run "line '$LINENO';kubectl apply -f - <<<\"apiVersion: storage.k8s.io/v1
+  # kind: StorageClass
+  # metadata:
+  #   name: local-storage
+  # provisioner: kubernetes.io/no-provisioner # indicates that this StorageClass does not support automatic provisioning
+  # volumeBindingMode: WaitForFirstConsumer\""
+  #     #endregion local storage
+  #   fi
     if [ -n "$csi_driver_nfs_use" ] && [ "$csi_driver_nfs_use" -eq 1 ]; then
       inf "csi-driver-nfs (Line:$LINENO)\n"
       # https://github.com/kubernetes-csi/csi-driver-nfs
@@ -2424,13 +2436,9 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
 # TODO storage speed test job with many storage classes. Fio tests. Using ? https://github.com/louwrentius/fio-plot
 function vkube-k3s.storage-speedtest-job-create() {
   [[ -z $1 ]] && err_and_exit "Missing \$1 namespace parameter"
-  [[ -z $2 ]] && err_and_exit "Missing \$2 storage class name parameter"
+  [[ -z $2 ]] && err_and_exit "Missing \$2 job name"
   [[ -z $3 ]] && err_and_exit "Missing \$3 access mode parameter"
   [[ -z $vkube_data_folder ]] && err_and_exit "Missing \$data_folder"
-
-  if [[ $(kubectl get storageclass $2 -A 2> /dev/null | wc -l) -eq 0 ]]; then
-    err_and_exit "Storage class '$2' is not found in cluster."
-  fi
 
   # https://www.talos.dev/v1.10/kubernetes-guides/configuration/synology-csi/
 
@@ -2444,26 +2452,42 @@ function vkube-k3s.storage-speedtest-job-create() {
   # https://github.com/abokov/ps_scripts/blob/master/Test-Disk.ps1
   # https://sematext.com/blog/the-complete-guide-to-linux-disk-io-monitoring-alerting-and-tuning/#tuning-disk-io-for-better-performance
 
-  #region read and write jobs
-  txt="kind: PersistentVolumeClaim
+  local _storage_class
+  for _storage_class in "${_storage_classes[@]}"; do
+    if [[ $(kubectl get storageclass "$_storage_class" -A 2> /dev/null | wc -l) -eq 0 ]]; then
+      err_and_exit "Storage class '$_storage_class' is not found in cluster."
+    fi
+  done
+
+  local txt=""
+  for _storage_class in "${_storage_classes[@]}"; do
+    #region pvc
+    txt+="---
+kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: $2-test-pvc
+  name: $_storage_class-test-pvc
   namespace: $1
 spec:
-  storageClassName: $2
+  storageClassName: $_storage_class
   accessModes:
   - $3
   resources:
     requests:
       storage: 5G
----
+"
+    #endregion pvc
+  done
+
+  #region read and write jobs
+  txt+="---
 apiVersion: batch/v1
 kind: Job
 metadata:
   name: $2-write-read
   namespace: $1
 spec:
+  ttlSecondsAfterFinished: 60
   template:
     metadata:
       name: $2-write-read
@@ -2484,21 +2508,7 @@ spec:
         - |
           echo 'alpine:'
           apk update
-          apk add fio
-          echo
-          echo '############ dd results ############'
-          echo ' Sequential writing results (dd):'
-          dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 #oflag=dsync
-          echo '  Sequential reading results (dd):'
-          # flush buffers or disk caches #
-          #echo 3 | tee /proc/sys/vm/drop_caches
-          dd if=/mnt/pv/test.img of=/dev/null bs=8k
-          echo
-          echo '############ fio results ############'
-          fio --filename=test --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --name=test
-        volumeMounts:
-        - mountPath: "/mnt/pv"
-          name: test-volume"
+          apk add fio"
     ;;
     busybox )
       txt+="
@@ -2506,21 +2516,7 @@ spec:
         command: ["sh", "-c"]
         args:
         - |
-          echo 'busybox:'
-          echo
-          echo '############ dd results ############'
-          echo '  Sequential writing results (dd):'
-          dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 #oflag=dsync
-          echo '  Sequential reading results (dd):'
-          # flush buffers or disk caches #
-          #echo 3 | tee /proc/sys/vm/drop_caches
-          dd if=/mnt/pv/test.img of=/dev/null bs=8k
-          echo
-          echo '############ fio results ############'
-          fio --filename=test --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --name=test
-        volumeMounts:
-        - mountPath: "/mnt/pv"
-          name: test-volume"
+          echo 'busybox:'"
     ;;
     ubuntu-xenial )
       txt+="
@@ -2528,34 +2524,69 @@ spec:
         command: ["sh", "-c"]
         args:
         - |
-          echo 'ubuntu-xenial:'
-          echo
-          echo '############ dd results ############'
-          # apt-get install -y iozone3
-          # echo '  iozone -t1 -i0 -i2 -r1k -s1g -F /tmp/testfile:'
-          # iozone -t1 -i0 -i2 -r1k -s1g -F /tmp/testfile
-          echo '  Sequential writing results (dd):'
-          dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 oflag=dsync
-          echo '  Sequential reading results (dd):'
-          # flush buffers or disk caches #
-          #echo 3 | tee /proc/sys/vm/drop_caches
-          dd if=/mnt/pv/test.img of=/dev/null bs=8k
-        volumeMounts:
-        - mountPath: "/mnt/pv"
-          name: test-volume"
+          echo 'ubuntu-xenial:'"
     ;;
     * ) 
       err_and_exit "Wrong --container-type argument ${args[--container-type]}. Expecting alpine, busybox, or ubuntu-xenial."
     ;;
   esac
-      txt+="
-      volumes:
-      - name: test-volume
-        persistentVolumeClaim:
-          claimName: $2-test-pvc
+  for _storage_class in "${_storage_classes[@]}"; do
+    txt+="
+          echo
+          echo '###########################################'
+          echo '# Storage class: $_storage_class'
+          echo '###########################################'
+          echo
+          echo '=============== dd results ================'
+          echo '  Sequential writing results:'
+          dd if=/dev/zero of=/mnt/pv-$_storage_class/test.img bs=1G count=1 #oflag=dsync
+          echo '  Sequential reading results:'
+          # flush buffers or disk caches #
+          #echo 3 | tee /proc/sys/vm/drop_caches
+          dd if=/mnt/pv-$_storage_class/test.img of=/dev/null bs=8k
+          echo
+          echo '============== fio results ================'
+          echo '-------------------------------------------'
+          fio --name=test-write --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-$_storage_class/test.img
+          echo '-------------------------------------------'
+          fio --name=test-read --direct=1 --rw=read --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-$_storage_class/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-$_storage_class/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-$_storage_class/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-$_storage_class/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-$_storage_class/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-$_storage_class/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-$_storage_class/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-$_storage_class/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-$_storage_class/test.img
+          "
+  done
+  txt+="
+        volumeMounts:"
+  for _storage_class in "${_storage_classes[@]}"; do
+    txt+="
+        - mountPath: \"/mnt/pv-$_storage_class\"
+          name: test-volume-$_storage_class"
+  done
+  txt+="
       restartPolicy: Never
+      volumes:"
+  for _storage_class in "${_storage_classes[@]}"; do
+    txt+="
+      - name: test-volume-$_storage_class
+        persistentVolumeClaim:
+          claimName: $_storage_class-test-pvc
 "
+  done
   #endregion read and write jobs
+
   vkube-k3s.namespace-create-if-not-exist $1
   vlib.trace "jobs=$txt"
   #kubectl apply -f - <<<"${txt}"
@@ -2566,28 +2597,45 @@ spec:
 }
 function vkube-k3s.-internal-storage-speed-test() {
   # $1 - storage driver
-  local storage_class="$1"
+  local job_name=""
+
+  if [[ -n ${args[storage-class]} ]]; then
+    #vlib.trace "storage-class=${args[storage-class]}"
+    eval "_storage_classes=(${args[storage-class]})"
+    vlib.trace "_storage_classes=${_storage_classes}"
+    vlib.trace "_storage_classes # =${#_storage_classes[@]}"
+    if [[ "${#_storage_classes[@]}" -eq 1 ]]; then
+      # shellcheck disable=SC2128
+      job_name="${_storage_classes}"
+    else
+      job_name="Multi-storage-classes${#_storage_classes}"
+    fi    
+    #eval "_storage_classes=(${args[--storage-class]:-})"
+  fi
+
   #vlib.h1 "Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce"
 
-  #vlib.h2  "Deleting previous speed test job for storage class '$storage_class'..."
-  #kubectl delete "job/${storage}-write-read" -n storage-speedtest --ignore-not-found=true
+  vlib.h2  "Deleting previous speed test job for storage class '$storage_class'..."
+  kubectl delete "job/${storage}-write-read" -n storage-speedtest --ignore-not-found=true --force
 
-  #vlib.wait-for-error -p 10 -t 200 "kubectl get job/${storage}-write-read -n storage-speedtest"
-  #kubectl wait --for=delete "job/${storage}-write-read" --timeout=60s
+  vlib.wait-for-error -p 10 -t 200 "kubectl get job/${storage}-write-read -n storage-speedtest"
+  kubectl wait --for=delete "job/${storage}-write-read" --timeout=60s
 
-  #kubectl delete "pvc/${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
+  kubectl delete "pvc/${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true --force
+
+  sleep 15
 
   #vlib.wait-for-error -p 10 -t 200 "kubectl get pvc/${storage}-test-pvc -n storage-speedtest"
   #kubectl wait --for=delete "pvc/${storage}-test-pvc" --timeout=60s
   #sleep 5
-  vlib.h2  "Creating speed test job for storage class '$storage_class'..."
-  vkube-k3s.storage-speedtest-job-create storage-speedtest $storage_class ReadWriteOnce
+  vlib.h2  "Creating speed test job for storage class '$job_name'..."
+  vkube-k3s.storage-speedtest-job-create storage-speedtest "$job_name" ReadWriteOnce
   #sleep 15
   # https://stackoverflow.com/questions/55073453/wait-for-kubernetes-job-to-complete-on-either-failure-success-using-command-line
-  vlib.wait-for-success -p 10 -t 200 "kubectl get job/${storage_class}-write-read -n storage-speedtest"
+  vlib.wait-for-success -p 10 -t 200 "kubectl get job/${job_name}-write-read -n storage-speedtest"
   vlib.h2  "Waiting job completition..."
-  kubectl wait --for=condition=Complete job/${storage_class}-write-read -n storage-speedtest --timeout=600s
-  vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs job/${storage_class}-write-read --follow)"
+  kubectl wait --for=condition=Complete "job/${job_name}-write-read" -n storage-speedtest --timeout=600s
+  vlib.echo -b --fg=green "$(kubectl -n storage-speedtest logs job/${job_name}-write-read --follow)"
 }
 function vkube-k3s.storage-speed-test {
   #hl.blue "$((++install_step)). Storage class speed test. (Line:$LINENO)"

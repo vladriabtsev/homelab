@@ -6,4 +6,4 @@
 source "${VBASH}/vlib.bash"
 
 vkube_folder="$(dirname $0)"
-#echo $vkube_folder
+vlib.trace "vkube_folder=$vkube_folder"

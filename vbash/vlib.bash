@@ -590,7 +590,7 @@ function vlib.bashly-init-command() {
 
   set -e
 
-  [ -n $args ] || err_and_exit "Expecting bashly script when call bashly-init-command()" 
+  [[ "${#args[@]}" -gt 0 ]] || err_and_exit "Expecting bashly script when call bashly-init-command()" 
   #[ -z $args ] && ( err_and_exit "Expecting bashly script when call bashly-init-command()"; exit 1 ) 
   #[[ $# -eq 1 ]] || err_and_exit "Only one parameter is expected" ${LINENO}
 
@@ -681,15 +681,16 @@ function vlib.bashly-init-command() {
   #echo "${args[--log]}"
   if [ -n "${args[--log]}" ]; then
     if [ -n "${MY_LOG_DIR}" ]; then
-      local __command_action_name="${BASH_SOURCE[${#BASH_LINENO[@]}-1]}"
-      __command_action_name="$(basename $__command_action_name)-${action}"
-      #echo "${MY_LOG_DIR}${__command_action_name}.log"
+      vlib.trace "FUNCNAME[@]=${FUNCNAME[@]}"
+      local __action_name="${FUNCNAME[1]}"
+      vlib.trace "__action_name=$__action_name"
+      #echo "${MY_LOG_DIR}${__scrip_dir}.log"
       # log history
       # https://stackoverflow.com/questions/5789526/log-rotating-with-a-bash-script
       # https://unix.stackexchange.com/questions/231486/how-to-implement-logrotate-in-shell-script
       # https://superuser.com/questions/1105185/creating-a-bash-script-for-logrotation-with-date-in-foldername
       # https://askubuntu.com/questions/370571/how-can-i-automatically-rotate-archive-my-bash-history-logs
-      redirect-to-log-file "${MY_LOG_DIR}${__command_action_name}.log"
+      redirect-to-log-file "${MY_LOG_DIR}${__action_name}.log"
     else
       err_and_exit "Environment variable MY_LOG_DIR is empty."
     fi
@@ -1002,6 +1003,7 @@ function vlib.wait-for-success() {
   done
 }
 function vlib.wait-for-error() {
+  # wait for error. If timeout exit script
   # https://earthly.dev/blog/jq-select/
   # https://www.baeldung.com/linux/bash-execute-variable-command
 
@@ -1056,11 +1058,21 @@ function vlib.wait-for-error() {
 
   #set -x
 
-  until ! eval "$1" &> /dev/null;
+  # echo "before until" >&3
+  # echo "\$1=$1" >&3
+  local exit_code
+  eval "$1" &> /dev/null
+  exit_code=$?
+  # echo "exit_code=$exit_code" >&3
+  until [ $exit_code -eq 0 ]
   do 
-    #echo $?
+    # echo "starting" >&3
     sleep $wait_check_period
     ((wait_time+=wait_check_period))
+    eval "$1" &> /dev/null
+    exit_code=$?
+    # echo "wait_time=$wait_time" >&3
+    # echo "exit_code=$exit_code" >&3
     vlib.trace-no-stack "total wait time=$wait_time"
     if [[ $wait_time -gt $wait_timeout ]]; then
       err_and_exit "Timeout. Wait time ${wait_time} sec"

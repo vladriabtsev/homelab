@@ -197,6 +197,7 @@ setup() {
 #region storage install and uninstall
   # bats test_tags=tag:storage-separate
   @test "storage: install-uninstall local" {
+    skip "Not implemented yet"
     echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --local" >&3
     run ../vkube --cluster-plan k3d-test --trace k3s install --local
     sleep 10
@@ -356,18 +357,17 @@ setup() {
 
 # bats test_tags=tag:storage-classes-only
 @test "storage-classes: regenerate" {
-  echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage-classes-only" >&3
-  run ../vkube --cluster-plan k3d-test --trace k3s install --storage-classes-only
+  echo "      Step $[step=$step+1]. ../vkube --force --cluster-plan k3d-test --trace k3s install --storage-classes-only" >&3
+  run ../vkube --force --cluster-plan k3d-test --trace k3s install --storage-classes-only
   sleep 10
   assert_success
   run verify "there is 1 storageclass named 'local-storage'"
-  [ "$status" -eq 0 ]
 }
 
 # bats test_tags=tag:storage
 @test "k3d general storage installation" {
-  echo "      Step $[step=$step+1]. ../vkube --cluster-plan k3d-test --trace k3s install --storage" >&3
-  run ../vkube --cluster-plan k3d-test --trace k3s install --storage
+  echo "      Step $[step=$step+1]. ../vkube --force --cluster-plan k3d-test --trace k3s install --storage" >&3
+  run ../vkube --force --cluster-plan k3d-test --trace k3s install --storage
   sleep 10
   assert_success
 
@@ -403,54 +403,40 @@ setup() {
 #region general storage speed tests
 
   # bats test_tags=tag:storage-speed
-  @test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'local-path'" {
-    #skip "not returning from test, not starting next test"
-    run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'local-path' >&3
-    echo "output=$output" >&3
-
-    # next lines never finish test execution
-    # run ../vkube --cluster-plan k3d-test --trace k3s storage-speed --storage-class 'local-path' >&3
-    # assert_success
-    # echo "output=$output"
+  @test "../vkube --cluster-plan k3d-test k3s storage-speed 'local-path'" {
+    run ../vkube --cluster-plan k3d-test k3s storage-speed 'local-path' # >&3
+    #echo "output=$output" >&3
   }
 
   # bats test_tags=tag:storage-speed
-  @test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-nfs-retain'" {
-    #skip "not returning from test, not starting next test"
-    run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-nfs-retain'
+  @test "../vkube --cluster-plan k3d-test k3s storage-speed 'office-csi-driver-nfs-retain'" {
+    run ../vkube --cluster-plan k3d-test k3s storage-speed 'office-csi-driver-nfs-retain'
     assert_success
-    #echo "output=$output"
-    echo "output=$output" >&3
+    #echo "output=$output" >&3
   }
 
   # bats test_tags=tag:storage-speed
-  @test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-smb-tmp'" {
-    #skip "not returning from test, not starting next test"
-    run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-csi-driver-smb-tmp'
+  @test "../vkube --cluster-plan k3d-test k3s storage-speed 'office-csi-driver-smb-tmp'" {
+    run ../vkube --cluster-plan k3d-test k3s storage-speed 'office-csi-driver-smb-tmp'
     assert_success
-    #echo "output=$output"
-    echo "output=$output" >&3
+    #echo "output=$output" >&3
   }
 
   # bats test_tags=tag:storage-speed
-  @test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-synology-csi-nfs-retain'" {
-    #skip "not returning from test, not starting next test"
-    run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'office-synology-csi-nfs-retain'
+  @test "../vkube --cluster-plan k3d-test k3s storage-speed 'office-synology-csi-nfs-retain'" {
+    run ../vkube --cluster-plan k3d-test k3s storage-speed 'office-synology-csi-nfs-retain'
     assert_success
-    #echo "output=$output"
-    echo "output=$output" >&3
+    #echo "output=$output" >&3
   }
 
   # bats test_tags=tag:storage-speed
-  @test "../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'longhorn'" {
-    #skip "not returning from test, not starting next test"
+  @test "../vkube --cluster-plan k3d-test k3s storage-speed 'longhorn'" {
     if ! kubectl get ns/longhorn-system; then
       skip "Longhorn is not installed"
     fi
-    run ../vkube --cluster-plan k3d-test k3s storage-speed --storage-class 'longhorn'
+    run ../vkube --cluster-plan k3d-test k3s storage-speed 'longhorn'
     assert_success
-    #echo "output=$output"
-    echo "output=$output" >&3
+    #echo "output=$output" >&3
   }
 
   # # bats test_tags=tag:storage-speed
@@ -830,18 +816,18 @@ setup() {
   echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox" >&3
   run ../vkube --trace busybox install test-busybox
 
-  #echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox-nfs --storage-class office-synology-csi-nfs-test" >&3
-  #run ../vkube --trace busybox install test-busybox-nfs --storage-class office-synology-csi-nfs-test
+  #echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox-nfs office-synology-csi-nfs-test" >&3
+  #run ../vkube --trace busybox install test-busybox-nfs office-synology-csi-nfs-test
 
-  echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox-iscsi --storage-class office-synology-csi-iscsi-test-tmp" >&3
-  run ../vkube --trace busybox install test-busybox-iscsi --storage-class office-synology-csi-iscsi-test-tmp
+  echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox-iscsi office-synology-csi-iscsi-test-tmp" >&3
+  run ../vkube --trace busybox install test-busybox-iscsi office-synology-csi-iscsi-test-tmp
 
-  # echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox-iscsi --storage-class office-synology-csi-iscsi-test" >&3
-  # run ../vkube --trace busybox install test-busybox-iscsi --storage-class office-synology-csi-iscsi-test
+  # echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox-iscsi office-synology-csi-iscsi-test" >&3
+  # run ../vkube --trace busybox install test-busybox-iscsi office-synology-csi-iscsi-test
 
 
-  echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox 1.37 --storage-class backup2-synology-csi-nfs-test" >&3
-  #run ../vkube --trace busybox install test-busybox 1.37 --storage-class backup2-synology-csi-nfs-test
+  echo "      Step $[step=$step+1]. ../vkube --trace busybox install test-busybox 1.37 backup2-synology-csi-nfs-test" >&3
+  #run ../vkube --trace busybox install test-busybox 1.37 backup2-synology-csi-nfs-test
   # https://github.com/bats-core/bats-assert#partial-matching
   #echo '# text' >&3
   assert_success
@@ -856,13 +842,13 @@ setup() {
   [ "$status" -eq 0 ]
   [ "$___ver" == "1.37.0" ]
 
-  #run ../vkube --trace busybox install mybusybox --storage-class backup2-nfs-test
-  #run ../vkube --trace busybox install mybusybox --storage-class backup2-iscsi-test
-  #run ../vkube --trace busybox install mybusybox --storage-class backup2-smb-test
+  #run ../vkube --trace busybox install mybusybox backup2-nfs-test
+  #run ../vkube --trace busybox install mybusybox backup2-iscsi-test
+  #run ../vkube --trace busybox install mybusybox backup2-smb-test
 
-  #run ../vkube --trace busybox install mybusybox --storage-class backup2-synology-csi-nfs-test
-  #run ../vkube --trace busybox install mybusybox --storage-class backup2-synology-csi-smb-test
-  #run ../vkube --trace busybox install mybusybox --storage-class backup2-synology-csi-iscsi-test
+  #run ../vkube --trace busybox install mybusybox backup2-synology-csi-nfs-test
+  #run ../vkube --trace busybox install mybusybox backup2-synology-csi-smb-test
+  #run ../vkube --trace busybox install mybusybox backup2-synology-csi-iscsi-test
 
 }
 

@@ -8,7 +8,7 @@ source ./script-lib-1.bash
 source ./script-lib-2.bash
 source ./script-lib-3.bash
 source ../vlib.bash
-vlib.bashly-init-command
+vlib.bashly-init-error-handler
 
 # $1: where execute unknown-command
 echo "script-lib.sh"

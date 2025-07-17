@@ -9,12 +9,13 @@ commands:
     help: Install core cluster components. Install all if --core, --storage, and --apps flags are not set.
   - long: --storage-classes-only
     help: Generate only storage classes for general storage drivers. Dangerous if these classes already in use.
-    conflicts: [--storage --local --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn]
+    conflicts: [--storage --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn]
+    #conflicts: [--storage --local --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn]
   - long: --storage
     help: All general storage drivers according cluster plan.
-  - long: --local
-    help: Local storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
-    conflicts: [--storage]
+  #- long: --local
+  #  help: Local storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
+  #  conflicts: [--storage]
   - long: --csi-driver-nfs
     help: CSI driver NFS storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
     conflicts: [--storage]
@@ -36,16 +37,33 @@ commands:
 
 - name: storage-speed
   help: Test speed for storage storage class
-  flags:
-  - long: --storage-class
-    help: Storage class name
-    arg: name
+  args:
+  - name: storage-class
+    repeatable: true
     required: true
+  flags:
   - long: --container-type
     help: Container OS
     arg: container
     allowed: [alpine, ubuntu-xenial, busybox]
     default: alpine
+
+
+# - name: storage-speed
+#   help: Test speed for storage storage class
+#   #arg: name
+#   #repeatable: true
+#   #required: true
+#   flags:
+#   - long: --storage-class
+#     help: Storage class name
+#     arg: name
+#     required: true
+#   - long: --container-type
+#     help: Container OS
+#     arg: container
+#     allowed: [alpine, ubuntu-xenial, busybox]
+#     default: alpine
 
 - name: upgrade
   help: Upgrade k3s kubernetes
@@ -64,10 +82,10 @@ examples:
 - ./vkube --trace --cluster-plan ../k3s-HA.yaml k3s install # with explicit 'k3s-HA.yaml' cluster plan and path to data folder
 - ./vkube --cluster-plan k3s-HA k3s install --csi-driver-smb # install only csi-driver-smb storage driver
 - ./vkube --cluster-plan k3s-HA k3s install --storage-classes-only # regenerate and install only storage classes
-- ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-csi-driver-smb-tmp # run speed test for 'office-csi-driver-smb-tmp' storage class
-- ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-synology-csi-smb-tmp
-- ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-synology-csi-nfs-tmp
-- ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class longhorn-nvme --distr busybox
+- ./vkube --cluster-plan k3s-HA k3s storage-speed office-csi-driver-smb-tmp # run speed test for 'office-csi-driver-smb-tmp' storage class
+- ./vkube --cluster-plan k3s-HA k3s storage-speed office-synology-csi-smb-tmp
+- ./vkube --cluster-plan k3s-HA k3s storage-speed office-synology-csi-nfs-tmp
+- ./vkube --cluster-plan k3s-HA k3s storage-speed longhorn-nvme --distr busybox
 - ./vkube k3s upgrade
 - ./vkube k3s backup
 - ./vkube k3s restore

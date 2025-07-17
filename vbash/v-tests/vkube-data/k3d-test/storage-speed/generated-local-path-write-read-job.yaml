@@ -1,3 +1,4 @@
+---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
@@ -17,6 +18,7 @@ metadata:
   name: local-path-write-read
   namespace: storage-speedtest
 spec:
+  ttlSecondsAfterFinished: 60
   template:
     metadata:
       name: local-path-write-read
@@ -27,25 +29,54 @@ spec:
     spec:
       containers:
       - name: write-read
-        image: ubuntu:xenial
+        image: alpine:latest
         command: [sh, -c]
         args:
         - |
-          # apt-get install -y iozone3
-          # echo '  iozone -t1 -i0 -i2 -r1k -s1g -F /tmp/testfile:'
-          # iozone -t1 -i0 -i2 -r1k -s1g -F /tmp/testfile
+          echo 'alpine:'
+          apk update
+          apk add fio
+          echo
+          echo '###########################################'
+          echo '# Storage class: local-path'
+          echo '###########################################'
+          echo
+          echo '=============== dd results ================'
           echo '  Sequential writing results:'
-          dd if=/dev/zero of=/mnt/pv/test.img bs=1G count=1 oflag=dsync
+          dd if=/dev/zero of=/mnt/pv-local-path/test.img bs=1G count=1 #oflag=dsync
           echo '  Sequential reading results:'
           # flush buffers or disk caches #
           #echo 3 | tee /proc/sys/vm/drop_caches
-          dd if=/mnt/pv/test.img of=/dev/null bs=8k
+          dd if=/mnt/pv-local-path/test.img of=/dev/null bs=8k
+          echo
+          echo '============== fio results ================'
+          echo '-------------------------------------------'
+          fio --name=test-write --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-read --direct=1 --rw=read --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          
         volumeMounts:
-        - mountPath: /mnt/pv
-          name: test-volume
+        - mountPath: "/mnt/pv-local-path"
+          name: test-volume-local-path
+      restartPolicy: Never
       volumes:
-      - name: test-volume
+      - name: test-volume-local-path
         persistentVolumeClaim:
           claimName: local-path-test-pvc
-      restartPolicy: Never
 

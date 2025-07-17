@@ -100,7 +100,7 @@ node:
 #################
 
 # https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
-local_storage_use: 1
+#local_storage_use: 1 # not implemented
 
 # https://github.com/longhorn/longhorn
 longhorn_ver: v1.9.0 # auto upgrade to latest if empty

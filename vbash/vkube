@@ -26,6 +26,7 @@ vkube_usage() {
   echo
   # :command.usage_commands
   printf "%s\n" "$(bold "Commands:")"
+  printf "  %s   Run 'vkube exec \"command\"'. For test traps of vkube script\n" "$(green "exec")"
   printf "  %s   k3s kubernetes\n" "$(green "k3s") "
   echo
 
@@ -191,10 +192,10 @@ vkube_k3s_usage() {
     printf "  ./vkube --trace --cluster-plan ../k3s-HA.yaml k3s install\n"
     printf "  ./vkube --cluster-plan k3s-HA k3s install --csi-driver-smb\n"
     printf "  ./vkube --cluster-plan k3s-HA k3s install --storage-classes-only\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class\n  office-csi-driver-smb-tmp\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class\n  office-synology-csi-smb-tmp\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class\n  office-synology-csi-nfs-tmp\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class longhorn-nvme\n  --distr busybox\n"
+    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed office-csi-driver-smb-tmp\n"
+    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed office-synology-csi-smb-tmp\n"
+    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed office-synology-csi-nfs-tmp\n"
+    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed longhorn-nvme --distr busybox\n"
     printf "  ./vkube k3s upgrade\n"
     printf "  ./vkube k3s backup\n"
     printf "  ./vkube k3s restore\n"
@@ -225,18 +226,12 @@ vkube_k3s_install_usage() {
     # :flag.usage
     printf "  %s\n" "$(magenta "--storage-classes-only")"
     printf "    Generate only storage classes for general storage drivers. Dangerous if\n    these classes already in use.\n"
-    printf "    %s\n" "Conflicts: --storage --local --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn"
+    printf "    %s\n" "Conflicts: --storage --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--storage")"
     printf "    All general storage drivers according cluster plan.\n"
-    echo
-
-    # :flag.usage
-    printf "  %s\n" "$(magenta "--local")"
-    printf "    Local storage. Overriding storage use in cluster plan. Install all if\n    --core, --storage, and --apps flags are not set.\n"
-    printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
@@ -281,7 +276,7 @@ vkube_k3s_storage_speed_usage() {
   printf "vkube k3s storage-speed - Test speed for storage storage class\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s storage-speed [OPTIONS]\n"
+  printf "  vkube k3s storage-speed STORAGE-CLASS... [OPTIONS]\n"
   printf "  vkube k3s storage-speed --help | -h\n"
   echo
 
@@ -290,11 +285,6 @@ vkube_k3s_storage_speed_usage() {
     printf "%s\n" "$(bold "Options:")"
 
     # :command.usage_flags
-    # :flag.usage
-    printf "  %s\n" "$(magenta "--storage-class NAME (required)")"
-    printf "    Storage class name\n"
-    echo
-
     # :flag.usage
     printf "  %s\n" "$(magenta "--container-type CONTAINER")"
     printf "    Container OS\n"
@@ -305,6 +295,14 @@ vkube_k3s_storage_speed_usage() {
     # :command.usage_fixed_flags
     printf "  %s\n" "$(magenta "--help, -h")"
     printf "    Show this help\n"
+    echo
+
+    # :command.usage_args
+    printf "%s\n" "$(bold "Arguments:")"
+
+    # :argument.usage
+    printf "  %s\n" "$(blue "STORAGE-CLASS...")"
+    printf "\n"
     echo
 
   fi
@@ -518,6 +516,9 @@ vkube_exec_command() {
   # src/exec_command.sh
   #!/usr/bin/env bash
   #inspect_args
+
+  vlib.bashly-init-command
+  vlib.trace "$(inspect_args)"
 
   # shellcheck disable=SC2154
   eval "${args[command]}"
@@ -1007,8 +1008,8 @@ vkube_k3s_install_parse_requirements() {
       # :flag.case
       --storage-classes-only)
         # :flag.conflicts
-        if [[ -n "${args['--storage --local --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn']:-}" ]]; then
-          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage --local --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn" >&2
+        if [[ -n "${args['--storage --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn" >&2
           exit 1
         fi
 
@@ -1022,19 +1023,6 @@ vkube_k3s_install_parse_requirements() {
 
         # :flag.case_no_arg
         args['--storage']=1
-        shift
-        ;;
-
-      # :flag.case
-      --local)
-        # :flag.conflicts
-        if [[ -n "${args['--storage']:-}" ]]; then
-          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
-          exit 1
-        fi
-
-        # :flag.case_no_arg
-        args['--local']=1
         shift
         ;;
 
@@ -1143,20 +1131,6 @@ vkube_k3s_storage_speed_parse_requirements() {
     key="$1"
     case "$key" in
       # :flag.case
-      --storage-class)
-
-        # :flag.case_arg
-        if [[ -n ${2+x} ]]; then
-          args['--storage-class']="$2"
-          shift
-          shift
-        else
-          printf "%s\n" "--storage-class requires an argument: --storage-class NAME" >&2
-          exit 1
-        fi
-        ;;
-
-      # :flag.case
       --container-type)
 
         # :flag.case_arg
@@ -1177,18 +1151,26 @@ vkube_k3s_storage_speed_parse_requirements() {
 
       *)
         # :command.parse_requirements_case
-        # :command.parse_requirements_case_simple
-        printf "invalid argument: %s\n" "$key" >&2
-        exit 1
+        # :command.parse_requirements_case_repeatable
+        # :argument.case_repeatable
+        escaped="$(printf '%q' "$1")"
+        if [[ -z ${args['storage-class']+x} ]]; then
+          args['storage-class']="$escaped"
+        else
+          args['storage-class']="${args['storage-class']} $escaped"
+
+        fi
+        shift
 
         ;;
 
     esac
   done
 
-  # :command.required_flags_filter
-  if [[ -z ${args['--storage-class']+x} ]]; then
-    printf "missing required flag: --storage-class NAME\n" >&2
+  # :command.required_args_filter
+  if [[ -z ${args['storage-class']+x} ]]; then
+    printf "missing required argument: STORAGE-CLASS\nusage: vkube k3s storage-speed STORAGE-CLASS... [OPTIONS]\n" >&2
+
     exit 1
   fi
 
@@ -1348,7 +1330,7 @@ before_hook() {
   source "${VBASH}/vlib.bash"
 
   vkube_folder="$(dirname $0)"
-  #echo $vkube_folder
+  vlib.trace "vkube_folder=$vkube_folder"
 
 }
 

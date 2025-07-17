@@ -6,7 +6,7 @@
 # shellcheck disable=SC1091
 source script-lib-0.bash
 source ../vlib.bash
-vlib.bashly-init-command
+vlib.bashly-init-error-handler
 
 echo "script-3"
 [[ "$1" == "3" ]] && unknown-command
