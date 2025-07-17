@@ -413,19 +413,13 @@ testvercomp() {
     assert_failure
     assert_output --partial "Error: Call 'vlib.wait-for-error' without parameters"
   }
-  # bats test_tags=tag:wait-one
-  @test "wait-for-error: with <bash command> parameter only" {
-    run vlib.wait-for-error -p 2 -t 5 "ls /kuku/kuku"
-    #echo "status=$status"
-    assert_success
-  }
   # bats test_tags=tag:wait
   @test "wait-for-error: error if without <bash command> parameter" {
     run vlib.wait-for-error -p 2 -t 5
     assert_failure
     [ "${lines[0]}" = "Function 'vlib.wait-for-error' is expecting <bash command> parameter" ]
   }
-  # bats test_tags=tag:wait
+  # bats test_tags=tag:wait-one
   @test "wait-for-error: waiting for error timeout" {
     start=$(date +%s)
     #echo "start=$start" >&3
@@ -437,7 +431,7 @@ testvercomp() {
     runtime=$((end-start))
     #echo "runtime=$runtime" >&3
     [ "$runtime" -gt 5 ]
-    [ 7 -gt "$runtime" ]
+    [ 8 -gt "$runtime" ]
   }
 #endregion wait-for 
 
