@@ -142,7 +142,8 @@ setup() {
     #echo "output=$output" >&3
     assert_success
   }
-  #bats test_tags=tag:secret
+# TODO tests without password request
+#bats test_tags=tag:secret
   @test "vkube-k3s.secret-create-from-pass-folder: from password manager" {
     # Required:
     # ~/.test/username.txt # with line 'username=test-user'

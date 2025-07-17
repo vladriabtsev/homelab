@@ -132,6 +132,7 @@ EOF
   assert_output "test"
   refute_output --partial "delimited by end-of-file"
 }
+# TODO tests without password request
 @test "bash -s EOF failed" {
   bats_require_minimum_version 1.5.0
   run -127 bash -s << EOF
@@ -142,12 +143,14 @@ EOF
   assert_output --partial "kuku: command not found"
   refute_output --partial "delimited by end-of-file"
 }
+# TODO tests without password request
 @test "ssh k3s1 ls" {
   run ssh k3s1 ls
   assert_success
   refute_output --partial "delimited by end-of-file"
 }
 # https://thornelabs.net/posts/remotely-execute-multi-line-commands-with-ssh/
+# TODO tests without password request
 @test "ssh k3s1 EOF success" {
   run ssh k3s1 << EOF
 echo test
@@ -155,6 +158,7 @@ EOF
   assert_success
   refute_output --partial "delimited by end-of-file"
 }
+# TODO tests without password request
 @test "ssh k3s1 EOF failed" {
   bats_require_minimum_version 1.5.0
   run -127 ssh k3s1 << EOF
@@ -167,6 +171,7 @@ EOF
 }
 # https://stackoverflow.com/questions/10310299/what-is-the-proper-way-to-sudo-over-ssh
 # /etc/sudoers: user ALL=(ALL) NOPASSWD: ALL
+# TODO tests without password request
 @test "ssh k3s1 EOF sudo" {
   run ssh k3s1 << EOF
 sudo ls
