@@ -419,11 +419,34 @@ testvercomp() {
     assert_failure
     [ "${lines[0]}" = "Function 'vlib.wait-for-error' is expecting <bash command> parameter" ]
   }
-  # bats test_tags=tag:wait-one
+  function error-on-second-call() {
+    #echo "_error_on_second_call=$_error_on_second_call" >&3
+    if [[ $_error_on_second_call -eq 1 ]]; then
+      #echo "failed" >&3
+      return 1
+    fi
+    _error_on_second_call=$((_error_on_second_call + 1))
+  }
+  # bats test_tags=tag:wait
+  @test "wait-for-error: success" {
+    start=$(date +%s)
+    #echo "start=$start" >&3
+    _error_on_second_call=0
+    run vlib.wait-for-error -p 2 -t 5 "error-on-second-call"
+    assert_success
+    #echo "output=$output" >&3
+    end=$(date +%s)
+    #echo "end=$end" >&3
+    runtime=$((end-start))
+    #echo "runtime=$runtime" >&3
+    [ "$runtime" -gt 1 ]
+    [ 3 -gt "$runtime" ]
+  }
+  # bats test_tags=tag:wait
   @test "wait-for-error: waiting for error timeout" {
     start=$(date +%s)
     #echo "start=$start" >&3
-    run vlib.wait-for-error -p 2 -t 5 "not-existing-command123"
+    run vlib.wait-for-error -p 2 -t 5 "ls"
     assert_failure
     #echo "output=$output" >&3
     end=$(date +%s)

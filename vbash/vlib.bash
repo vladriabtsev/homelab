@@ -1064,7 +1064,7 @@ function vlib.wait-for-error() {
   eval "$1" &> /dev/null
   exit_code=$?
   # echo "exit_code=$exit_code" >&3
-  until [ $exit_code -eq 0 ]
+  until [ $exit_code -gt 0 ]
   do 
     # echo "starting" >&3
     sleep $wait_check_period

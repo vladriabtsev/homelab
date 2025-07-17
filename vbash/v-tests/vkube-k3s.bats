@@ -32,6 +32,10 @@ setup() {
   PATH="$DIR/../src:$PATH"
 
   data_folder="./vkube-data/k3d-test"
+  if [ -z "$SSH_AUTH_SOCK" ]; then
+    eval "$(ssh-agent -s)" # start ssh agent
+    ssh-add ~/.ssh/id_rsa
+  fi
 }
 #teardown() {
   #echo "teardown"
@@ -401,6 +405,7 @@ setup() {
   assert_success
 }
 
+# TODO https://github.com/louwrentius/fio-plot
 #region general storage speed tests
 
   # bats test_tags=tag:storage-speed
@@ -409,7 +414,7 @@ setup() {
     #echo "output=$output" >&3
   }
 
-  # bats test_tags=tag:storage-speed
+  # bats test_tags=tag:storage-speed-one
   @test "../vkube --cluster-plan k3d-test k3s storage-speed 'office-csi-driver-nfs-retain'" {
     run ../vkube --cluster-plan k3d-test k3s storage-speed 'office-csi-driver-nfs-retain'
     assert_success
