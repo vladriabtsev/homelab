@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: StatefulSet
+# https://github.com/marcel-dempers/docker-development-youtube-series/blob/master/storage/databases/postgresql/4-k8s-basic/README.md
+metadata:
+  name: mssql
+spec:
+  serviceName: mssql-balancer
+  selector:
+  replicas: 1
+  template:
+    metadata:
+      name: mssql
+    spec:
+      securityContext:
+        fsGroup: 10001
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: mssql
+          image: mcr.microsoft.com/mssql/server:2019-latest
+          imagePullPolicy: "IfNotPresent"
+          ports:
+          - containerPort: 1433
+            protocol: TCP
+            name: database
+          env:
+          - name: ACCEPT_EULA
+            value: "Y"
+          - name: MSSQL_ENABLE_HADR
+            value: "1"
+          - name: MSSQL_AGENT_ENABLED
+            value: "1"
+          - name: MSSQL_SA_PASSWORD          
+            value: "passWord1"
+          #- name: MSSQL_COLLATION          
+          #  value: ""
+          volumeMounts:
+          - name: data
+            mountPath: /var/opt/mssql
+            subPath: datadb
+            readOnly: false
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: mssql-pvc

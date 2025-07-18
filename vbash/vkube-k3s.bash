@@ -2608,7 +2608,7 @@ function vkube-k3s.-internal-storage-speed-test() {
       # shellcheck disable=SC2128
       job_name="${_storage_classes}"
     else
-      job_name="Multi-storage-classes${#_storage_classes}"
+      job_name="multi-storage-classes${#_storage_classes}"
     fi    
     #eval "_storage_classes=(${args[--storage-class]:-})"
   fi

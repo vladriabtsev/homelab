@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# kubectl apply -k ./
+# https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
+namespace: pg17
+namePrefix: pg17-
+nameSuffix: "-master"
+labels:
+  - pairs:
+      db: postgres
+      ver: "17"
+      sub: master
+    includeSelectors: true
+images: # https://hub.docker.com/_/postgres
+  - name: postgres
+    newTag: "17"
+resources:
+  - ../../../base
+  - svc.yaml
+# patches:
+#   - target:
+#       kind: Service
+#       name: postgres-balancer
+#     patch: |
+#       - op: replace
+#         path: /spec/ports/0/port
+#         value: 30117

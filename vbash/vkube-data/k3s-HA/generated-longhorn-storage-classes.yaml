@@ -1,0 +1,153 @@
+apiVersion: storage.k8s.io/v1 # line:1760
+kind: StorageClass
+metadata:
+  name: longhorn-nvme-ret
+  labels:
+    vkube/storage-type: csi-driver-nfs
+provisioner: driver.longhorn.io
+reclaimPolicy: Retain
+allowVolumeExpansion: false
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "2880"
+  fromBackup: ""
+  fsType: "ext4"
+  mkfsParams: -I 256 -b 4096 -O ^metadata_csum,^64bit
+  diskSelector: nvme
+  nodeSelector: storage
+---
+apiVersion: storage.k8s.io/v1 # line:1760
+kind: StorageClass
+metadata:
+  name: longhorn-nvme-exp-ret
+  labels:
+    vkube/storage-type: csi-driver-nfs
+provisioner: driver.longhorn.io
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "2880"
+  fromBackup: ""
+  fsType: "ext4"
+  mkfsParams: -I 256 -b 4096 -O ^metadata_csum,^64bit
+  diskSelector: nvme
+  nodeSelector: storage
+---
+apiVersion: storage.k8s.io/v1 # line:1760
+kind: StorageClass
+metadata:
+  name: longhorn-nvme-del
+  labels:
+    vkube/storage-type: csi-driver-nfs
+provisioner: driver.longhorn.io
+reclaimPolicy: Delete
+allowVolumeExpansion: false
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "2880"
+  fromBackup: ""
+  fsType: "ext4"
+  mkfsParams: -I 256 -b 4096 -O ^metadata_csum,^64bit
+  diskSelector: nvme
+  nodeSelector: storage
+---
+apiVersion: storage.k8s.io/v1 # line:1760
+kind: StorageClass
+metadata:
+  name: longhorn-nvme-exp-del
+  labels:
+    vkube/storage-type: csi-driver-nfs
+provisioner: driver.longhorn.io
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "2880"
+  fromBackup: ""
+  fsType: "ext4"
+  mkfsParams: -I 256 -b 4096 -O ^metadata_csum,^64bit
+  diskSelector: nvme
+  nodeSelector: storage
+---
+apiVersion: storage.k8s.io/v1 # line:1760
+kind: StorageClass
+metadata:
+  name: longhorn-ssd-ret
+  labels:
+    vkube/storage-type: csi-driver-nfs
+provisioner: driver.longhorn.io
+reclaimPolicy: Retain
+allowVolumeExpansion: false
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "2880"
+  fromBackup: ""
+  fsType: "ext4"
+  mkfsParams: -I 256 -b 4096 -O ^metadata_csum,^64bit
+  diskSelector: ssd
+  nodeSelector: storage
+---
+apiVersion: storage.k8s.io/v1 # line:1760
+kind: StorageClass
+metadata:
+  name: longhorn-ssd-exp-ret
+  labels:
+    vkube/storage-type: csi-driver-nfs
+provisioner: driver.longhorn.io
+reclaimPolicy: Retain
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "2880"
+  fromBackup: ""
+  fsType: "ext4"
+  mkfsParams: -I 256 -b 4096 -O ^metadata_csum,^64bit
+  diskSelector: ssd
+  nodeSelector: storage
+---
+apiVersion: storage.k8s.io/v1 # line:1760
+kind: StorageClass
+metadata:
+  name: longhorn-ssd-del
+  labels:
+    vkube/storage-type: csi-driver-nfs
+provisioner: driver.longhorn.io
+reclaimPolicy: Delete
+allowVolumeExpansion: false
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "2880"
+  fromBackup: ""
+  fsType: "ext4"
+  mkfsParams: -I 256 -b 4096 -O ^metadata_csum,^64bit
+  diskSelector: ssd
+  nodeSelector: storage
+---
+apiVersion: storage.k8s.io/v1 # line:1760
+kind: StorageClass
+metadata:
+  name: longhorn-ssd-exp-del
+  labels:
+    vkube/storage-type: csi-driver-nfs
+provisioner: driver.longhorn.io
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "3"
+  staleReplicaTimeout: "2880"
+  fromBackup: ""
+  fsType: "ext4"
+  mkfsParams: -I 256 -b 4096 -O ^metadata_csum,^64bit
+  diskSelector: ssd
+  nodeSelector: storage
+---
+

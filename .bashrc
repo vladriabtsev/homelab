@@ -146,21 +146,35 @@ homelab() {
     if [[ "$1" = "k3d-test" ]]; then
       cd vbash
       cd v-tests
-      echo "For k3d-test: ./bats/bin/bats ./vkube-k3s.bats --filter-tags tag:tagname"
+      echo "For k3d-test: ./bats/bin/bats ./"
+      echo "./bats/bin/bats ./vkube-k3s.bats --filter-tags tag:tagname"
       echo "  Tag names: secret, core, storage, storage-separate, storage-speed"
     elif [[ "$1" = "k3s-HA" ]]; then
       cd vbash
       ek k3s-HA
-      echo "Examples: ./vkube --cluster-plan k3s-HA k3s install --core --storage"
-      echo "./vkube --cluster-plan k3s-HA k3s install --storage-classes-only"
-      echo "./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-synology-csi-nfs-tmp"
-      echo "./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class longhorn-nvme --distr busybox"
+      if [ -n "$2" ]; then
+        cd vkube-data
+        cd k3s-HA
+        cd apps
+        cd "$2"
+        ls
+        echo "kubectl apply -k <kustomization directory>"
+      else
+        echo "Examples: ./vkube --cluster-plan k3s-HA k3s install --core --storage"
+        echo "./vkube --cluster-plan k3s-HA k3s install --storage-classes-only"
+        echo "./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-synology-csi-nfs-tmp"
+        echo "./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class longhorn-nvme --distr busybox"
+      fi
     elif [[ "$1" = "vkube" ]]; then
       cd vbash
       cd vkube.prj
       echo "Examples: bashly generate"
     else
-      echo "Wrong name of preconfigured environment '$1'. Expected: 'k3d-test', 'k3s-HA'"
+      if [ -n "$1" ]; then
+        echo "Warning: name of preconfigured environment '$1'. Expected: 'vkube', 'k3d-test', 'k3s-HA'"
+      else
+        echo "Not preconfigured environment is selected. Use 'vkube', 'k3d-test', 'k3s-HA' as parameter for 'homelab' script"
+      fi
     fi
   fi
 }
