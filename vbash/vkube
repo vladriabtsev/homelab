@@ -26,8 +26,8 @@ vkube_usage() {
   echo
   # :command.usage_commands
   printf "%s\n" "$(bold "Commands:")"
-  printf "  %s   Run 'vkube exec \"command\"'. For test traps of vkube script\n" "$(green "exec")"
-  printf "  %s   k3s kubernetes\n" "$(green "k3s") "
+  printf "  %s   k3s kubernetes\n" "$(green "k3s")    "
+  printf "  %s   Busybox container\n" "$(green "busybox")"
   echo
 
   # :command.long_usage
@@ -371,6 +371,145 @@ vkube_k3s_restore_usage() {
   fi
 }
 
+# :command.usage
+vkube_busybox_usage() {
+  printf "vkube busybox - Busybox container\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube busybox COMMAND\n"
+  printf "  vkube busybox [COMMAND] --help | -h\n"
+  echo
+  # :command.usage_commands
+  printf "%s\n" "$(bold "Commands:")"
+  printf "  %s   Install busybox container with disks for all storage classes:\n" "$(green "install")  "
+  printf "  %s   Uninstall busybox container\n" "$(green "uninstall")"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_examples
+    printf "%s\n" "$(bold "Examples:")"
+    printf "  ./vkube busybox --help\n"
+    printf "  ./vkube busybox install mybusybox --synology-csi-plan\n  ../synology-csi-plan.yaml\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_busybox_install_usage() {
+  if [[ -n $long_usage ]]; then
+    printf "vkube busybox install\n\n"
+    printf "  Install busybox container with disks for all storage classes:\n  - All storage classes from --cluster-plan flag.\n  - All storage classes from --synology-csi-plan flag.\n  - All storage classes from --storage-class flags.\n\n"
+  else
+    printf "vkube busybox install - Install busybox container with disks for all storage classes:\n\n"
+  fi
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube busybox install STORAGE-CLASS... [OPTIONS]\n"
+  printf "  vkube busybox install --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_flags
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--all-storage-classes")"
+    printf "    Use all storage types\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--all-storage-classes-ext STORAGE-CLASSES-EXT")"
+    printf "    Storage class name extension for flag --all-storage-classes. Example\n    'longhorn-del'\n"
+    printf "    %s\n" "Allowed: del, ret, ext"
+    printf "    %s\n" "Default: del"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--deployment, -d DEPLOYMENT")"
+    printf "    Name of busybox deployment.\n"
+    printf "    %s\n" "Default: busybox"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--release, -r RELEASE")"
+    printf "    Busybox release version\n"
+    printf "    %s\n" "Default: latest"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--namespace, -n NAMESPACE")"
+    printf "    Namespace name\n"
+    printf "    %s\n" "Default: default"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--storage-size, -s STORAGE-SIZE-REQUEST")"
+    printf "    Storage size request for persistent volume claims for each storage class\n"
+    printf "    %s\n" "Default: 1Gi"
+    printf "    %s\n" "Conflicts: --cluster-plan, --synology-csi-plan"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--access-mode, -a ACCESS-MODE")"
+    printf "    Storage access mode\n"
+    printf "    %s\n" "Allowed: ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod"
+    printf "    %s\n" "Default: ReadWriteOnce"
+    echo
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_args
+    printf "%s\n" "$(bold "Arguments:")"
+
+    # :argument.usage
+    printf "  %s\n" "$(blue "STORAGE-CLASS...")"
+    printf "    Storage class name\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_busybox_uninstall_usage() {
+  printf "vkube busybox uninstall - Uninstall busybox container\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube busybox uninstall [OPTIONS]\n"
+  printf "  vkube busybox uninstall --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_flags
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--namespace, -n NAMESPACE")"
+    printf "    Namespace name\n"
+    printf "    %s\n" "Default: default"
+    echo
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+  fi
+}
+
 # :command.normalize_input
 # :command.normalize_input_function
 normalize_input() {
@@ -515,10 +654,7 @@ vkube_exec_command() {
 
   # src/exec_command.sh
   #!/usr/bin/env bash
-  #inspect_args
-
   vlib.bashly-init-command
-  vlib.trace "$(inspect_args)"
 
   # shellcheck disable=SC2154
   eval "${args[command]}"
@@ -530,11 +666,8 @@ vkube_k3s_install_command() {
 
   # src/k3s_install_command.sh
   #!/usr/bin/env bash
-  #inspect_args
-  #echo "$(inspect_args)" >&3
 
   vlib.bashly-init-command
-  vlib.trace "$(inspect_args)"
 
   # shellcheck source=/dev/null
   source "${VBASH}/vkube-k3s.bash"
@@ -550,11 +683,8 @@ vkube_k3s_storage_speed_command() {
 
   # src/k3s_storage_speed_command.sh
   #!/usr/bin/env bash
-  #inspect_args
-  #echo "$(inspect_args)" >&3
 
   vlib.bashly-init-command
-  vlib.trace "$(inspect_args)"
 
   # shellcheck source=/dev/null
   source "${VBASH}/vkube-k3s.bash"
@@ -594,6 +724,38 @@ vkube_k3s_restore_command() {
   echo "# this file is located in 'src/k3s_restore_command.sh'"
   echo "# code for 'vkube k3s restore' goes here"
   echo "# you can edit it freely and regenerate (it will not be overwritten)"
+  inspect_args
+
+}
+
+# :command.function
+vkube_busybox_install_command() {
+
+  # src/busybox_install_command.sh
+  #!/usr/bin/env bash
+  vlib.bashly-init-command
+
+  # shellcheck source=/dev/null
+  source "${VBASH}/vkube-k3s.bash"
+  vkube-k3s.command-init
+
+  #csi_synology_ver=${args[release]}
+  #csi_synology_secret_folder=${args[--secret-folder]}
+  #csi_synology_snapshot_use=${args[--snapshot]}
+
+  vkube-k3s.check-cluster-plan-path
+  vkube-k3s.busybox-install
+
+}
+
+# :command.function
+vkube_busybox_uninstall_command() {
+
+  # src/busybox_uninstall_command.sh
+  echo "# This file is located at 'src/busybox_uninstall_command.sh'."
+  echo "# It contains the implementation for the 'vkube busybox uninstall' command."
+  echo "# The code you write here will be wrapped by a function named 'vkube_busybox_uninstall_command()'."
+  echo "# Feel free to edit this file; your changes will persist when regenerating."
   inspect_args
 
 }
@@ -779,6 +941,13 @@ parse_requirements() {
       action="k3s"
       shift
       vkube_k3s_parse_requirements "$@"
+      shift $#
+      ;;
+
+    busybox)
+      action="busybox"
+      shift
+      vkube_busybox_parse_requirements "$@"
       shift $#
       ;;
 
@@ -1320,6 +1489,319 @@ vkube_k3s_restore_parse_requirements() {
 
 }
 
+# :command.parse_requirements
+vkube_busybox_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_busybox_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action=${1:-}
+
+  case $action in
+    -*) ;;
+
+    install)
+      action="install"
+      shift
+      vkube_busybox_install_parse_requirements "$@"
+      shift $#
+      ;;
+
+    uninstall)
+      action="uninstall"
+      shift
+      vkube_busybox_uninstall_parse_requirements "$@"
+      shift $#
+      ;;
+
+    # :command.command_fallback
+    "")
+      vkube_busybox_usage >&2
+      exit 1
+      ;;
+
+    *)
+      printf "invalid command: %s\n" "$action" >&2
+      exit 1
+      ;;
+
+  esac
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+vkube_busybox_install_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_busybox_install_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="busybox install"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      # :flag.case
+      --all-storage-classes)
+
+        # :flag.case_no_arg
+        args['--all-storage-classes']=1
+        shift
+        ;;
+
+      # :flag.case
+      --all-storage-classes-ext)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--all-storage-classes-ext']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--all-storage-classes-ext requires an argument: --all-storage-classes-ext STORAGE-CLASSES-EXT" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --deployment | -d)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--deployment']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--deployment requires an argument: --deployment, -d DEPLOYMENT" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --release | -r)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--release']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--release requires an argument: --release, -r RELEASE" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --namespace | -n)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--namespace']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--namespace requires an argument: --namespace, -n NAMESPACE" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --storage-size | -s)
+        # :flag.conflicts
+        for conflict in --cluster-plan --synology-csi-plan; do
+          if [[ -n "${args[$conflict]:-}" ]]; then
+            printf "conflicting options: %s cannot be used with %s\n" "$key" "$conflict" >&2
+            exit 1
+          fi
+        done
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--storage-size']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--storage-size requires an argument: --storage-size, -s STORAGE-SIZE-REQUEST" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --access-mode | -a)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--access-mode']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--access-mode requires an argument: --access-mode, -a ACCESS-MODE" >&2
+          exit 1
+        fi
+        ;;
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_repeatable
+        # :argument.case_repeatable
+        escaped="$(printf '%q' "$1")"
+        if [[ -z ${args['storage-class']+x} ]]; then
+          args['storage-class']="$escaped"
+          unique_lookup["storage-class:$escaped"]=1
+        elif [[ -z "${unique_lookup["storage-class:$escaped"]:-}" ]]; then
+          args['storage-class']="${args['storage-class']} $escaped"
+          unique_lookup["storage-class:$escaped"]=1
+
+        fi
+        shift
+
+        ;;
+
+    esac
+  done
+
+  # :command.required_args_filter
+  if [[ -z ${args['storage-class']+x} ]]; then
+    printf "missing required argument: STORAGE-CLASS\nusage: vkube busybox install STORAGE-CLASS... [OPTIONS]\n" >&2
+
+    exit 1
+  fi
+
+  # :command.default_assignments
+  [[ -n ${args['--all-storage-classes-ext']:-} ]] || args['--all-storage-classes-ext']="del"
+  [[ -n ${args['--deployment']:-} ]] || args['--deployment']="busybox"
+  [[ -n ${args['--release']:-} ]] || args['--release']="latest"
+  [[ -n ${args['--namespace']:-} ]] || args['--namespace']="default"
+  [[ -n ${args['--storage-size']:-} ]] || args['--storage-size']="1Gi"
+  [[ -n ${args['--access-mode']:-} ]] || args['--access-mode']="ReadWriteOnce"
+
+  # :command.whitelist_filter
+  if [[ ${args['--all-storage-classes-ext']:-} ]] && [[ ! ${args['--all-storage-classes-ext']:-} =~ ^(del|ret|ext)$ ]]; then
+    printf "%s\n" "--all-storage-classes-ext must be one of: del, ret, ext" >&2
+    exit 1
+  fi
+  if [[ ${args['--access-mode']:-} ]] && [[ ! ${args['--access-mode']:-} =~ ^(ReadWriteOnce|ReadOnlyMany|ReadWriteMany|ReadWriteOncePod)$ ]]; then
+    printf "%s\n" "--access-mode must be one of: ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod" >&2
+    exit 1
+  fi
+
+}
+
+# :command.parse_requirements
+vkube_busybox_uninstall_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_busybox_uninstall_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="busybox uninstall"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      # :flag.case
+      --namespace | -n)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--namespace']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--namespace requires an argument: --namespace, -n NAMESPACE" >&2
+          exit 1
+        fi
+        ;;
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+  # :command.default_assignments
+  [[ -n ${args['--namespace']:-} ]] || args['--namespace']="default"
+
+}
+
 # :command.user_hooks
 before_hook() {
   # src/before.sh
@@ -1349,6 +1831,7 @@ bashly-run() {
   declare -g -A deps=()
   declare -g -a env_var_names=()
   declare -g -a input=()
+  declare -g -A unique_lookup=()
 
   normalize_input "$@"
   parse_requirements "${input[@]}"
@@ -1362,6 +1845,9 @@ bashly-run() {
     "k3s upgrade") vkube_k3s_upgrade_command ;;
     "k3s backup") vkube_k3s_backup_command ;;
     "k3s restore") vkube_k3s_restore_command ;;
+    "busybox") vkube_busybox_command ;;
+    "busybox install") vkube_busybox_install_command ;;
+    "busybox uninstall") vkube_busybox_uninstall_command ;;
   esac
 }
 

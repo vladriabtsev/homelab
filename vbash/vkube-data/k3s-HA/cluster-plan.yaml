@@ -1,13 +1,14 @@
 cluster_name: k3s-HA
-kubernetes_type: k3s # k3d, k8s
-#cluster_token: kuku
-#cluster_token_file: ~/cluster_token_file
 amount_nodes: 3 #3
-# can be overridden by node settings
-node_user: vlad
+kubernetes_type: k3s # k3d, k8s
 # https://github.com/k3s-io/k3s/releases
 k3s_ver: v1.33.2+k3s1
+#cluster_token: kuku
+#cluster_token_file: ~/cluster_token_file
+
+node_user: vlad
 cert_name: id_rsa
+
 # https://github.com/kube-vip/kube-vip/releases
 kube_vip_use: 1
 kube_vip_ver: v0.9.2  # auto upgrade to latest if empty

@@ -355,8 +355,16 @@ function h2() {
 function inf() {
   echo "$(green_bold "$@")"
 }
+function inf-and-trace() {
+  echo "$(green_bold "$@")"
+  vlib.trace-call-short
+}
 function warn() {
   echo "$(yellow_bold "$@")"
+}
+function warn-and-trace() {
+  echo "$(yellow_bold "$@")"
+  vlib.trace-call-short
 }
 function bashly_step() {
   echo "[$(date -Is)]" "$@"
@@ -367,10 +375,6 @@ function bashly_info() {
 }
 function bashly_warn() {
   echo "  ==> $(yellow_bold "$@")"
-}
-function warn-and-trace() {
-  echo "$(yellow_bold "$@")"
-  vlib.call-trace 1
 }
 function err_and_exit() {
   vlib.echo -b --fg=red "$1"
@@ -423,6 +427,16 @@ function vlib.call-trace() {
     fi
   done
   echo "################# E N D   C A L L   T R A C E ######################"
+}
+function vlib.trace-call-short() {
+  #echo "is trace: '$__is_trace'"
+  [[ $__is_trace -eq 0 ]] && return 0
+  if [[ ${#BASH_LINENO[@]} -gt 1 ]]; then
+    echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
+    echo "  # file: ${BASH_SOURCE[2]}, line: ${BASH_LINENO[1]}, func: ${FUNCNAME[2]}"
+  else
+    echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
+  fi
 }
 function vlib.trace() {
   #echo "is trace: '$__is_trace'"
@@ -735,6 +749,8 @@ function vlib.bashly-init-command() {
   # _monitored_variable_name="amount_nodes" # Change variable name as parameter
   # trap 'vlib._monitor_variable_change' DEBUG   # Uncomment 'trap' line
   # vlib.trace "_monitored_variable_name=$_monitored_variable_name"
+  
+  vlib.trace "$(inspect_args)"
 }
 vlib._monitor_variable_change() {
   local new_value
@@ -782,7 +798,7 @@ function vlib.vercomp() {
 # shellcheck disable=SC2183
 function vlib.ver { printf "%03d%03d%03d%03d" $(echo "$1" | tr '.' ' '); } # [ $(vlib.ver 10.9) -lt $(vlib.ver 10.10) ] && echo 1
 function vlib.check-github-release-version() {
-  usage="Usage: $(basename $0) name github_releases_url name_of_version_variable"
+  usage="Usage: $(basename $0) name github_releases_url name_of_version_variable reverse_sorting"
   if [ -z "$1" ]; then
     echo $usage
     err_and_exit "Missing \$1 - name"
@@ -805,20 +821,20 @@ function vlib.check-github-release-version() {
   fi
   eval local ver2=\"\$$3\"
   local ver=$ver2
-  if ! [ -z $latest ]; then
+  if [ -n $latest ]; then
     if [ -z "$4" ]; then
       readarray -t releases < <(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0:3]")
     else
       readarray -t releases < <(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0:3]")
     fi
     if [ -z $ver ]; then 
-      ver=$latest; 
-      inf "Requested version of '$1' is empty. Will use '$ver' version. Latest: ${releases[*]}\n"
+      ver=$latest;
+      inf-and-trace "Version of '$1' is empty. Will use '$ver' version. Latest: ${releases[*]}\n"
     else
       if ! [ "$latest" == "$ver" ]; then
-        warn "Requested version of '$1' is '$ver'. Latest: ${releases[*]}\n"
+        warn-and-trace "Version of '$1' is '$ver'. Latest: ${releases[*]}\n"
       else
-        inf "Requested version of '$1' is '$ver'. Latest: ${releases[*]}\n"
+        inf "Version of '$1' is '$ver'. Latest: ${releases[*]}\n"
       fi
     fi
     eval "$3=$ver"
@@ -826,7 +842,7 @@ function vlib.check-github-release-version() {
     if [ -z $ver ]; then 
       err_and_exit "Latest version of $1 is not found. Github URL: $2"
     else
-      err_and_exit "Requested version of '$1' is '$ver'. Latest version of $1 is not found. Github URL: $2"
+      err_and_exit "Version of '$1' is '$ver'. Latest version of $1 is not found. Github URL: $2"
     fi
   fi
   #set +x

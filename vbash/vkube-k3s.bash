@@ -239,8 +239,8 @@ function vkube-k3s.install_tools() {
     _flag_precheck=1
     err_and_exit "Tool 'jq' is not found. Need to be installed. See: https://github.com/jqlang/jq"
   # else
-  #   ver_curr=$(jq | awk '/version/ {print $7}')
-  #   vlib.trace "Current jq version=$ver_curr"
+  #   ver_curr=$(jq | awk '/version/ {print $7}') # not working
+  #   #vlib.trace "Current jq version=$ver_curr"
   #   vlib.check-github-release-version 'jq' https://api.github.com/repos/jqlang/jq/releases 'ver_curr'
   fi
 
@@ -248,10 +248,12 @@ function vkube-k3s.install_tools() {
   # https://v1-32.docs.kubernetes.io/docs/tasks/tools/install-kubectl-linux/
   if ! command -v kubectl version > /dev/null 2> /dev/null; then
     _flag_precheck=1
-    warn "Tool 'kubectl' is not found. Need to be installed.\n"
+    warn-and-trace "Tool 'kubectl' is not found. Need to be installed.\n"
     # echo -e " Kubectl not found, installing ..."
     # run "line '$LINENO';curl -LO 'https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl'"
     # run "line '$LINENO';sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl"
+    # curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+    # sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
   else
     ver_curr=$(kubectl version | awk '/Client Version:/ {print $3}')
     vlib.check-github-release-version 'kubectl' https://api.github.com/repos/kubernetes/kubernetes/releases 'ver_curr'
@@ -270,7 +272,7 @@ function vkube-k3s.install_tools() {
     # rm ./get_helm.sh
 
     _flag_precheck=1
-    warn "Tool 'helm' is not found. Need to be installed.\n"
+    warn-and-trace "Tool 'helm' is not found. Need to be installed.\n"
   else
     ver_curr=$(helm version | awk -F '\"' '{print $2}')
     vlib.check-github-release-version 'helm' https://api.github.com/repos/helm/helm/releases 'ver_curr'
@@ -280,7 +282,7 @@ function vkube-k3s.install_tools() {
     # Install k3d
     if ! command -v k3d version &> /dev/null; then
       _flag_precheck=1
-      warn "Tool 'k3d' is not found. Need to be installed.\n"
+      warn-and-trace "Tool 'k3d' is not found. Need to be installed.\n"
       # echo -e " k3d not found, installing ..."
       # if [ -z $k3d_ver ]; then # latest version
       #   wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
@@ -295,7 +297,7 @@ function vkube-k3s.install_tools() {
     # Install k3sup
     if ! command -v k3sup version &> /dev/null; then
       _flag_precheck=1
-      warn "Tool 'k3sup' is not found. Need to be installed. See: https://github.com/alexellis/k3sup\n"
+      warn-and-trace "Tool 'k3sup' is not found. Need to be installed. See: https://github.com/alexellis/k3sup\n"
       # run "line '$LINENO';curl -sLS https://get.k3sup.dev | sh"
       # run "line '$LINENO';sudo install k3sup /usr/local/bin/"
     else
@@ -607,14 +609,13 @@ function vkube-k3s.install() {
   # echo "      csi_synology_use=$csi_synology_use" >&3
   # echo "      longhorn_use=$longhorn_use" >&3
   # echo "      install_storage_at_least_one=$install_storage_at_least_one" >&3
-  vlib.trace "local_storage_use=$local_storage_use"
+  local data_folder=$(dirname "${cluster_plan_file}")
+  vlib.trace-no-stack "local_storage_use=$local_storage_use"
   vlib.trace-no-stack "csi_driver_nfs_use=$csi_driver_nfs_use"
   vlib.trace-no-stack "csi_driver_smb_use=$csi_driver_smb_use"
   vlib.trace-no-stack "csi_synology_use=$csi_synology_use"
   vlib.trace-no-stack "longhorn_use=$longhorn_use"
   vlib.trace-no-stack "install_storage_at_least_one=$install_storage_at_least_one"
-
-  local data_folder=$(dirname "${cluster_plan_file}")
   vlib.trace "data folder=$data_folder"
 
   if [[ ${install_core} -eq 1 ]]; then
@@ -745,7 +746,7 @@ function vkube-k3s.install() {
   vlib.check-github-release-version 'rancher' https://api.github.com/repos/rancher/rancher/releases 'rancher_latest'
   helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
   #if ! [ "$rancher_latest" == "$rancher_ver" ]; then
-  #  warn "Latest version of Rancher: '$rancher_latest', but installing: '$rancher_ver'\n"
+  #  warn-and-trace "Latest version of Rancher: '$rancher_latest', but installing: '$rancher_ver'\n"
   #fi
   run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist cattle-system"
   # helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
@@ -1247,283 +1248,6 @@ function vkube-k3s.csi-synology-uninstall() {
     run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/kubernetes/$deploy_k8s_version/snapshotter/snapshotter.yaml' --ignore-not-found"
     run "line '$LINENO';kubectl delete -f '$vkube_data_folder/synology-csi/synology CRDs' --ignore-not-found"
   fi
-}
-function vkube-k3s.busybox-install() {
-  declare _storage_classes=()
-  if [[ -n ${args[--storage-class]} ]]; then
-    vlib.trace "--storage-class=${args[--storage-class]}"
-    eval "_storage_classes=(${args[--storage-class]:-})"
-  elif [[ -n ${args[--synology-csi-plan]} ]]; then
-    for csi_synology_host in "${csi_synology_hosts[@]}"; do
-      err_and_exit "Not implemented" ${LINENO}
-    done
-  elif [[ -n ${args[--cluster-plan]} ]]; then
-    err_and_exit "Not implemented" ${LINENO}
-  fi
-
-  local txt=""
-  local txt_init_args=""
-  local txt_deploy=""
-  local txt_deploy_vol=""
-  local txt_deploy_vol_mount=""
-  local separator=""
-  
-  #region
-  txt_deploy+="apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: ${args[name]}
-  namespace: ${args[--namespace]}
-  labels:
-    app: ${args[name]}
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: ${args[name]}  
-  template:
-    metadata:
-      labels:
-        app: ${args[name]}
-    spec:
-      #securityContext: user for commands???
-      #  runAsUser: 1030  # Use UID of nsf_user on Synology
-      #  runAsGroup: 100  # Use GID user group on Synology
-      initContainers:
-      # https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#differences-from-regular-containers
-      - name: init
-        image: busybox:musl
-        # https://www.busybox.net/downloads/BusyBox.html
-        # https://boxmatrix.info/wiki/BusyBox-Commands
-        command: [ \"sh\", \"-c\" ]
-        args:
-        - |
-          #create mount directory
-          #apk add open-iscsi
-          #mkdir -p /usr/bin/env"
-    #endregion
-
-  for __s in "${_storage_classes[@]}"; do
-  #local yaml
-  #yaml=$(kubectl get storageclass $__storage_type -o yaml | yq '.metadata.labels[] | select(.name == "vkube/storage-type")')
-  #yaml=$(kubectl get storageclass $__storage_type -o yaml)
-  #vlib.trace "yaml=$yaml"
-
-    vlib.trace "__s=$__s"
-    # check storage class exists
-    local __storage_type
-    __storage_type="$(vkube-k3s.get-storage-class-type $__s)"
-    vlib.trace "__storage_type=$__storage_type"
-
-    # get storage class label vkube/storage-type
-    #err_and_exit "Not implemented" ${LINENO}
-    #region
-    txt+="${separator}apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: ${args[name]}-$__s-pvc
-  namespace: ${args[--namespace]}
-spec:
-  storageClassName: $__s
-  accessModes: 
-  - ${args[--access-mode]}
-  resources:
-    requests:
-      storage: ${args[--storage-size]}
-"
-    #endregion
-    case $__storage_type in
-      iscsi )
-        [[ "${access-mode}" == "ReadWriteMany" ]] && warn-and-trace "ReadWriteMany access mode is not supported for ISCSI"
-        #err_and_exit "Not implemented" ${LINENO}
-      ;;
-      smb )
-      ;;
-      nfs ) # https://medium.com/@bastian.ohm/configuring-your-synology-nas-as-nfs-storage-for-kubernetes-cluster-5e668169e5a2
-      ;;
-      synology-csi-iscsi )
-        [[ "${access-mode}" == "ReadWriteMany" ]] && warn-and-trace "ReadWriteMany access mode is not supported for ISCSI"
-      ;;
-      synology-csi-smb )
-      ;;
-      synology-csi-nfs )
-      ;;
-      * )
-        if [[ -z $__storage_type ]]; then
-          err_and_exit "Storage class '$__s with label 'vkube/storage-type' is not found in kubernetes cluster" ${LINENO};
-        else
-          err_and_exit "Storage class '$__s with label 'vkube/storage-type: $$__storage_type' is not supported" ${LINENO};
-        fi
-    esac
-    #region
-    separator="---
-"
-    txt_init_args+="
-          mkdir -p /home/${args[name]}-$__s-vol && chown -R 999:999 /home/${args[name]}-$__s-vol"
-    txt_deploy_vol+="
-      - name: ${args[name]}-$__s-vol
-        persistentVolumeClaim:
-          claimName: ${args[name]}-$__s-pvc"
-    txt_deploy_vol_mount+="
-          - name: ${args[name]}-$__s-vol
-            mountPath: /home/${args[name]}-$__s-vol # The mount point inside the container"
-    #endregion
-  done
-
-  txt_deploy+="$txt_init_args"
-  #region
-  txt_deploy+="
-      containers:
-        - name: busybox
-          image: busybox:musl
-          imagePullPolicy: 'IfNotPresent'
-          command:
-            - 'sh'
-            - '-c'
-            - 'while true; do sleep 6000; done'
-          resources:
-            limits:
-              memory: '128Mi'
-              cpu: '100m'"
-  txt_deploy+="
-          volumeMounts:"
-  txt_deploy+="$txt_deploy_vol_mount"
-  txt_deploy+="
-      volumes:"
-  #endregion
-  txt_deploy+="$txt_deploy_vol"
-  vlib.trace "generated PVCs=\n$txt"
-  run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist ${args[--namespace]}"
-  run "line '$LINENO';kubectl apply -f - <<<\"${txt}\""
-
-  hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
-  run "line '$LINENO';kubectl apply -f - <<<\"${txt_deploy}\""
-  
-  err_and_exit "Not implemented" ${LINENO}
-
-
-  # ${args[--storage-class]}
-
-  # if ! [[ -e ${cluster_plan_file} ]]; then
-  #   err_and_exit "Cluster plan file '${cluster_plan_file}' is not found" ${LINENO};
-  # fi
-  # #echo $node_root_password
-  # if [[ -z $node_root_password ]]; then
-  #   node_root_password=""
-  #   vlib.read-password node_root_password "Please enter root password for cluster nodes:"
-  #   echo
-  # fi
-
-  # hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
-  # if command kubectl get deploy busybox -n busybox-system &> /dev/null; then
-  #   err_and_exit "Busybox already installed."  ${LINENO} "$0"
-  # fi
-
-  #region
-  txt="apiVersion: v1
-kind: PersistentVolume
-metadata:
-    name: pv-smb-example-name
-    namespace: smb-example-namespace # PersistentVolume and PersistentVolumeClaim must use the same namespace parameter
-spec:
-    capacity:
-        storage: 100Gi
-    accessModes:
-        - ReadWriteMany
-    persistentVolumeReclaimPolicy: Retain
-    mountOptions:
-        - dir_mode=0777
-        - file_mode=0777
-        - vers=3.0
-    csi:
-        driver: smb.csi.k8s.io
-        readOnly: false
-        volumeHandle: examplehandle  # make sure it's a unique id in the cluster
-        volumeAttributes:
-            source: \"//gateway-dns-name-or-ip-address/example-share-name\"
-        nodeStageSecretRef:
-            name: example-smbcreds
-            namespace: smb-example-namespace
-"
-  txt="apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: local-pv
-spec:
-  capacity:
-    storage: 500Mi 
-  volumeMode: Filesystem
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  # https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
-  storageClassName: local-storage
-  hostPath:
-    path: /mnt/pv-data
-"
-  #endregion
-
-  #exit 1
-  err_and_exit "Not implemented" ${LINENO}
-}
-function vkube-k3s.busybox-uninstall() {
-  hl.blue "$parent_step$((++install_step)). Uninstalling Busybox. (Line:$LINENO)"
-
-  if ! command kubectl get deploy busybox -n busybox-system &> /dev/null; then
-    err_and_exit "Busybox not installed yet."  ${LINENO} "$0"
-  fi
-
-  if ! command kubectl get deploy -l app.kubernetes.io/version=$busybox_ver -n busybox-system &> /dev/null; then
-    err_and_exit "Trying uninstall Busybox version '$busybox_ver', but this version is not installed."  ${LINENO} "$0"
-  fi
-
-  # busybox_installed_ver=$( busyboxctl version )
-  # if ! [ $busybox_installed_ver == $busybox_ver ]; then
-  #   err_and_exit "Trying uninstall Busybox version '$busybox_ver', but expected '$busybox_installed_ver'."  ${LINENO} "$0"
-  # fi
-
-  # manually deleting stucked-namespace
-  #kubectl get namespace "busybox-system" -o json | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/" | kubectl replace --raw /api/v1/namespaces/busybox-system/finalize -f -
-  #kubectl get namespace "stucked-namespace" -o json \
-  #  | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/" \
-  #  | kubectl replace --raw /api/v1/namespaces/stucked-namespace/finalize -f -
-
-  # busybox deleting-confirmation-flag
-  # kubectl get lhs -n busybox-system
-  # can be edit in k9s or apply deleting-confirmation-flag.yaml
-  local dir="$(dirname "$0")"
-  #run "line $LINENO;kubectl -n busybox-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
-  #run "line $LINENO;helm uninstall busybox -n busybox-system"
-  #run "line $LINENO;kubectl apply -f ./101-busybox/deleting-confirmation-flag.yaml"
-
-  run "line $LINENO;kubectl create -f https://raw.githubusercontent.com/busybox/busybox/$busybox_ver/uninstall/uninstall.yaml"
-  #kubectl get job/busybox-uninstall -n busybox-system -w
-
-  # https://medium.com/@sirtcp/how-to-resolve-stuck-kubernetes-namespace-deletions-by-cleaning-finalizers-38190bf3165f
-  # Get all resorces
-  #kubectl api-resources
-  # Get all resorces for namespace
-  #kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n busybox-system
-
-  # kubectl wait --for jsonpath='{.status.state}'=AtLatestKnown sub mysub -n myns --timeout=3m
-  #run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=complete job/busybox-uninstall -n busybox-system'"
-  run "line '$LINENO';kubectl wait --for=condition=complete job/busybox-uninstall -n busybox-system --timeout=5m"
-  #run "line '$LINENO';wait-for-success \"kubectl get job/busybox-uninstall -n busybox-system -o jsonpath='{.status.conditions[?(@.type==\"Complete\")].status}' | grep True\""
-
-  # crd_array=(backingimagedatasources backingimagemanagers backingimages backupbackingimages backups backuptargets /
-  #   backupvolumes engineimages engines instancemanagers nodes orphans recurringjobs replicas settings sharemanagers /
-  #   snapshots supportbundles systembackups systemrestores volumeattachments volumes)
-  # for crd in "${crd_array[@]}"; do
-  #   run "line '$LINENO';kubectl patch crd $crd -n busybox-system -p '{"metadata":{"finalizers":[]}}' --type=merge"
-  #   run "line '$LINENO';kubectl delete crd $crd -n busybox-system"
-  #   #run "line '$LINENO';kubectl delete crd $crd"
-  # done
-
-  run "line '$LINENO';kubectl delete namespace busybox-system"
-  run "line '$LINENO';kubectl delete storageclass busybox-ssd"
-  run "line '$LINENO';kubectl delete storageclass busybox-nvme"
-
-  run "line '$LINENO';kubectl delete namespace busybox-system"
 }
 function install-k3s() {
   
@@ -2646,3 +2370,283 @@ function vkube-k3s.command-init() {
 
   vkube-k3s.cluster-plan-read
 }
+
+#region busybox
+function vkube-k3s.busybox-install() {
+  declare _storage_classes=()
+  if [[ -n ${args[--storage-class]} ]]; then
+    vlib.trace "--storage-class=${args[--storage-class]}"
+    eval "_storage_classes=(${args[--storage-class]:-})"
+  elif [[ -n ${args[--synology-csi-plan]} ]]; then
+    for csi_synology_host in "${csi_synology_hosts[@]}"; do
+      err_and_exit "Not implemented" ${LINENO}
+    done
+  elif [[ -n ${args[--cluster-plan]} ]]; then
+    err_and_exit "Not implemented" ${LINENO}
+  fi
+
+  local txt=""
+  local txt_init_args=""
+  local txt_deploy=""
+  local txt_deploy_vol=""
+  local txt_deploy_vol_mount=""
+  local separator=""
+  
+  #region
+  txt_deploy+="apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${args[name]}
+  namespace: ${args[--namespace]}
+  labels:
+    app: ${args[name]}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${args[name]}  
+  template:
+    metadata:
+      labels:
+        app: ${args[name]}
+    spec:
+      #securityContext: user for commands???
+      #  runAsUser: 1030  # Use UID of nsf_user on Synology
+      #  runAsGroup: 100  # Use GID user group on Synology
+      initContainers:
+      # https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#differences-from-regular-containers
+      - name: init
+        image: busybox:musl
+        # https://www.busybox.net/downloads/BusyBox.html
+        # https://boxmatrix.info/wiki/BusyBox-Commands
+        command: [ \"sh\", \"-c\" ]
+        args:
+        - |
+          #create mount directory
+          #apk add open-iscsi
+          #mkdir -p /usr/bin/env"
+    #endregion
+
+  for __s in "${_storage_classes[@]}"; do
+  #local yaml
+  #yaml=$(kubectl get storageclass $__storage_type -o yaml | yq '.metadata.labels[] | select(.name == "vkube/storage-type")')
+  #yaml=$(kubectl get storageclass $__storage_type -o yaml)
+  #vlib.trace "yaml=$yaml"
+
+    vlib.trace "__s=$__s"
+    # check storage class exists
+    local __storage_type
+    __storage_type="$(vkube-k3s.get-storage-class-type $__s)"
+    vlib.trace "__storage_type=$__storage_type"
+
+    # get storage class label vkube/storage-type
+    #err_and_exit "Not implemented" ${LINENO}
+    #region
+    txt+="${separator}apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ${args[name]}-$__s-pvc
+  namespace: ${args[--namespace]}
+spec:
+  storageClassName: $__s
+  accessModes: 
+  - ${args[--access-mode]}
+  resources:
+    requests:
+      storage: ${args[--storage-size]}
+"
+    #endregion
+    case $__storage_type in
+      iscsi )
+        [[ "${access-mode}" == "ReadWriteMany" ]] && warn-and-trace "ReadWriteMany access mode is not supported for ISCSI"
+        #err_and_exit "Not implemented" ${LINENO}
+      ;;
+      smb )
+      ;;
+      nfs ) # https://medium.com/@bastian.ohm/configuring-your-synology-nas-as-nfs-storage-for-kubernetes-cluster-5e668169e5a2
+      ;;
+      synology-csi-iscsi )
+        [[ "${access-mode}" == "ReadWriteMany" ]] && warn-and-trace "ReadWriteMany access mode is not supported for ISCSI"
+      ;;
+      synology-csi-smb )
+      ;;
+      synology-csi-nfs )
+      ;;
+      * )
+        if [[ -z $__storage_type ]]; then
+          err_and_exit "Storage class '$__s with label 'vkube/storage-type' is not found in kubernetes cluster" ${LINENO};
+        else
+          err_and_exit "Storage class '$__s with label 'vkube/storage-type: $$__storage_type' is not supported" ${LINENO};
+        fi
+    esac
+    #region
+    separator="---
+"
+    txt_init_args+="
+          mkdir -p /home/${args[name]}-$__s-vol && chown -R 999:999 /home/${args[name]}-$__s-vol"
+    txt_deploy_vol+="
+      - name: ${args[name]}-$__s-vol
+        persistentVolumeClaim:
+          claimName: ${args[name]}-$__s-pvc"
+    txt_deploy_vol_mount+="
+          - name: ${args[name]}-$__s-vol
+            mountPath: /home/${args[name]}-$__s-vol # The mount point inside the container"
+    #endregion
+  done
+
+  txt_deploy+="$txt_init_args"
+  #region
+  txt_deploy+="
+      containers:
+        - name: busybox
+          image: busybox:musl
+          imagePullPolicy: 'IfNotPresent'
+          command:
+            - 'sh'
+            - '-c'
+            - 'while true; do sleep 6000; done'
+          resources:
+            limits:
+              memory: '128Mi'
+              cpu: '100m'"
+  txt_deploy+="
+          volumeMounts:"
+  txt_deploy+="$txt_deploy_vol_mount"
+  txt_deploy+="
+      volumes:"
+  #endregion
+  txt_deploy+="$txt_deploy_vol"
+  vlib.trace "generated PVCs=\n$txt"
+  run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist ${args[--namespace]}"
+  run "line '$LINENO';kubectl apply -f - <<<\"${txt}\""
+
+  hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
+  run "line '$LINENO';kubectl apply -f - <<<\"${txt_deploy}\""
+  
+  err_and_exit "Not implemented" ${LINENO}
+
+
+  # ${args[--storage-class]}
+
+  # if ! [[ -e ${cluster_plan_file} ]]; then
+  #   err_and_exit "Cluster plan file '${cluster_plan_file}' is not found" ${LINENO};
+  # fi
+  # #echo $node_root_password
+  # if [[ -z $node_root_password ]]; then
+  #   node_root_password=""
+  #   vlib.read-password node_root_password "Please enter root password for cluster nodes:"
+  #   echo
+  # fi
+
+  # hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
+  # if command kubectl get deploy busybox -n busybox-system &> /dev/null; then
+  #   err_and_exit "Busybox already installed."  ${LINENO} "$0"
+  # fi
+
+  #region
+  txt="apiVersion: v1
+kind: PersistentVolume
+metadata:
+    name: pv-smb-example-name
+    namespace: smb-example-namespace # PersistentVolume and PersistentVolumeClaim must use the same namespace parameter
+spec:
+    capacity:
+        storage: 100Gi
+    accessModes:
+        - ReadWriteMany
+    persistentVolumeReclaimPolicy: Retain
+    mountOptions:
+        - dir_mode=0777
+        - file_mode=0777
+        - vers=3.0
+    csi:
+        driver: smb.csi.k8s.io
+        readOnly: false
+        volumeHandle: examplehandle  # make sure it's a unique id in the cluster
+        volumeAttributes:
+            source: \"//gateway-dns-name-or-ip-address/example-share-name\"
+        nodeStageSecretRef:
+            name: example-smbcreds
+            namespace: smb-example-namespace
+"
+  txt="apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: local-pv
+spec:
+  capacity:
+    storage: 500Mi 
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  # https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
+  storageClassName: local-storage
+  hostPath:
+    path: /mnt/pv-data
+"
+  #endregion
+
+  #exit 1
+  err_and_exit "Not implemented" ${LINENO}
+}
+function vkube-k3s.busybox-uninstall() {
+  hl.blue "$parent_step$((++install_step)). Uninstalling Busybox. (Line:$LINENO)"
+
+  if ! command kubectl get deploy busybox -n busybox-system &> /dev/null; then
+    err_and_exit "Busybox not installed yet."  ${LINENO} "$0"
+  fi
+
+  if ! command kubectl get deploy -l app.kubernetes.io/version=$busybox_ver -n busybox-system &> /dev/null; then
+    err_and_exit "Trying uninstall Busybox version '$busybox_ver', but this version is not installed."  ${LINENO} "$0"
+  fi
+
+  # busybox_installed_ver=$( busyboxctl version )
+  # if ! [ $busybox_installed_ver == $busybox_ver ]; then
+  #   err_and_exit "Trying uninstall Busybox version '$busybox_ver', but expected '$busybox_installed_ver'."  ${LINENO} "$0"
+  # fi
+
+  # manually deleting stucked-namespace
+  #kubectl get namespace "busybox-system" -o json | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/" | kubectl replace --raw /api/v1/namespaces/busybox-system/finalize -f -
+  #kubectl get namespace "stucked-namespace" -o json \
+  #  | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/" \
+  #  | kubectl replace --raw /api/v1/namespaces/stucked-namespace/finalize -f -
+
+  # busybox deleting-confirmation-flag
+  # kubectl get lhs -n busybox-system
+  # can be edit in k9s or apply deleting-confirmation-flag.yaml
+  local dir="$(dirname "$0")"
+  #run "line $LINENO;kubectl -n busybox-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
+  #run "line $LINENO;helm uninstall busybox -n busybox-system"
+  #run "line $LINENO;kubectl apply -f ./101-busybox/deleting-confirmation-flag.yaml"
+
+  run "line $LINENO;kubectl create -f https://raw.githubusercontent.com/busybox/busybox/$busybox_ver/uninstall/uninstall.yaml"
+  #kubectl get job/busybox-uninstall -n busybox-system -w
+
+  # https://medium.com/@sirtcp/how-to-resolve-stuck-kubernetes-namespace-deletions-by-cleaning-finalizers-38190bf3165f
+  # Get all resorces
+  #kubectl api-resources
+  # Get all resorces for namespace
+  #kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n busybox-system
+
+  # kubectl wait --for jsonpath='{.status.state}'=AtLatestKnown sub mysub -n myns --timeout=3m
+  #run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=complete job/busybox-uninstall -n busybox-system'"
+  run "line '$LINENO';kubectl wait --for=condition=complete job/busybox-uninstall -n busybox-system --timeout=5m"
+  #run "line '$LINENO';wait-for-success \"kubectl get job/busybox-uninstall -n busybox-system -o jsonpath='{.status.conditions[?(@.type==\"Complete\")].status}' | grep True\""
+
+  # crd_array=(backingimagedatasources backingimagemanagers backingimages backupbackingimages backups backuptargets /
+  #   backupvolumes engineimages engines instancemanagers nodes orphans recurringjobs replicas settings sharemanagers /
+  #   snapshots supportbundles systembackups systemrestores volumeattachments volumes)
+  # for crd in "${crd_array[@]}"; do
+  #   run "line '$LINENO';kubectl patch crd $crd -n busybox-system -p '{"metadata":{"finalizers":[]}}' --type=merge"
+  #   run "line '$LINENO';kubectl delete crd $crd -n busybox-system"
+  #   #run "line '$LINENO';kubectl delete crd $crd"
+  # done
+
+  run "line '$LINENO';kubectl delete namespace busybox-system"
+  run "line '$LINENO';kubectl delete storageclass busybox-ssd"
+  run "line '$LINENO';kubectl delete storageclass busybox-nvme"
+
+  run "line '$LINENO';kubectl delete namespace busybox-system"
+}
+#endregion busybox

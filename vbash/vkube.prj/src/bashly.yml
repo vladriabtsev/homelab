@@ -85,11 +85,11 @@ commands:
     default: "ls"
 
 - import: src/k3s.yml
+- import: src/busybox.yml
 #- import: src/local-storage.yml
 #- import: src/nfs-storage.yml
 #- import: src/smb-storage.yml
 #- import: src/synology-csi.yml
-#- import: src/busybox.yml
 
 examples:
 - ./vkube --help

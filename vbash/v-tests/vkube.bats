@@ -165,3 +165,16 @@ setup() {
   assert_file_not_contains "${MY_LOG_DIR}vkube_exec_command.log" '+[' grep
 }
 
+#region apps
+
+  # bats test_tags=tag:busybox
+  @test "../vkube --cluster-plan k3d-test busybox install test-deployment" {
+    # if ! kubectl get ns/longhorn-system; then
+    #   skip "Longhorn is not installed"
+    # fi
+    run ../vkube --cluster-plan k3d-test busybox install test-deployment
+    assert_success
+    #echo "output=$output" >&3
+  }
+
+#endregion apps

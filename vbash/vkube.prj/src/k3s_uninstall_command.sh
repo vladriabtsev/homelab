@@ -291,7 +291,7 @@ else
   err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
 fi
 if ! [ "$k3s_latest" == "$k3s_ver" ]; then
-  warn "Latest version of K3s: '$k3s_latest', but installing: '$k3s_ver'"
+  warn-and-trace "Latest version of K3s: '$k3s_latest', but installing: '$k3s_ver'"
 fi
 
 # kube vip
@@ -308,7 +308,7 @@ if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
     err_and_exit "Error: Invalid input for kube_vip_ver: '$kube_vip_ver'." ${LINENO}
   fi
   if ! [ "$kvversion_latest" == "$kube_vip_ver" ]; then
-    warn "Latest version kube-vip: '$kvversion_latest', but installing: '$kube_vip_ver'"
+    warn-and-trace "Latest version kube-vip: '$kvversion_latest', but installing: '$kube_vip_ver'"
   fi
 
   # kube-vip-cloud-provider
@@ -318,7 +318,7 @@ if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
   #fi
   #inf "kube_vip_cloud_provider_ver: '$kube_vip_cloud_provider_ver'\n"
   #if ! [ "$kvcloudversion_latest" == "$kube_vip_cloud_provider_ver" ]; then
-  #  warn "Latest version kube-vip-cloud-provider: '$kvcloudversion_latest', but installing: '$kube_vip_cloud_provider_ver'\n"
+  #  warn-and-trace "Latest version kube-vip-cloud-provider: '$kvcloudversion_latest', but installing: '$kube_vip_cloud_provider_ver'\n"
   #fi
 
   # Kube-VIP mode
@@ -336,7 +336,7 @@ if [ -z $metal_lb_ver ]; then
 fi
 inf "               metal_lb_ver: '$kube_vip_cloud_provider_ver'"
 if ! [ "$metal_lb_latest" == "$metal_lb_ver" ]; then
-  warn "Latest version MetalLB: '$metal_lb_latest', but installing: '$metal_lb_ver'"
+  warn-and-trace "Latest version MetalLB: '$metal_lb_latest', but installing: '$metal_lb_ver'"
 fi
 
 if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; then # install on nodes
@@ -485,7 +485,7 @@ fi
 #   longhorn_ver=$longhorn_latest
 # fi
 # if ! [ "$longhorn_latest" == "$longhorn_ver" ]; then
-#   warn "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
+#   warn-and-trace "Latest version of Longhorn: '$longhorn_latest', but installing: '$longhorn_ver'\n"
 # fi
 # run "line '$LINENO';kubectl apply -f https://raw.githubusercontent.com/longhorn/longhorn/$longhorn_ver/deploy/longhorn.yaml"
 # # https://longhorn.io/docs/1.7.2/advanced-resources/longhornctl/install-longhornctl/
@@ -524,7 +524,7 @@ if [ -z $rancher_ver ]; then
 fi
 helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
 #if ! [ "$rancher_latest" == "$rancher_ver" ]; then
-#  warn "Latest version of Rancher: '$rancher_latest', but installing: '$rancher_ver'\n"
+#  warn-and-trace "Latest version of Rancher: '$rancher_latest', but installing: '$rancher_ver'\n"
 #fi
 if ! ($(kubectl get namespace cattle-system > /dev/null )); then kubectl create namespace cattle-system; fi
 # helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
