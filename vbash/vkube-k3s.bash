@@ -2404,6 +2404,7 @@ function vkube-k3s.app-install() {
 
   local _release
   local _variant
+  local _deployment
   local _ver
   if [ -n "${args[--release]}" ]; then
     _release="${args[--release]}"
@@ -2411,13 +2412,16 @@ function vkube-k3s.app-install() {
   if [ -n "${args[--variant]}" ]; then
     _variant="${args[--variant]}"
   fi
+  if [ -n "${args[--deployment]}" ]; then
+    _deployment="${args[--deployment]}"
+  fi
   case ${1} in
     busybox )
       # https://hub.docker.com/_/busybox
       # https://github.com/docker-library/busybox/blob/master/versions.json
       hl.blue "$parent_step$((++install_step)). Installing busybox. (Line:$LINENO)"
       if [ -z "$busybox_ver" ]; then
-        warn-and-trace "Busybox version is not set in cluster-plan.yaml file. Latest stable version will be used."
+        warn-and-trace "Variable 'busybox_ver' is not set in cluster-plan.yaml file. Latest stable version will be used."
         _release="stable"
       fi
       _ver="$_release"
@@ -2437,23 +2441,14 @@ function vkube-k3s.app-install() {
     ;;
   esac
 
-
-  #vlib.check-container-release-version busybox "$latest" busybox_ver
-
-
-
-
+  if [ -z "${_deployment}" ]; then
+    _deployment="${1}"
+  fi
 
   declare _storage_classes=()
   if [[ -n ${args[--storage-class]} ]]; then
     vlib.trace "--storage-class=${args[--storage-class]}"
     eval "_storage_classes=(${args[--storage-class]:-})"
-  elif [[ -n ${args[--synology-csi-plan]} ]]; then
-    for csi_synology_host in "${csi_synology_hosts[@]}"; do
-      err_and_exit "Not implemented" ${LINENO}
-    done
-  elif [[ -n ${args[--cluster-plan]} ]]; then
-    err_and_exit "Not implemented" ${LINENO}
   fi
 
   local txt=""

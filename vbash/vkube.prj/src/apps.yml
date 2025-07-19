@@ -60,7 +60,7 @@ commands:
     arg: storage-size-request
     default: 1Gi
     help: Storage size request for persistent volume claims for each storage class
-    conflicts: [--cluster-plan, --synology-csi-plan]
+    #conflicts: [--cluster-plan, --synology-csi-plan]
   - long: --access-mode
     short: -a
     arg: access-mode

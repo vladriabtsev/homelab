@@ -45,7 +45,7 @@ commands:
   - long: --container-type
     help: Container OS
     arg: container
-    allowed: [alpine, ubuntu-xenial, busybox]
+    allowed: [alpine]
     default: alpine
 
 

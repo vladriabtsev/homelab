@@ -288,7 +288,7 @@ vkube_k3s_storage_speed_usage() {
     # :flag.usage
     printf "  %s\n" "$(magenta "--container-type CONTAINER")"
     printf "    Container OS\n"
-    printf "    %s\n" "Allowed: alpine, ubuntu-xenial, busybox"
+    printf "    %s\n" "Allowed: alpine"
     printf "    %s\n" "Default: alpine"
     echo
 
@@ -465,7 +465,6 @@ vkube_app_install_usage() {
     printf "  %s\n" "$(magenta "--storage-size, -s STORAGE-SIZE-REQUEST")"
     printf "    Storage size request for persistent volume claims for each storage class\n"
     printf "    %s\n" "Default: 1Gi"
-    printf "    %s\n" "Conflicts: --cluster-plan, --synology-csi-plan"
     echo
 
     # :flag.usage
@@ -1403,8 +1402,8 @@ vkube_k3s_storage_speed_parse_requirements() {
   [[ -n ${args['--container-type']:-} ]] || args['--container-type']="alpine"
 
   # :command.whitelist_filter
-  if [[ ${args['--container-type']:-} ]] && [[ ! ${args['--container-type']:-} =~ ^(alpine|ubuntu-xenial|busybox)$ ]]; then
-    printf "%s\n" "--container-type must be one of: alpine, ubuntu-xenial, busybox" >&2
+  if [[ ${args['--container-type']:-} ]] && [[ ! ${args['--container-type']:-} =~ ^(alpine)$ ]]; then
+    printf "%s\n" "--container-type must be one of: alpine" >&2
     exit 1
   fi
 
@@ -1721,13 +1720,6 @@ vkube_app_install_parse_requirements() {
 
       # :flag.case
       --storage-size | -s)
-        # :flag.conflicts
-        for conflict in --cluster-plan --synology-csi-plan; do
-          if [[ -n "${args[$conflict]:-}" ]]; then
-            printf "conflicting options: %s cannot be used with %s\n" "$key" "$conflict" >&2
-            exit 1
-          fi
-        done
 
         # :flag.case_arg
         if [[ -n ${2+x} ]]; then
