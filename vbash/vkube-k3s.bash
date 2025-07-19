@@ -2405,14 +2405,11 @@ function vkube-k3s.busybox-install() {
   vlib.trace "versions: ${versions[*]}"
   if [[ "$ver" != "stable" ]] && [[ "$ver" != "latest" ]]; then
     if [[ "$ver" != "${versions[0]}" ]] && [[ "$ver" != "${versions[1]}" ]]; then
-      #warn-and-trace "Version of '$1' is '$ver'. Stable version: '${versions[1]}'. Latest version: '${versions[0]}'."
       warn-and-trace "Version of 'busybox' is '$busybox_ver'. Latest and stable versions: ${versions[*]}"
     else
-      #inf-and-trace "Version of '$1' is '$ver'. Stable version: '${versions[1]}'. Latest version: '${versions[0]}'."
       inf-and-trace "Version of 'busybox' is '$busybox_ver'. Latest and stable versions: ${versions[*]}"
     fi
   else
-    #inf-and-trace "Version of '$1' is '$ver'. Stable version: '${versions[1]}'. Latest version: '${versions[0]}'."
     inf-and-trace "Version of 'busybox' is '$busybox_ver'. Latest and stable versions: ${versions[*]}"
   fi
 
