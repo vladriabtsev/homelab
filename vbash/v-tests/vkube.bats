@@ -168,13 +168,25 @@ setup() {
 #region apps
 
   # bats test_tags=tag:busybox
-  @test "../vkube --cluster-plan k3d-test busybox install test-deployment" {
+  @test "../vkube --trace --cluster-plan k3d-test app" {
+    run ../vkube --trace --cluster-plan k3d-test app
+    assert_failure
+    #echo "output=$output" >&3
+  }
+  # bats test_tags=tag:busybox
+  @test "../vkube --trace --cluster-plan k3d-test app install" {
+    run ../vkube --trace --cluster-plan k3d-test app install
+    assert_failure
+    #echo "output=$output" >&3
+  }
+  # bats test_tags=tag:busybox
+  @test "../vkube --trace --cluster-plan k3d-test app install busybox" {
     # if ! kubectl get ns/longhorn-system; then
     #   skip "Longhorn is not installed"
     # fi
-    run ../vkube --cluster-plan k3d-test busybox install test-deployment
+    run ../vkube --trace --cluster-plan k3d-test app install busybox
     assert_success
-    #echo "output=$output" >&3
+    echo "output=$output" >&3
   }
 
 #endregion apps

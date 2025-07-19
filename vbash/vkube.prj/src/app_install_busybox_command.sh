@@ -10,4 +10,4 @@ vkube-k3s.command-init
 #csi_synology_snapshot_use=${args[--snapshot]}
 
 vkube-k3s.check-cluster-plan-path
-vkube-k3s.busybox-install
+vkube-k3s.app-install busybox

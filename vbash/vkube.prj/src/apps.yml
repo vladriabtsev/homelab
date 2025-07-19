@@ -1,20 +1,44 @@
-name: busybox
-help: Busybox container
+name: app
+help: Application commands
+flags:
+- long: --namespace
+  short: -n
+  arg: namespace
+  default: default
+  help: Namespace name
+
+  # args:
+  # - name: storage-class
+  #   help: Storage class name
+  #   repeatable: true
+  #   required: true
+  #   unique: true
 
 commands:
 - name: install
   help: |-
-    Install busybox container with disks for all storage classes:
-    - All storage classes from --cluster-plan flag.
-    - All storage classes from --synology-csi-plan flag.
-    - All storage classes from --storage-class flags.
-  args:
-  - name: storage-class
-    help: Storage class name
-    repeatable: true
-    required: true
-    unique: true
+    Install application container
+    - With disks for all storage classes. Example: '--all-storage-classes' flag.
+    - With disks for several storage classes. Example: '-s class-name-1 -s class-name-2'
+    - Without storage.
+  
+  commands:
+  - name: busybox
+    help: |-
+      Install busybox application.
+    flags:
+    - long: --variant
+      arg: variant
+      help: Busybox variant
+      default: musl
+      allowed: [musl, uclibc, glibc] # https://hub.docker.com/_/busybox
   flags:
+  - long: --storage-class
+    short: -c
+    help: Storage class name(s)
+    arg: name
+    repeatable: true
+    unique: true
   - long: --all-storage-classes
     help: Use all storage types
   - long: --all-storage-classes-ext
@@ -25,23 +49,12 @@ commands:
   - long: --deployment
     short: -d
     arg: deployment
-    help: Name of busybox deployment.
-    default: busybox
+    help: Name of deployment.
   - long: --release
     short: -r
     arg: release
-    help: Busybox release version
-    default: stable
-  - long: --variant
-    arg: variant
-    help: Busybox variant
-    default: musl
-    allowed: [musl, uclibc, glibc] # https://hub.docker.com/_/busybox
-  - long: --namespace
-    short: -n
-    arg: namespace
-    default: default
-    help: Namespace name
+    help: Container release version
+    default: latest
   - long: --storage-size
     short: -s
     arg: storage-size-request
@@ -62,12 +75,10 @@ commands:
 
 - name: uninstall
   help: Uninstall busybox container
-  flags:
-  - long: --namespace
-    short: -n
-    arg: namespace
-    default: default
-    help: Namespace name
+  commands:
+  - name: busybox
+    help: |-
+      Uninstall busybox application.
 
 # - name: upgrade
 #   help: Upgrade busybox release version

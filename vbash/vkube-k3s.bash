@@ -2371,47 +2371,74 @@ function vkube-k3s.command-init() {
   vkube-k3s.cluster-plan-read
 }
 
-#region busybox
-function vkube-k3s.busybox-install() {
-  # https://hub.docker.com/_/busybox
-  # https://github.com/docker-library/busybox/blob/master/versions.json
+#region app
+function vkube-k3s.app-check-releses() {
+  if [ -z "$1" ]; then
+    err_and_exit "URL to github json file for container is missing. Parameter \$1."
+  fi
+  if [ -z "$2" ]; then
+    err_and_exit "Container version is missing. Parameter \$2."
+  fi
+  if [ -z "$3" ]; then
+    err_and_exit "Full container version is missing. Parameter \$3."
+  fi
+  readarray -t versions < <(curl -sL "$1" | jq -r "[ .[] | .version ]")
+  vlib.trace "versions: ${versions[*]}"
+  if [[ "$2" != "stable" ]] && [[ "$2" != "latest" ]]; then
+    if [[ "$2" != "${versions[0]}" ]] && [[ "$2" != "${versions[1]}" ]]; then
+      warn-and-trace "Version of 'busybox' is '$3'. Latest and stable versions: ${versions[*]}"
+    else
+      inf-and-trace "Version of 'busybox' is '$3'. Latest and stable versions: ${versions[*]}"
+    fi
+  else
+    inf-and-trace "Version of 'busybox' is '$3'. Latest and stable versions: ${versions[*]}"
+  fi
+}
+function vkube-k3s.app-install() {
   # https://jqlang.org/
   # https://github.com/jqlang/jq
   # https://jqlang.org/manual/
+  if [ -z "$1" ]; then
+    err_and_exit "Name of application container is missing. Parameter \$1."
+  fi
 
-  #vlib.check-container-release-version busybox "$latest" busybox_ver
+  local _release
+  local _variant
+  local _ver
   if [ -n "${args[--release]}" ]; then
-    busybox_ver="${args[--release]}"
+    _release="${args[--release]}"
   fi
   if [ -n "${args[--variant]}" ]; then
-    busybox_variant="${args[--variant]}"
+    _variant="${args[--variant]}"
   fi
-  if [ -z "$busybox_ver" ]; then
-    warn-and-trace "Busybox version is not set in cluster-plan.yaml file. Latest stable version will be used."
-    busybox_ver="stable"
-  fi
-  local ver
-  ver="$busybox_ver"
-  if [[ "$busybox_ver" = "latest" ]]; then
-    if [ -n "$busybox_variant" ]; then
-      busybox_ver="$busybox_variant"
-    fi
-  else
-    if [ -n "$busybox_variant" ]; then
-      busybox_ver="$busybox_ver-$busybox_variant"
-    fi
-  fi
-  readarray -t versions < <(curl -sL https://raw.githubusercontent.com/docker-library/busybox/refs/heads/master/versions.json | jq -r "[ .[] | .version ]")
-  vlib.trace "versions: ${versions[*]}"
-  if [[ "$ver" != "stable" ]] && [[ "$ver" != "latest" ]]; then
-    if [[ "$ver" != "${versions[0]}" ]] && [[ "$ver" != "${versions[1]}" ]]; then
-      warn-and-trace "Version of 'busybox' is '$busybox_ver'. Latest and stable versions: ${versions[*]}"
-    else
-      inf-and-trace "Version of 'busybox' is '$busybox_ver'. Latest and stable versions: ${versions[*]}"
-    fi
-  else
-    inf-and-trace "Version of 'busybox' is '$busybox_ver'. Latest and stable versions: ${versions[*]}"
-  fi
+  case ${1} in
+    busybox )
+      # https://hub.docker.com/_/busybox
+      # https://github.com/docker-library/busybox/blob/master/versions.json
+      hl.blue "$parent_step$((++install_step)). Installing busybox. (Line:$LINENO)"
+      if [ -z "$busybox_ver" ]; then
+        warn-and-trace "Busybox version is not set in cluster-plan.yaml file. Latest stable version will be used."
+        _release="stable"
+      fi
+      _ver="$_release"
+      if [[ "$_release" = "latest" ]]; then
+        if [ -n "$busybox_variant" ]; then
+          _release="$busybox_variant"
+        fi
+      else
+        if [ -n "$busybox_variant" ]; then
+          _release="$_release-$busybox_variant"
+        fi
+      fi
+      vkube-k3s.app-check-releses 'https://raw.githubusercontent.com/docker-library/busybox/refs/heads/master/versions.json' "$_ver" "$_release"
+    ;;
+    * ) 
+      err_and_exit "Unsupported app type '${1}'."
+    ;;
+  esac
+
+
+  #vlib.check-container-release-version busybox "$latest" busybox_ver
 
 
 
@@ -2629,7 +2656,12 @@ spec:
   #exit 1
   err_and_exit "Not implemented" ${LINENO}
 }
-function vkube-k3s.busybox-uninstall() {
+function vkube-k3s.app-uninstall() {
+  if [ -z "$1" ]; then
+    err_and_exit "Name of application container is missing. Parameter \$1."
+  fi
+
+
   hl.blue "$parent_step$((++install_step)). Uninstalling Busybox. (Line:$LINENO)"
 
   if ! command kubectl get deploy busybox -n busybox-system &> /dev/null; then
@@ -2688,4 +2720,4 @@ function vkube-k3s.busybox-uninstall() {
 
   run "line '$LINENO';kubectl delete namespace busybox-system"
 }
-#endregion busybox
+#endregion app
