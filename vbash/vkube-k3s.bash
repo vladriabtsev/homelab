@@ -2373,6 +2373,53 @@ function vkube-k3s.command-init() {
 
 #region busybox
 function vkube-k3s.busybox-install() {
+  # https://hub.docker.com/_/busybox
+  # https://github.com/docker-library/busybox/blob/master/versions.json
+  # https://jqlang.org/
+  # https://github.com/jqlang/jq
+  # https://jqlang.org/manual/
+
+  #vlib.check-container-release-version busybox "$latest" busybox_ver
+  if [ -n "${args[--release]}" ]; then
+    busybox_ver="${args[--release]}"
+  fi
+  if [ -n "${args[--variant]}" ]; then
+    busybox_variant="${args[--variant]}"
+  fi
+  if [ -z "$busybox_ver" ]; then
+    warn-and-trace "Busybox version is not set in cluster-plan.yaml file. Latest stable version will be used."
+    busybox_ver="stable"
+  fi
+  local ver
+  ver="$busybox_ver"
+  if [[ "$busybox_ver" = "latest" ]]; then
+    if [ -n "$busybox_variant" ]; then
+      busybox_ver="$busybox_variant"
+    fi
+  else
+    if [ -n "$busybox_variant" ]; then
+      busybox_ver="$busybox_ver-$busybox_variant"
+    fi
+  fi
+  readarray -t versions < <(curl -sL https://raw.githubusercontent.com/docker-library/busybox/refs/heads/master/versions.json | jq -r "[ .[] | .version ]")
+  vlib.trace "versions: ${versions[*]}"
+  if [[ "$ver" != "stable" ]] && [[ "$ver" != "latest" ]]; then
+    if [[ "$ver" != "${versions[0]}" ]] && [[ "$ver" != "${versions[1]}" ]]; then
+      #warn-and-trace "Version of '$1' is '$ver'. Stable version: '${versions[1]}'. Latest version: '${versions[0]}'."
+      warn-and-trace "Version of 'busybox' is '$busybox_ver'. Latest and stable versions: ${versions[*]}"
+    else
+      #inf-and-trace "Version of '$1' is '$ver'. Stable version: '${versions[1]}'. Latest version: '${versions[0]}'."
+      inf-and-trace "Version of 'busybox' is '$busybox_ver'. Latest and stable versions: ${versions[*]}"
+    fi
+  else
+    #inf-and-trace "Version of '$1' is '$ver'. Stable version: '${versions[1]}'. Latest version: '${versions[0]}'."
+    inf-and-trace "Version of 'busybox' is '$busybox_ver'. Latest and stable versions: ${versions[*]}"
+  fi
+
+
+
+
+
   declare _storage_classes=()
   if [[ -n ${args[--storage-class]} ]]; then
     vlib.trace "--storage-class=${args[--storage-class]}"
@@ -2386,11 +2433,6 @@ function vkube-k3s.busybox-install() {
   fi
 
   local txt=""
-  local txt_init_args=""
-  local txt_deploy=""
-  local txt_deploy_vol=""
-  local txt_deploy_vol_mount=""
-  local separator=""
   
   #region
   txt_deploy+="apiVersion: apps/v1

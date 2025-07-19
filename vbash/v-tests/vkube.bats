@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 # bats tests: ./bats/bin/bats ./
 # bats tests: ./bats/bin/bats vkube.bats --filter-status failed
-# ./bats/bin/bats ./ --filter-tags tag:log
+# ./bats/bin/bats ./vkube.bats --filter-tags tag:log
 
 # https://bats-core.readthedocs.io/en/stable/tutorial.html#dealing-with-output
 setup() {

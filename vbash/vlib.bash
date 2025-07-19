@@ -357,14 +357,26 @@ function inf() {
 }
 function inf-and-trace() {
   echo "$(green_bold "$@")"
-  vlib.trace-call-short
+  [[ $__is_trace -eq 0 ]] && return 0
+  if [[ ${#BASH_LINENO[@]} -gt 1 ]]; then
+    echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
+    echo "  # file: ${BASH_SOURCE[2]}, line: ${BASH_LINENO[1]}, func: ${FUNCNAME[2]}"
+  else
+    echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
+  fi
 }
 function warn() {
   echo "$(yellow_bold "$@")"
 }
 function warn-and-trace() {
   echo "$(yellow_bold "$@")"
-  vlib.trace-call-short
+  [[ $__is_trace -eq 0 ]] && return 0
+  if [[ ${#BASH_LINENO[@]} -gt 1 ]]; then
+    echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
+    echo "  # file: ${BASH_SOURCE[2]}, line: ${BASH_LINENO[1]}, func: ${FUNCNAME[2]}"
+  else
+    echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
+  fi
 }
 function bashly_step() {
   echo "[$(date -Is)]" "$@"
@@ -427,16 +439,6 @@ function vlib.call-trace() {
     fi
   done
   echo "################# E N D   C A L L   T R A C E ######################"
-}
-function vlib.trace-call-short() {
-  #echo "is trace: '$__is_trace'"
-  [[ $__is_trace -eq 0 ]] && return 0
-  if [[ ${#BASH_LINENO[@]} -gt 1 ]]; then
-    echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
-    echo "  # file: ${BASH_SOURCE[2]}, line: ${BASH_LINENO[1]}, func: ${FUNCNAME[2]}"
-  else
-    echo "  # file: ${BASH_SOURCE[1]}, line: ${BASH_LINENO[0]}, func: ${FUNCNAME[1]}"
-  fi
 }
 function vlib.trace() {
   #echo "is trace: '$__is_trace'"
@@ -847,6 +849,57 @@ function vlib.check-github-release-version() {
   fi
   #set +x
 }
+# function vlib.check-container-release-version() {
+#   usage="Usage: $(basename $0) name github_releases_url name_of_version_variable reverse_sorting"
+#   if [ -z "$1" ]; then
+#     echo $usage
+#     err_and_exit "Missing \$1 - name"
+#   fi
+#   # Sample: https://raw.githubusercontent.com/docker-library/busybox/refs/heads/master/versions.json
+#   if [ -z "$2" ]; then
+#     echo $usage
+#     # Sample: https://api.github.com/repos/longhorn/longhorn/releases
+#     err_and_exit "Missing \$2 - github releases url"
+#   fi
+#   if [ -z "$3" ]; then
+#     echo $usage
+#     err_and_exit "Missing \$3 - name of global variable used to return latest version"
+#   fi
+#   #set -x
+#   local latest
+#   if [ -z "$4" ]; then
+#     latest=$(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0]")
+#   else
+#     latest=$(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0]")
+#   fi
+#   eval local ver2=\"\$$3\"
+#   local ver=$ver2
+#   if [ -n $latest ]; then
+#     if [ -z "$4" ]; then
+#       readarray -t releases < <(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | .[0:3]")
+#     else
+#       readarray -t releases < <(curl -sL $2 | jq -r "[ .[] | select(.prerelease == false) | .tag_name ] | sort | reverse | .[0:3]")
+#     fi
+#     if [ -z $ver ]; then 
+#       ver=$latest;
+#       inf-and-trace "Version of '$1' is empty. Will use '$ver' version. Latest: ${releases[*]}\n"
+#     else
+#       if ! [ "$latest" == "$ver" ]; then
+#         warn-and-trace "Version of '$1' is '$ver'. Latest: ${releases[*]}\n"
+#       else
+#         inf "Version of '$1' is '$ver'. Latest: ${releases[*]}\n"
+#       fi
+#     fi
+#     eval "$3=$ver"
+#   else
+#     if [ -z $ver ]; then 
+#       err_and_exit "Latest version of $1 is not found. Github URL: $2"
+#     else
+#       err_and_exit "Version of '$1' is '$ver'. Latest version of $1 is not found. Github URL: $2"
+#     fi
+#   fi
+#   #set +x
+# }
 # Waits until the user presses any key to continue.
 function vlib.press-any-key() {
   local prompt="$*"

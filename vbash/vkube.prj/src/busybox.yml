@@ -31,7 +31,12 @@ commands:
     short: -r
     arg: release
     help: Busybox release version
-    default: latest
+    default: stable
+  - long: --variant
+    arg: variant
+    help: Busybox variant
+    default: musl
+    allowed: [musl, uclibc, glibc] # https://hub.docker.com/_/busybox
   - long: --namespace
     short: -n
     arg: namespace

@@ -186,9 +186,10 @@ storage_servers:
 # A P P L I C A T I O N S
 ##########################
 
-# Busybox
+# Busybox, https://hub.docker.com/_/busybox 
 busybox_use: 1
-busybox_ver:  # auto upgrade to latest if empty
+busybox_ver: stable  # stable if empty. If not empty full version will be '<busybox_ver>-<busybox_variant>'
+busybox_variant: musl # if not empty, busybox_ver has to be empty or 'stable.' Expected: uclibc (https://uclibc.org/), musl (https://pkgs.alpinelinux.org/packages?name=musl), glibc (https://packages.debian.org/search?searchon=names&exact=1&suite=all&section=all&keywords=libc6)
 
 # https://github.com/kube-vip/kube-vip/releases
 pi_hole_use: 1

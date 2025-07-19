@@ -443,7 +443,14 @@ vkube_busybox_install_usage() {
     # :flag.usage
     printf "  %s\n" "$(magenta "--release, -r RELEASE")"
     printf "    Busybox release version\n"
-    printf "    %s\n" "Default: latest"
+    printf "    %s\n" "Default: stable"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--variant VARIANT")"
+    printf "    Busybox variant\n"
+    printf "    %s\n" "Allowed: musl, uclibc, glibc"
+    printf "    %s\n" "Default: musl"
     echo
 
     # :flag.usage
@@ -1641,6 +1648,20 @@ vkube_busybox_install_parse_requirements() {
         ;;
 
       # :flag.case
+      --variant)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--variant']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--variant requires an argument: --variant VARIANT" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
       --namespace | -n)
 
         # :flag.case_arg
@@ -1724,7 +1745,8 @@ vkube_busybox_install_parse_requirements() {
   # :command.default_assignments
   [[ -n ${args['--all-storage-classes-ext']:-} ]] || args['--all-storage-classes-ext']="del"
   [[ -n ${args['--deployment']:-} ]] || args['--deployment']="busybox"
-  [[ -n ${args['--release']:-} ]] || args['--release']="latest"
+  [[ -n ${args['--release']:-} ]] || args['--release']="stable"
+  [[ -n ${args['--variant']:-} ]] || args['--variant']="musl"
   [[ -n ${args['--namespace']:-} ]] || args['--namespace']="default"
   [[ -n ${args['--storage-size']:-} ]] || args['--storage-size']="1Gi"
   [[ -n ${args['--access-mode']:-} ]] || args['--access-mode']="ReadWriteOnce"
@@ -1732,6 +1754,10 @@ vkube_busybox_install_parse_requirements() {
   # :command.whitelist_filter
   if [[ ${args['--all-storage-classes-ext']:-} ]] && [[ ! ${args['--all-storage-classes-ext']:-} =~ ^(del|ret|ext)$ ]]; then
     printf "%s\n" "--all-storage-classes-ext must be one of: del, ret, ext" >&2
+    exit 1
+  fi
+  if [[ ${args['--variant']:-} ]] && [[ ! ${args['--variant']:-} =~ ^(musl|uclibc|glibc)$ ]]; then
+    printf "%s\n" "--variant must be one of: musl, uclibc, glibc" >&2
     exit 1
   fi
   if [[ ${args['--access-mode']:-} ]] && [[ ! ${args['--access-mode']:-} =~ ^(ReadWriteOnce|ReadOnlyMany|ReadWriteMany|ReadWriteOncePod)$ ]]; then
