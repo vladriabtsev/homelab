@@ -32,46 +32,59 @@ commands:
       help: Busybox variant
       default: musl
       allowed: [musl, uclibc, glibc] # https://hub.docker.com/_/busybox
-  flags:
-  - long: --storage-class
-    short: -c
-    help: Storage class name(s)
-    arg: name
-    repeatable: true
-    unique: true
-  - long: --all-storage-classes
-    help: Use all storage types
-  - long: --all-storage-classes-ext
-    arg: storage-classes-ext
-    default: del
-    allowed: [del, ret, ext]
-    help: Storage class name extension for flag --all-storage-classes. Example 'longhorn-del'
-  - long: --deployment
-    short: -d
-    arg: deployment
-    help: Name of deployment.
-  - long: --release
-    short: -r
-    arg: release
-    help: Container release version
-    default: latest
-  - long: --storage-size
-    short: -s
-    arg: storage-size-request
-    default: 1Gi
-    help: Storage size request for persistent volume claims for each storage class
-    #conflicts: [--cluster-plan, --synology-csi-plan]
-  - long: --access-mode
-    short: -a
-    arg: access-mode
-    default: ReadWriteOnce
-    allowed: [ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod] # https://spacelift.io/blog/kubernetes-persistent-volumes
-    help: Storage access mode
-  # - long: --secret-folder
-  #   help: Secret folder with?????
-  #   #validate: dir_exists
-  #   required: true
-  #   arg: folder
+    - &storage-class
+      long: --storage-class
+      short: -c
+      help: Storage class name(s)
+      arg: name
+      repeatable: true
+      unique: true
+    - &mount-point
+      long: --mount-point
+      short: -m
+      help: Mount pass(es) for storage class(es)
+      arg: name
+      repeatable: true
+      unique: true
+    - &all-storage-classes
+      long: --all-storage-classes
+      help: Use all storage types
+    - &all-storage-classes-ext
+      long: --all-storage-classes-ext
+      arg: storage-classes-ext
+      default: del
+      allowed: [del, ret, ext]
+      help: Storage class name extension for flag --all-storage-classes. Example 'longhorn-del'
+    - &deployment
+      long: --deployment
+      short: -d
+      arg: deployment
+      help: Name of deployment.
+    - &release
+      long: --release
+      short: -r
+      arg: release
+      help: Container release version
+      default: latest
+    - &storage-size
+      long: --storage-size
+      short: -s
+      arg: storage-size-request
+      default: 1Gi
+      help: Storage size request for persistent volume claims for each storage class
+      #conflicts: [--cluster-plan, --synology-csi-plan]
+    - &access-mode
+      long: --access-mode
+      short: -a
+      arg: access-mode
+      default: ReadWriteOnce
+      allowed: [ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod] # https://spacelift.io/blog/kubernetes-persistent-volumes
+      help: Storage access mode
+    # - long: --secret-folder
+    #   help: Secret folder with?????
+    #   #validate: dir_exists
+    #   required: true
+    #   arg: folder
 
 - name: uninstall
   help: Uninstall busybox container

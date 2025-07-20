@@ -420,7 +420,7 @@ vkube_app_install_usage() {
   fi
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube app install [OPTIONS] COMMAND\n"
+  printf "  vkube app install COMMAND\n"
   printf "  vkube app install [COMMAND] --help | -h\n"
   echo
   # :command.usage_commands
@@ -430,12 +430,45 @@ vkube_app_install_usage() {
 
   # :command.long_usage
   if [[ -n "$long_usage" ]]; then
-    printf "%s\n" "$(bold "Global Options:")"
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_app_install_busybox_usage() {
+  printf "vkube app install busybox - Install busybox application.\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube app install busybox [OPTIONS]\n"
+  printf "  vkube app install busybox --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
 
     # :command.usage_flags
     # :flag.usage
+    printf "  %s\n" "$(magenta "--variant VARIANT")"
+    printf "    Busybox variant\n"
+    printf "    %s\n" "Allowed: musl, uclibc, glibc"
+    printf "    %s\n" "Default: musl"
+    echo
+
+    # :flag.usage
     printf "  %s\n" "$(magenta "--storage-class, -c NAME (repeatable)")"
     printf "    Storage class name(s)\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--mount-point, -m NAME (repeatable)")"
+    printf "    Mount pass(es) for storage class(es)\n"
     echo
 
     # :flag.usage
@@ -472,35 +505,6 @@ vkube_app_install_usage() {
     printf "    Storage access mode\n"
     printf "    %s\n" "Allowed: ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod"
     printf "    %s\n" "Default: ReadWriteOnce"
-    echo
-
-    # :command.usage_fixed_flags
-    printf "  %s\n" "$(magenta "--help, -h")"
-    printf "    Show this help\n"
-    echo
-
-  fi
-}
-
-# :command.usage
-vkube_app_install_busybox_usage() {
-  printf "vkube app install busybox - Install busybox application.\n\n"
-
-  printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube app install busybox [OPTIONS]\n"
-  printf "  vkube app install busybox --help | -h\n"
-  echo
-
-  # :command.long_usage
-  if [[ -n "$long_usage" ]]; then
-    printf "%s\n" "$(bold "Options:")"
-
-    # :command.usage_flags
-    # :flag.usage
-    printf "  %s\n" "$(magenta "--variant VARIANT")"
-    printf "    Busybox variant\n"
-    printf "    %s\n" "Allowed: musl, uclibc, glibc"
-    printf "    %s\n" "Default: musl"
     echo
 
     # :command.usage_fixed_flags
@@ -1648,6 +1652,102 @@ vkube_app_install_parse_requirements() {
         exit
         ;;
 
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action=${1:-}
+
+  case $action in
+    -*) ;;
+
+    busybox)
+      action="busybox"
+      shift
+      vkube_app_install_busybox_parse_requirements "$@"
+      shift $#
+      ;;
+
+    # :command.command_fallback
+    "")
+      vkube_app_install_usage >&2
+      exit 1
+      ;;
+
+    *)
+      printf "invalid command: %s\n" "$action" >&2
+      exit 1
+      ;;
+
+  esac
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+vkube_app_install_busybox_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_app_install_busybox_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="app install busybox"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      # :flag.case
+      --variant)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--variant']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--variant requires an argument: --variant VARIANT" >&2
+          exit 1
+        fi
+        ;;
+
       # :flag.case
       --storage-class | -c)
 
@@ -1664,6 +1764,26 @@ vkube_app_install_parse_requirements() {
           shift
         else
           printf "%s\n" "--storage-class requires an argument: --storage-class, -c NAME" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --mount-point | -m)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          escaped="$(printf '%q' "$2")"
+          if [[ -z ${args['--mount-point']+x} ]]; then
+            args['--mount-point']="$escaped"
+          elif [[ -z "${unique_lookup["--mount-point:${escaped}"]:-}" ]]; then
+            args['--mount-point']="${args['--mount-point']} $escaped"
+          fi
+          unique_lookup["--mount-point:${escaped}"]=1
+          shift
+          shift
+        else
+          printf "%s\n" "--mount-point requires an argument: --mount-point, -m NAME" >&2
           exit 1
         fi
         ;;
@@ -1746,118 +1866,6 @@ vkube_app_install_parse_requirements() {
         fi
         ;;
 
-      *)
-        break
-        ;;
-
-    esac
-  done
-
-  # :command.command_filter
-  action=${1:-}
-
-  case $action in
-    -*) ;;
-
-    busybox)
-      action="busybox"
-      shift
-      vkube_app_install_busybox_parse_requirements "$@"
-      shift $#
-      ;;
-
-    # :command.command_fallback
-    "")
-      vkube_app_install_usage >&2
-      exit 1
-      ;;
-
-    *)
-      printf "invalid command: %s\n" "$action" >&2
-      exit 1
-      ;;
-
-  esac
-
-  # :command.parse_requirements_while
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-
-      -?*)
-        printf "invalid option: %s\n" "$key" >&2
-        exit 1
-        ;;
-
-      *)
-        # :command.parse_requirements_case
-        # :command.parse_requirements_case_simple
-        printf "invalid argument: %s\n" "$key" >&2
-        exit 1
-
-        ;;
-
-    esac
-  done
-
-  # :command.default_assignments
-  [[ -n ${args['--all-storage-classes-ext']:-} ]] || args['--all-storage-classes-ext']="del"
-  [[ -n ${args['--release']:-} ]] || args['--release']="latest"
-  [[ -n ${args['--storage-size']:-} ]] || args['--storage-size']="1Gi"
-  [[ -n ${args['--access-mode']:-} ]] || args['--access-mode']="ReadWriteOnce"
-
-  # :command.whitelist_filter
-  if [[ ${args['--all-storage-classes-ext']:-} ]] && [[ ! ${args['--all-storage-classes-ext']:-} =~ ^(del|ret|ext)$ ]]; then
-    printf "%s\n" "--all-storage-classes-ext must be one of: del, ret, ext" >&2
-    exit 1
-  fi
-  if [[ ${args['--access-mode']:-} ]] && [[ ! ${args['--access-mode']:-} =~ ^(ReadWriteOnce|ReadOnlyMany|ReadWriteMany|ReadWriteOncePod)$ ]]; then
-    printf "%s\n" "--access-mode must be one of: ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod" >&2
-    exit 1
-  fi
-
-}
-
-# :command.parse_requirements
-vkube_app_install_busybox_parse_requirements() {
-  # :command.fixed_flags_filter
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-      --help | -h)
-        long_usage=yes
-        vkube_app_install_busybox_usage
-        exit
-        ;;
-
-      *)
-        break
-        ;;
-
-    esac
-  done
-
-  # :command.command_filter
-  action="app install busybox"
-
-  # :command.parse_requirements_while
-  while [[ $# -gt 0 ]]; do
-    key="$1"
-    case "$key" in
-      # :flag.case
-      --variant)
-
-        # :flag.case_arg
-        if [[ -n ${2+x} ]]; then
-          args['--variant']="$2"
-          shift
-          shift
-        else
-          printf "%s\n" "--variant requires an argument: --variant VARIANT" >&2
-          exit 1
-        fi
-        ;;
-
       -?*)
         printf "invalid option: %s\n" "$key" >&2
         exit 1
@@ -1876,10 +1884,22 @@ vkube_app_install_busybox_parse_requirements() {
 
   # :command.default_assignments
   [[ -n ${args['--variant']:-} ]] || args['--variant']="musl"
+  [[ -n ${args['--all-storage-classes-ext']:-} ]] || args['--all-storage-classes-ext']="del"
+  [[ -n ${args['--release']:-} ]] || args['--release']="latest"
+  [[ -n ${args['--storage-size']:-} ]] || args['--storage-size']="1Gi"
+  [[ -n ${args['--access-mode']:-} ]] || args['--access-mode']="ReadWriteOnce"
 
   # :command.whitelist_filter
   if [[ ${args['--variant']:-} ]] && [[ ! ${args['--variant']:-} =~ ^(musl|uclibc|glibc)$ ]]; then
     printf "%s\n" "--variant must be one of: musl, uclibc, glibc" >&2
+    exit 1
+  fi
+  if [[ ${args['--all-storage-classes-ext']:-} ]] && [[ ! ${args['--all-storage-classes-ext']:-} =~ ^(del|ret|ext)$ ]]; then
+    printf "%s\n" "--all-storage-classes-ext must be one of: del, ret, ext" >&2
+    exit 1
+  fi
+  if [[ ${args['--access-mode']:-} ]] && [[ ! ${args['--access-mode']:-} =~ ^(ReadWriteOnce|ReadOnlyMany|ReadWriteMany|ReadWriteOncePod)$ ]]; then
+    printf "%s\n" "--access-mode must be one of: ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod" >&2
     exit 1
   fi
 

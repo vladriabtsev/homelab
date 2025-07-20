@@ -172,19 +172,60 @@ setup() {
     run ../vkube --trace --cluster-plan k3d-test app
     assert_failure
     #echo "output=$output" >&3
-  }
+    assert_output --partial 'Usage:'
+}
   # bats test_tags=tag:busybox
   @test "../vkube --trace --cluster-plan k3d-test app install" {
     run ../vkube --trace --cluster-plan k3d-test app install
     assert_failure
     #echo "output=$output" >&3
+    assert_output --partial 'Usage:'
   }
   # bats test_tags=tag:busybox
-  @test "../vkube --trace --cluster-plan k3d-test app install busybox" {
+  @test "../vkube --trace --cluster-plan k3d-test app install busybox -c local-path" {
+    # if ! kubectl get ns/longhorn-system; then
+    #   skip "Longhorn is not installed"
+    # fi
+    run ../vkube --trace --cluster-plan k3d-test app install busybox -c local-path
+    assert_failure
+    #echo "output=$output" >&3
+    assert_output --partial 'Expecting equal amount'
+  }
+  # bats test_tags=tag:busybox
+  @test "../vkube --trace --cluster-plan k3d-test app install busybox -m /mnt/local-path" {
+    # if ! kubectl get ns/longhorn-system; then
+    #   skip "Longhorn is not installed"
+    # fi
+    run ../vkube --trace --cluster-plan k3d-test app install busybox -m /mnt/local-path
+    assert_failure
+    #echo "output=$output" >&3
+    assert_output --partial 'Expecting equal amount'
+  }
+  # bats test_tags=tag:busybox
+  @test "../vkube --trace --cluster-plan k3d-test app install busybox -c unknown-storage-class -m /mnt/local-path" {
+    # if ! kubectl get ns/longhorn-system; then
+    #   skip "Longhorn is not installed"
+    # fi
+    run ../vkube --trace --cluster-plan k3d-test app install busybox -c unknown-storage-class -m /mnt/local-path
+    assert_failure
+    #echo "output=$output" >&3
+    assert_output --partial "Storage class 'unknown-storage-class' is not found in cluster"
+  }
+  # bats test_tags=tag:busybox-one
+  @test "../vkube --trace --cluster-plan k3d-test app install busybox # without storage" {
     # if ! kubectl get ns/longhorn-system; then
     #   skip "Longhorn is not installed"
     # fi
     run ../vkube --trace --cluster-plan k3d-test app install busybox
+    assert_success
+    echo "output=$output" >&3
+  }
+  # bats test_tags=tag:busybox
+  @test "../vkube --trace --cluster-plan k3d-test app install busybox -c local-path -m /mnt/local-path" {
+    # if ! kubectl get ns/longhorn-system; then
+    #   skip "Longhorn is not installed"
+    # fi
+    run ../vkube --trace --cluster-plan k3d-test app install busybox -c local-path -m /mnt/local-path
     assert_success
     echo "output=$output" >&3
   }

@@ -609,14 +609,13 @@ function vkube-k3s.install() {
   # echo "      csi_synology_use=$csi_synology_use" >&3
   # echo "      longhorn_use=$longhorn_use" >&3
   # echo "      install_storage_at_least_one=$install_storage_at_least_one" >&3
-  local data_folder=$(dirname "${cluster_plan_file}")
   vlib.trace-no-stack "local_storage_use=$local_storage_use"
   vlib.trace-no-stack "csi_driver_nfs_use=$csi_driver_nfs_use"
   vlib.trace-no-stack "csi_driver_smb_use=$csi_driver_smb_use"
   vlib.trace-no-stack "csi_synology_use=$csi_synology_use"
   vlib.trace-no-stack "longhorn_use=$longhorn_use"
   vlib.trace-no-stack "install_storage_at_least_one=$install_storage_at_least_one"
-  vlib.trace "data folder=$data_folder"
+  vlib.trace "data folder=$vkube_data_folder"
 
   if [[ ${install_core} -eq 1 ]]; then
     vkube-k3s.install_tools
@@ -1004,12 +1003,9 @@ function vkube-k3s.csi-synology-install() {
   #   err_and_exit "Error: Not valid csi synology plan file: '${synology_csi_plan}'." ${LINENO}
   # fi
 
-  if [[ -n ${args[--force]} ]] && [[ -a "$data_folder/generated-synology-csi-storage-classes.yaml" ]]; then # file exists
-    run "line '$LINENO';kubectl delete -f '$data_folder/generated-synology-csi-storage-classes.yaml' --ignore-not-found=true"
+  if [[ -n ${args[--force]} ]] && [[ -a "$vkube_data_folder/generated-synology-csi-storage-classes.yaml" ]]; then # file exists
+    run "line '$LINENO';kubectl delete -f '$vkube_data_folder/generated-synology-csi-storage-classes.yaml' --ignore-not-found=true"
   fi
-
-  local data_folder=$(dirname "${synology_csi_plan}")
-  vlib.trace "data folder=$data_folder"
 
   # Defaults
   # Root level scalar settings
@@ -1189,9 +1185,9 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
     done
   done
   #set +x
-  run "line '$LINENO';echo '$txt' > '$data_folder/generated-synology-csi-storage-classes.yaml'"
-  #run "line '$LINENO';kubectl apply edit-last-applied -f '$data_folder/generated-storage-classes.yaml'"
-  run "line '$LINENO';kubectl apply -f '$data_folder/generated-synology-csi-storage-classes.yaml'"
+  run "line '$LINENO';echo '$txt' > '$vkube_data_folder/generated-synology-csi-storage-classes.yaml'"
+  #run "line '$LINENO';kubectl apply edit-last-applied -f '$vkube_data_folder/generated-storage-classes.yaml'"
+  run "line '$LINENO';kubectl apply -f '$vkube_data_folder/generated-synology-csi-storage-classes.yaml'"
 
   if [[ -z ${args[--storage-classes-only]} ]]; then
     local deploy_k8s_version="v1.20"
@@ -1607,8 +1603,8 @@ longhorn-install() {
     ((i_node++))
     if [ $i_node -eq $amount_nodes ]; then break; fi
   done
-  if [[ -n ${args[--force]} ]] && [[ -a "$data_folder/generated-longhorn-storage-classes.yaml" ]]; then # file exists
-    run "line '$LINENO';kubectl delete -f '$data_folder/generated-longhorn-storage-classes.yaml' --ignore-not-found=true"
+  if [[ -n ${args[--force]} ]] && [[ -a "$vkube_data_folder/generated-longhorn-storage-classes.yaml" ]]; then # file exists
+    run "line '$LINENO';kubectl delete -f '$vkube_data_folder/generated-longhorn-storage-classes.yaml' --ignore-not-found=true"
   fi
   local _storage_class=""
   _gen_txt=""
@@ -1618,8 +1614,8 @@ longhorn-install() {
     longhorn-storage-class-create "$_storage_class" 'Delete' 'false' # retain, temporary storage
     longhorn-storage-class-create "$_storage_class" 'Delete' 'true'  # retain, expandable, temporary storage
   done
-  run "line '$LINENO';echo '$_gen_txt' > '$data_folder/generated-longhorn-storage-classes.yaml'"
-  run "line '$LINENO';kubectl apply -f '$data_folder/generated-longhorn-storage-classes.yaml'"
+  run "line '$LINENO';echo '$_gen_txt' > '$vkube_data_folder/generated-longhorn-storage-classes.yaml'"
+  run "line '$LINENO';kubectl apply -f '$vkube_data_folder/generated-longhorn-storage-classes.yaml'"
 
   # return 0
 
@@ -1927,8 +1923,8 @@ function install-storage() {
     if [[ ${#storage_server_protocols[@]} -eq 0 ]]; then
       err_and_exit "There are no storage protocol for host. Configuration YAML file: '${cluster_plan_file}'. Host '$storage_server_name'." ${LINENO}
     fi
-    if [[ -n ${args[--force]} ]] && [[ -a "$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml" ]]; then # file exists
-      run "line '$LINENO';kubectl delete -f '$data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml' --ignore-not-found=true"
+    if [[ -n ${args[--force]} ]] && [[ -a "$vkube_data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml" ]]; then # file exists
+      run "line '$LINENO';kubectl delete -f '$vkube_data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml' --ignore-not-found=true"
     fi
     i_protocol=-1
     #vlib.trace "reclaimPolicy=$storage_server_protocol_class_reclaimPolicy"
@@ -2162,7 +2158,7 @@ function vkube-k3s.storage-speedtest-job-create() {
   [[ -z $1 ]] && err_and_exit "Missing \$1 namespace parameter"
   [[ -z $2 ]] && err_and_exit "Missing \$2 job name"
   [[ -z $3 ]] && err_and_exit "Missing \$3 access mode parameter"
-  [[ -z $vkube_data_folder ]] && err_and_exit "Missing \$data_folder"
+  [[ -z $vkube_data_folder ]] && err_and_exit "Missing \$vkube_data_folder"
 
   # https://www.talos.dev/v1.10/kubernetes-guides/configuration/synology-csi/
 
@@ -2382,6 +2378,10 @@ function vkube-k3s.app-check-releses() {
   if [ -z "$3" ]; then
     err_and_exit "Full container version is missing. Parameter \$3."
   fi
+  if [ -z "$vkube_data_folder" ]; then
+    err_and_exit "Variable \$vkube_data_folder is empty."
+  fi
+  
   readarray -t versions < <(curl -sL "$1" | jq -r "[ .[] | .version ]")
   vlib.trace "versions: ${versions[*]}"
   if [[ "$2" != "stable" ]] && [[ "$2" != "latest" ]]; then
@@ -2400,6 +2400,23 @@ function vkube-k3s.app-install() {
   # https://jqlang.org/manual/
   if [ -z "$1" ]; then
     err_and_exit "Name of application container is missing. Parameter \$1."
+  fi
+
+  declare _storage_classes=()
+  declare _mount_points=()
+  local _n
+  if [[ -n ${args[--storage-class]} ]]; then
+    vlib.trace "--storage-class=${args[--storage-class]}"
+    eval "_storage_classes=(${args[--storage-class]:-})"
+  fi
+  if [[ -n ${args[--mount-point]} ]]; then
+    vlib.trace "--mount-point=${args[--mount-point]}"
+    eval "_mount_points=(${args[--mount-point]:-})"
+  fi
+  _n="${#_storage_classes[@]}"
+  vlib.trace "_n=$_n"
+  if [ "${#_storage_classes[@]}" -ne "${#_mount_points[@]}" ]; then
+    err_and_exit "Amount of storage classes=${#_storage_classes[@]}, amount of mount points=${#_mount_points[@]}. Expecting equal amount."
   fi
 
   local _release
@@ -2445,31 +2462,32 @@ function vkube-k3s.app-install() {
     _deployment="${1}"
   fi
 
-  declare _storage_classes=()
-  if [[ -n ${args[--storage-class]} ]]; then
-    vlib.trace "--storage-class=${args[--storage-class]}"
-    eval "_storage_classes=(${args[--storage-class]:-})"
-  fi
+  local _storage_class
+  for _storage_class in "${_storage_classes[@]}"; do
+    if [[ $(kubectl get storageclass "$_storage_class" -A 2> /dev/null | wc -l) -eq 0 ]]; then
+      err_and_exit "Storage class '$_storage_class' is not found in cluster."
+    fi
+  done
 
   local txt=""
   
   #region
-  txt_deploy+="apiVersion: apps/v1
-kind: Deployment
+  txt_deploy="kind: Deployment
+apiVersion: apps/v1
 metadata:
-  name: ${args[name]}
+  name: ${1}
   namespace: ${args[--namespace]}
   labels:
-    app: ${args[name]}
+    app: ${1}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ${args[name]}  
+      app: ${1}  
   template:
     metadata:
       labels:
-        app: ${args[name]}
+        app: ${1}
     spec:
       #securityContext: user for commands???
       #  runAsUser: 1030  # Use UID of nsf_user on Synology
@@ -2487,17 +2505,20 @@ spec:
           #apk add open-iscsi
           #mkdir -p /usr/bin/env"
     #endregion
+  vlib.trace "txt_deploy=$txt_deploy"
 
-  for __s in "${_storage_classes[@]}"; do
-  #local yaml
-  #yaml=$(kubectl get storageclass $__storage_type -o yaml | yq '.metadata.labels[] | select(.name == "vkube/storage-type")')
-  #yaml=$(kubectl get storageclass $__storage_type -o yaml)
-  #vlib.trace "yaml=$yaml"
+  local _i=-1
+  for _storage_class in "${_storage_classes[@]}"; do
+    ((_i+=1))
+    #local yaml
+    #yaml=$(kubectl get storageclass $__storage_type -o yaml | yq '.metadata.labels[] | select(.name == "vkube/storage-type")')
+    #yaml=$(kubectl get storageclass $__storage_type -o yaml)
+    #vlib.trace "yaml=$yaml"
 
-    vlib.trace "__s=$__s"
+    vlib.trace "_storage_class=$_storage_class"
     # check storage class exists
     local __storage_type
-    __storage_type="$(vkube-k3s.get-storage-class-type $__s)"
+    __storage_type="$(vkube-k3s.get-storage-class-type $_storage_class)"
     vlib.trace "__storage_type=$__storage_type"
 
     # get storage class label vkube/storage-type
@@ -2506,10 +2527,10 @@ spec:
     txt+="${separator}apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: ${args[name]}-$__s-pvc
+  name: ${args[name]}-$_storage_class-pvc
   namespace: ${args[--namespace]}
 spec:
-  storageClassName: $__s
+  storageClassName: $_storage_class
   accessModes: 
   - ${args[--access-mode]}
   resources:
@@ -2543,6 +2564,7 @@ spec:
     #region
     separator="---
 "
+    #_mount_points[_i]
     txt_init_args+="
           mkdir -p /home/${args[name]}-$__s-vol && chown -R 999:999 /home/${args[name]}-$__s-vol"
     txt_deploy_vol+="
@@ -2575,14 +2597,22 @@ spec:
   txt_deploy+="$txt_deploy_vol_mount"
   txt_deploy+="
       volumes:"
-  #endregion
   txt_deploy+="$txt_deploy_vol"
-  vlib.trace "generated PVCs=\n$txt"
-  run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist ${args[--namespace]}"
-  run "line '$LINENO';kubectl apply -f - <<<\"${txt}\""
+  #endregion
 
-  hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
-  run "line '$LINENO';kubectl apply -f - <<<\"${txt_deploy}\""
+  hl.blue "$parent_step$((++install_step)). App '$1' installation. (Line:$LINENO)"
+  run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist ${args[--namespace]}"
+  local _path
+  _path="$vkube_data_folder/generated-app-$_deployment-deployment.yaml"
+  vlib.trace "_path=$_path"
+  if [[ -n ${args[--force]} ]] && [[ -a "$_path" ]]; then # file exists
+    run "line '$LINENO';kubectl delete -f '$_path' --ignore-not-found=true"
+  fi
+  vlib.trace "txt_deploy=$txt_deploy"
+  run "line '$LINENO';echo '$txt_deploy' > '$_path'"
+  run "line '$LINENO';kubectl apply -f '$_path'"
+
+
   
   err_and_exit "Not implemented" ${LINENO}
 

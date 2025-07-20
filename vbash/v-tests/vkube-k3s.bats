@@ -31,7 +31,7 @@ setup() {
   # make executables in src/ visible to PATH
   PATH="$DIR/../src:$PATH"
 
-  data_folder="./vkube-data/k3d-test"
+  $vkube_data_folder="./vkube-data/k3d-test"
   if [ -z "$SSH_AUTH_SOCK" ]; then
     eval "$(ssh-agent -s)" # start ssh agent
     ssh-add ~/.ssh/id_rsa
@@ -535,7 +535,7 @@ setup() {
   # @test "storage: office-csi-driver-smb-tmp tests" {
   #   local storage="office-csi-driver-smb-tmp"
   #   echo "      Step $[step=$step+1]. vkube-k3s.storage-speedtest-job-create storage-speedtest $storage ReadWriteOnce" >&3
-  #   #kubectl delete -f "$data_folder/generated-$2-write-read.yaml" --ignore-not-found=true
+  #   #kubectl delete -f "$vkube_data_folder/generated-$2-write-read.yaml" --ignore-not-found=true
   #   kubectl delete job "${storage}-write-read" -n storage-speedtest --ignore-not-found=true
   #   kubectl delete pvc "${storage}-test-pvc" -n storage-speedtest --ignore-not-found=true
 
