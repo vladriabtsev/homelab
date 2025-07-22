@@ -23,15 +23,14 @@ commands:
     - Without storage.
   
   commands:
-  - name: busybox
+  - name: general
     help: |-
-      Install busybox application.
+      Install general application. Without additional version checking.
+    args:
+    - name: container-name
+      required: true
+      help: Container name
     flags:
-    - long: --variant
-      arg: variant
-      help: Busybox variant
-      default: musl
-      allowed: [musl, uclibc, glibc] # https://hub.docker.com/_/busybox
     - &storage-class
       long: --storage-class
       short: -c
@@ -80,18 +79,38 @@ commands:
       default: ReadWriteOnce
       allowed: [ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod] # https://spacelift.io/blog/kubernetes-persistent-volumes
       help: Storage access mode
-    # - long: --secret-folder
-    #   help: Secret folder with?????
-    #   #validate: dir_exists
-    #   required: true
-    #   arg: folder
+
+  - name: busybox
+    help: |-
+      Install busybox application.
+    flags:
+    - long: --variant
+      arg: variant
+      help: Busybox variant
+      default: musl
+      allowed: [musl, uclibc, glibc] # https://hub.docker.com/_/busybox
+    - *storage-class
+    - *mount-point
+    - *all-storage-classes
+    - *all-storage-classes-ext
+    - *deployment
+    - *release
+    - *storage-size
+    - *access-mode
 
 - name: uninstall
   help: Uninstall busybox container
   commands:
-  - name: busybox
+  - name: deployment
     help: |-
-      Uninstall busybox application.
+      Uninstall application deployment.
+    args:
+    - name: general-deployment-name
+      required: true
+      help: Deployment name to uninstall
+  # - name: busybox
+  #   help: |-
+  #     Uninstall busybox application.
 
 # - name: upgrade
 #   help: Upgrade busybox release version

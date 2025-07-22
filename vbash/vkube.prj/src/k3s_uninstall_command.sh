@@ -40,7 +40,7 @@ install_tools()
 
     # Install brew https://brew.sh/
     if ! command -v brew help &> /dev/null; then
-      err_and_exit "Homebrew not found, please install ..."  ${LINENO} "$0"
+      err_and_exit "Homebrew not found, please install ..."
       #/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
       #run "line '$LINENO';curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
       #run "line '$LINENO';chmod 700 install.sh"
@@ -68,7 +68,7 @@ gen_kube_vip_manifest()
   #if [ "$node_id" -eq "1" ]; then
   #fi
   if [ -z $kube_vip_interface ]; then
-    err_and_exit "Error: Node kube_vip_interface is empty." ${LINENO} `basename $0`
+    err_and_exit "Error: Node kube_vip_interface is empty."
   fi
 
   curl -o ~/tmp/rbac.yaml https://kube-vip.io/manifests/rbac.yaml
@@ -88,7 +88,7 @@ gen_kube_vip_manifest()
     --enableNodeLabeling \
     >> ~/tmp/rbac.yaml
   else # BGP mode
-    err_and_exit "Not implemented yet" ${LINENO}
+    err_and_exit "Not implemented yet"
     #--servicesElection
     docker run --network host --rm ghcr.io/kube-vip/kube-vip:$kube_vip_ver manifest daemonset \
     --interface $kube_vip_interface \
@@ -154,7 +154,7 @@ install_first_node()
     # https://docs.k3s.io/cli/certificate#certificate-authority-ca-certificates
     # https://github.com/k3s-io/k3s/blob/master/contrib/util/generate-custom-ca-certs.sh
     # https://blog.chkpwd.com/posts/k3s-ha-installation-kube-vip-and-metallb/
-    if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$cluster_plan_file'." ${LINENO}; fi
+    if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$cluster_plan_file'."; fi
     cluster_node_ip=$node_ip4
     if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
       gen_kube_vip_manifest
@@ -239,7 +239,7 @@ wait_kubectl_can_connect_cluster()
     sleep $timeout_step
     ((duration=duration+timeout_step))
     if [ $duration -gt $timeout ]; then 
-      err_and_exit "Error: Cluster is not started in $timeout seconds." ${LINENO}
+      err_and_exit "Error: Cluster is not started in $timeout seconds."
     fi
   done
 }
@@ -272,12 +272,12 @@ install_tools
 if [[ $amount_nodes =~ ^[0-9]{1,3}$ && $amount_nodes -gt 0 ]]; then
   inf "               amount_nodes: '$amount_nodes'"
 else
-  err_and_exit "Error: Invalid input for amount_nodes: '$amount_nodes'." ${LINENO}
+  err_and_exit "Error: Invalid input for amount_nodes: '$amount_nodes'."
 fi
 
 amount_nodes_max=$(yq '.node | length' < $cluster_plan_file)
 if [[ $amount_nodes -gt $amount_nodes_max ]]; then
-  err_and_exit "Error: Amount of real nodes is less than requested. Real: '$amount_nodes_max', requested: '$amount_nodes'." ${LINENO}
+  err_and_exit "Error: Amount of real nodes is less than requested. Real: '$amount_nodes_max', requested: '$amount_nodes'."
 fi
 
 # K3S Version
@@ -288,7 +288,7 @@ fi
 if [[ $k3s_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
   inf "                    k3s_ver: '$k3s_ver'"
 else
-  err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
+  err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'."
 fi
 if ! [ "$k3s_latest" == "$k3s_ver" ]; then
   warn-and-trace "Latest version of K3s: '$k3s_latest', but installing: '$k3s_ver'"
@@ -305,7 +305,7 @@ if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
   if [[ $kube_vip_ver =~ ^v[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
     inf "               kube_vip_ver: '$kube_vip_ver'"
   else
-    err_and_exit "Error: Invalid input for kube_vip_ver: '$kube_vip_ver'." ${LINENO}
+    err_and_exit "Error: Invalid input for kube_vip_ver: '$kube_vip_ver'."
   fi
   if ! [ "$kvversion_latest" == "$kube_vip_ver" ]; then
     warn-and-trace "Latest version kube-vip: '$kvversion_latest', but installing: '$kube_vip_ver'"
@@ -323,7 +323,7 @@ if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
 
   # Kube-VIP mode
   if ! [[ "$kube_vip_mode" == "ARP" || "BGP" ]]; then
-    err_and_exit "Error: Invalid kube_vip_mode: '$kube_vip_mode'. Expected 'ARP' or 'BGP'." ${LINENO}
+    err_and_exit "Error: Invalid kube_vip_mode: '$kube_vip_mode'. Expected 'ARP' or 'BGP'."
   fi
   inf "              kube_vip_mode: '$kube_vip_mode'"
 fi
@@ -357,7 +357,7 @@ if [ $((opt_install_new || opt_install_remove || opt_install_upgrade)) -eq 1 ]; 
       echo
       #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo -S rm -rfd /var/lib/kuku                                  <<< \"$node_root_password\"\""
       if [[ $first_node_address = "localhost" ]]; then
-        err_and_exit "Not implemented yet" ${LINENO}
+        err_and_exit "Not implemented yet"
         k3sup install --local --local-path ~/.kube/local \
           --k3s-version $k3s_ver #\
           #--k3s-extra-args "--disable traefik --disable servicelb --flannel-iface=$interface --node-ip=$master1 --node-taint node-role.kubernetes.io/master=true:NoSchedule"

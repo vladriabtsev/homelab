@@ -425,6 +425,7 @@ vkube_app_install_usage() {
   echo
   # :command.usage_commands
   printf "%s\n" "$(bold "Commands:")"
+  printf "  %s   Install general application. Without additional version checking.\n" "$(green "general")"
   printf "  %s   Install busybox application.\n" "$(green "busybox")"
   echo
 
@@ -435,6 +436,82 @@ vkube_app_install_usage() {
     # :command.usage_fixed_flags
     printf "  %s\n" "$(magenta "--help, -h")"
     printf "    Show this help\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_app_install_general_usage() {
+  printf "vkube app install general - Install general application. Without additional version checking.\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube app install general CONTAINER-NAME [OPTIONS]\n"
+  printf "  vkube app install general --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_flags
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--storage-class, -c NAME (repeatable)")"
+    printf "    Storage class name(s)\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--mount-point, -m NAME (repeatable)")"
+    printf "    Mount pass(es) for storage class(es)\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--all-storage-classes")"
+    printf "    Use all storage types\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--all-storage-classes-ext STORAGE-CLASSES-EXT")"
+    printf "    Storage class name extension for flag --all-storage-classes. Example\n    'longhorn-del'\n"
+    printf "    %s\n" "Allowed: del, ret, ext"
+    printf "    %s\n" "Default: del"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--deployment, -d DEPLOYMENT")"
+    printf "    Name of deployment.\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--release, -r RELEASE")"
+    printf "    Container release version\n"
+    printf "    %s\n" "Default: latest"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--storage-size, -s STORAGE-SIZE-REQUEST")"
+    printf "    Storage size request for persistent volume claims for each storage class\n"
+    printf "    %s\n" "Default: 1Gi"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--access-mode, -a ACCESS-MODE")"
+    printf "    Storage access mode\n"
+    printf "    %s\n" "Allowed: ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod"
+    printf "    %s\n" "Default: ReadWriteOnce"
+    echo
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_args
+    printf "%s\n" "$(bold "Arguments:")"
+
+    # :argument.usage
+    printf "  %s\n" "$(blue "CONTAINER-NAME")"
+    printf "    Container name\n"
     echo
 
   fi
@@ -525,7 +602,7 @@ vkube_app_uninstall_usage() {
   echo
   # :command.usage_commands
   printf "%s\n" "$(bold "Commands:")"
-  printf "  %s   Uninstall busybox application.\n" "$(green "busybox")"
+  printf "  %s   Uninstall application deployment.\n" "$(green "deployment")"
   echo
 
   # :command.long_usage
@@ -541,12 +618,12 @@ vkube_app_uninstall_usage() {
 }
 
 # :command.usage
-vkube_app_uninstall_busybox_usage() {
-  printf "vkube app uninstall busybox - Uninstall busybox application.\n\n"
+vkube_app_uninstall_deployment_usage() {
+  printf "vkube app uninstall deployment - Uninstall application deployment.\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube app uninstall busybox\n"
-  printf "  vkube app uninstall busybox --help | -h\n"
+  printf "  vkube app uninstall deployment GENERAL-DEPLOYMENT-NAME\n"
+  printf "  vkube app uninstall deployment --help | -h\n"
   echo
 
   # :command.long_usage
@@ -556,6 +633,14 @@ vkube_app_uninstall_busybox_usage() {
     # :command.usage_fixed_flags
     printf "  %s\n" "$(magenta "--help, -h")"
     printf "    Show this help\n"
+    echo
+
+    # :command.usage_args
+    printf "%s\n" "$(bold "Arguments:")"
+
+    # :argument.usage
+    printf "  %s\n" "$(blue "GENERAL-DEPLOYMENT-NAME")"
+    printf "    Deployment name to uninstall\n"
     echo
 
   fi
@@ -780,6 +865,26 @@ vkube_k3s_restore_command() {
 }
 
 # :command.function
+vkube_app_install_general_command() {
+
+  # src/app_install_general_command.sh
+  #!/usr/bin/env bash
+  vlib.bashly-init-command
+
+  # shellcheck source=/dev/null
+  source "${VBASH}/vkube-k3s.bash"
+  vkube-k3s.command-init
+
+  #csi_synology_ver=${args[release]}
+  #csi_synology_secret_folder=${args[--secret-folder]}
+  #csi_synology_snapshot_use=${args[--snapshot]}
+
+  vkube-k3s.check-cluster-plan-path
+  vkube-k3s.app-install "${args[container-name]}"
+
+}
+
+# :command.function
 vkube_app_install_busybox_command() {
 
   # src/app_install_busybox_command.sh
@@ -800,9 +905,9 @@ vkube_app_install_busybox_command() {
 }
 
 # :command.function
-vkube_app_uninstall_busybox_command() {
+vkube_app_uninstall_deployment_command() {
 
-  # src/app_uninstall_busybox_command.sh
+  # src/app_uninstall_deployment_command.sh
   #!/usr/bin/env bash
   vlib.bashly-init-command
 
@@ -815,7 +920,7 @@ vkube_app_uninstall_busybox_command() {
   #csi_synology_snapshot_use=${args[--snapshot]}
 
   vkube-k3s.check-cluster-plan-path
-  vkube-k3s.busybox-uninstall
+  vkube-k3s.app-deployment-uninstall "${args[general-deployment-name]}"
 
 }
 
@@ -1665,6 +1770,13 @@ vkube_app_install_parse_requirements() {
   case $action in
     -*) ;;
 
+    general)
+      action="general"
+      shift
+      vkube_app_install_general_parse_requirements "$@"
+      shift $#
+      ;;
+
     busybox)
       action="busybox"
       shift
@@ -1705,6 +1817,197 @@ vkube_app_install_parse_requirements() {
 
     esac
   done
+
+}
+
+# :command.parse_requirements
+vkube_app_install_general_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_app_install_general_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="app install general"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      # :flag.case
+      --storage-class | -c)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          escaped="$(printf '%q' "$2")"
+          if [[ -z ${args['--storage-class']+x} ]]; then
+            args['--storage-class']="$escaped"
+          elif [[ -z "${unique_lookup["--storage-class:${escaped}"]:-}" ]]; then
+            args['--storage-class']="${args['--storage-class']} $escaped"
+          fi
+          unique_lookup["--storage-class:${escaped}"]=1
+          shift
+          shift
+        else
+          printf "%s\n" "--storage-class requires an argument: --storage-class, -c NAME" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --mount-point | -m)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          escaped="$(printf '%q' "$2")"
+          if [[ -z ${args['--mount-point']+x} ]]; then
+            args['--mount-point']="$escaped"
+          elif [[ -z "${unique_lookup["--mount-point:${escaped}"]:-}" ]]; then
+            args['--mount-point']="${args['--mount-point']} $escaped"
+          fi
+          unique_lookup["--mount-point:${escaped}"]=1
+          shift
+          shift
+        else
+          printf "%s\n" "--mount-point requires an argument: --mount-point, -m NAME" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --all-storage-classes)
+
+        # :flag.case_no_arg
+        args['--all-storage-classes']=1
+        shift
+        ;;
+
+      # :flag.case
+      --all-storage-classes-ext)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--all-storage-classes-ext']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--all-storage-classes-ext requires an argument: --all-storage-classes-ext STORAGE-CLASSES-EXT" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --deployment | -d)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--deployment']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--deployment requires an argument: --deployment, -d DEPLOYMENT" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --release | -r)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--release']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--release requires an argument: --release, -r RELEASE" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --storage-size | -s)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--storage-size']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--storage-size requires an argument: --storage-size, -s STORAGE-SIZE-REQUEST" >&2
+          exit 1
+        fi
+        ;;
+
+      # :flag.case
+      --access-mode | -a)
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          args['--access-mode']="$2"
+          shift
+          shift
+        else
+          printf "%s\n" "--access-mode requires an argument: --access-mode, -a ACCESS-MODE" >&2
+          exit 1
+        fi
+        ;;
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        # :argument.case
+        if [[ -z ${args['container-name']+x} ]]; then
+          args['container-name']=$1
+          shift
+        else
+          printf "invalid argument: %s\n" "$key" >&2
+          exit 1
+        fi
+
+        ;;
+
+    esac
+  done
+
+  # :command.required_args_filter
+  if [[ -z ${args['container-name']+x} ]]; then
+    printf "missing required argument: CONTAINER-NAME\nusage: vkube app install general CONTAINER-NAME [OPTIONS]\n" >&2
+
+    exit 1
+  fi
+
+  # :command.default_assignments
+  [[ -n ${args['--all-storage-classes-ext']:-} ]] || args['--all-storage-classes-ext']="del"
+  [[ -n ${args['--release']:-} ]] || args['--release']="latest"
+  [[ -n ${args['--storage-size']:-} ]] || args['--storage-size']="1Gi"
+  [[ -n ${args['--access-mode']:-} ]] || args['--access-mode']="ReadWriteOnce"
+
+  # :command.whitelist_filter
+  if [[ ${args['--all-storage-classes-ext']:-} ]] && [[ ! ${args['--all-storage-classes-ext']:-} =~ ^(del|ret|ext)$ ]]; then
+    printf "%s\n" "--all-storage-classes-ext must be one of: del, ret, ext" >&2
+    exit 1
+  fi
+  if [[ ${args['--access-mode']:-} ]] && [[ ! ${args['--access-mode']:-} =~ ^(ReadWriteOnce|ReadOnlyMany|ReadWriteMany|ReadWriteOncePod)$ ]]; then
+    printf "%s\n" "--access-mode must be one of: ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod" >&2
+    exit 1
+  fi
 
 }
 
@@ -1930,10 +2233,10 @@ vkube_app_uninstall_parse_requirements() {
   case $action in
     -*) ;;
 
-    busybox)
-      action="busybox"
+    deployment)
+      action="deployment"
       shift
-      vkube_app_uninstall_busybox_parse_requirements "$@"
+      vkube_app_uninstall_deployment_parse_requirements "$@"
       shift $#
       ;;
 
@@ -1974,14 +2277,14 @@ vkube_app_uninstall_parse_requirements() {
 }
 
 # :command.parse_requirements
-vkube_app_uninstall_busybox_parse_requirements() {
+vkube_app_uninstall_deployment_parse_requirements() {
   # :command.fixed_flags_filter
   while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
       --help | -h)
         long_usage=yes
-        vkube_app_uninstall_busybox_usage
+        vkube_app_uninstall_deployment_usage
         exit
         ;;
 
@@ -1993,7 +2296,7 @@ vkube_app_uninstall_busybox_parse_requirements() {
   done
 
   # :command.command_filter
-  action="app uninstall busybox"
+  action="app uninstall deployment"
 
   # :command.parse_requirements_while
   while [[ $# -gt 0 ]]; do
@@ -2008,13 +2311,26 @@ vkube_app_uninstall_busybox_parse_requirements() {
       *)
         # :command.parse_requirements_case
         # :command.parse_requirements_case_simple
-        printf "invalid argument: %s\n" "$key" >&2
-        exit 1
+        # :argument.case
+        if [[ -z ${args['general-deployment-name']+x} ]]; then
+          args['general-deployment-name']=$1
+          shift
+        else
+          printf "invalid argument: %s\n" "$key" >&2
+          exit 1
+        fi
 
         ;;
 
     esac
   done
+
+  # :command.required_args_filter
+  if [[ -z ${args['general-deployment-name']+x} ]]; then
+    printf "missing required argument: GENERAL-DEPLOYMENT-NAME\nusage: vkube app uninstall deployment GENERAL-DEPLOYMENT-NAME\n" >&2
+
+    exit 1
+  fi
 
 }
 
@@ -2063,9 +2379,10 @@ bashly-run() {
     "k3s restore") vkube_k3s_restore_command ;;
     "app") vkube_app_command ;;
     "app install") vkube_app_install_command ;;
+    "app install general") vkube_app_install_general_command ;;
     "app install busybox") vkube_app_install_busybox_command ;;
     "app uninstall") vkube_app_uninstall_command ;;
-    "app uninstall busybox") vkube_app_uninstall_busybox_command ;;
+    "app uninstall deployment") vkube_app_uninstall_deployment_command ;;
   esac
 }
 

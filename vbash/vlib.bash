@@ -608,7 +608,7 @@ function vlib.bashly-init-command() {
 
   [[ "${#args[@]}" -gt 0 ]] || err_and_exit "Expecting bashly script when call bashly-init-command()" 
   #[ -z $args ] && ( err_and_exit "Expecting bashly script when call bashly-init-command()"; exit 1 ) 
-  #[[ $# -eq 1 ]] || err_and_exit "Only one parameter is expected" ${LINENO}
+  #[[ $# -eq 1 ]] || err_and_exit "Only one parameter is expected"
 
   __is_trace=0
   if [[ ${args[--trace]} || ${args[--debug]} ]]; then 
@@ -639,14 +639,14 @@ function vlib.bashly-init-command() {
     bsfl )
       vlib.trace "Bsfl framework"
       vlib.bashly-init-error-handler
-      err_and_exit "Not implemented yet." ${LINENO} "$0"
+      err_and_exit "Not implemented yet."
     ;;
     none )
       vlib.trace "Pure bash without framework"
       vlib.bashly-init-error-handler
     ;;
     * ) 
-      err_and_exit "Wrong --framework argument ${args[framework-type]}. Expecting bashmatic, bsfl or none." ${LINENO} "$0"
+      err_and_exit "Wrong --framework argument ${args[framework-type]}. Expecting bashmatic, bsfl or none."
     ;;
   esac
   # https://www.gnu.org/software/bash/manual/bash.html#The-Set-Builtin-1
@@ -736,9 +736,9 @@ function vlib.bashly-init-command() {
     ;;
     bsfl )
       vlib.bashly-init-error-handler
-      err_and_exit "Not implemented yet." ${LINENO} "$0"
+      err_and_exit "Not implemented yet."
     ;;
-    \? ) err_and_exit "Wrong --framework argument ${args[framework-type]}. Expecting bashmatic or bsfl." ${LINENO} "$0"
+    \? ) err_and_exit "Wrong --framework argument ${args[framework-type]}. Expecting bashmatic or bsfl."
     ;;
   esac
   #if [[ ${args[--verbose]} || ${args[--debug]} || ${args[--xtrace]} ]]; then

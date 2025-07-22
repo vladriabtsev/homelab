@@ -30,6 +30,23 @@ function vkube-k3s.get-pod-image-version() {
   #echo "ver=$ver" >&3
   echo "$ver"
 }
+# function vkube-k3s.is-deployment-installed() {
+#   [[ -z $1 ]] && vlib.error-printf "Missing namespace parameter"
+#   [[ -z $2 ]] && vlib.error-printf "Missing pod name parameter"
+#   #kubectl get deploy $2 -n $1 --ignore-not-found >&3
+#   #echo "$(kubectl get deploy $2 -n $1 --ignore-not-found 2> /dev/null | wc -l)" >&3
+#   if [[ $(kubectl get deploy $2 -n $1 --ignore-not-found 2> /dev/null | wc -l) -gt 1 ]]; then # not installed yet
+#     vlib.trace "kkkkkkkk====="
+#     return 1
+#   fi
+# }
+function vkube-k3s.fail-if-already-deployed() {
+  [[ -z $1 ]] && vlib.error-printf "Missing namespace parameter"
+  [[ -z $2 ]] && vlib.error-printf "Missing deployment name parameter"
+  if [[ $(kubectl get deploy $2 -n $1 --ignore-not-found 2> /dev/null | wc -l) -gt 1 ]]; then # not installed yet
+    err_and_exit "App '$2' is already deployed in namespace '$1'."
+  fi
+}
 function vkube-k3s.is-app-ready() {
   if [[ $(kubectl get pods -l app=$1 -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}') != "True" ]]; then
     return 1
@@ -76,7 +93,7 @@ function vkube-k3s.cluster-plan-read() {
   csi_driver_smb_namespace="kube-system"
 
   if [[ $(yq --exit-status 'tag == "!!map" or tag== "!!seq"' $cluster_plan_file > /dev/null) ]]; then
-    err_and_exit "Error: Invalid format for YAML file: '$cluster_plan_file'." ${LINENO}
+    err_and_exit "Error: Invalid format for YAML file: '$cluster_plan_file'."
   fi
 
   # All root scalar settings from yaml file to bash variables
@@ -308,7 +325,7 @@ function vkube-k3s.install_tools() {
 
   # Install brew https://brew.sh/
   # if ! command -v brew help &> /dev/null; then
-  #   err_and_exit "Homebrew not found, please install ..."  ${LINENO} "$0"
+  #   err_and_exit "Homebrew not found, please install ..."
   #   #/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   #   #run "line '$LINENO';curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
   #   #run "line '$LINENO';chmod 700 install.sh"
@@ -337,7 +354,7 @@ function gen_kube_vip_manifest() {
   #if [ "$node_id" -eq "1" ]; then
   #fi
   if [ -z $kube_vip_interface ]; then
-    err_and_exit "Error: Node kube_vip_interface is empty." ${LINENO} `basename $0`
+    err_and_exit "Error: Node kube_vip_interface is empty."
   fi
 
   run "line '$LINENO';curl -o ~/tmp/rbac.yaml https://kube-vip.io/manifests/rbac.yaml"
@@ -357,7 +374,7 @@ function gen_kube_vip_manifest() {
     --enableNodeLabeling \
     >> ~/tmp/rbac.yaml"
   else # BGP mode
-    err_and_exit "Not implemented yet" ${LINENO}
+    err_and_exit "Not implemented yet"
     #--servicesElection
     run "line '$LINENO';docker run --network host --rm ghcr.io/kube-vip/kube-vip:$kube_vip_ver manifest daemonset \
     --interface $kube_vip_interface \
@@ -392,7 +409,7 @@ function wait_kubectl_can_connect_cluster() {
     sleep $timeout_step
     ((duration=duration+timeout_step))
     if [ $duration -gt $timeout ]; then 
-      err_and_exit "Error: Cluster is not started in $timeout seconds." ${LINENO}
+      err_and_exit "Error: Cluster is not started in $timeout seconds."
     fi
   done
 }
@@ -427,7 +444,7 @@ function install_first_node() {
   # https://docs.k3s.io/cli/certificate#certificate-authority-ca-certificates
   # https://github.com/k3s-io/k3s/blob/master/contrib/util/generate-custom-ca-certs.sh
   # https://blog.chkpwd.com/posts/k3s-ha-installation-kube-vip-and-metallb/
-  if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$cluster_plan_file'." ${LINENO}; fi
+  if ! [ $node_is_control_plane -eq 1 ]; then err_and_exit "Error: First node has to be part of Control Plane: '$cluster_plan_file'."; fi
   cluster_node_ip=$node_ip4
   if [ -n "$kube_vip_use" ] && [ "$kube_vip_use" -eq 1 ]; then
     gen_kube_vip_manifest
@@ -506,7 +523,7 @@ function _install_all() {
       #echo
       #run "line '$LINENO';ssh $node_user@$node_ip4 -i ~/.ssh/$cert_name \"sudo rm -rfd /var/lib/kuku                                  <<< \"$node_root_password\"\""
       if [[ $first_node_address = "localhost" ]]; then
-          err_and_exit "Not implemented yet" ${LINENO}
+          err_and_exit "Not implemented yet"
           k3sup install --local --local-path ~/.kube/local \
           --k3s-version $k3s_ver #\
           #--k3s-extra-args "--disable traefik --disable servicelb --flannel-iface=$interface --node-ip=$master1 --node-taint node-role.kubernetes.io/master=true:NoSchedule"
@@ -624,12 +641,12 @@ function vkube-k3s.install() {
     if [[ $amount_nodes =~ ^[0-9]{1,3}$ && $amount_nodes -gt 0 ]]; then
       inf "amount_nodes: '$amount_nodes'\n"
     else
-      err_and_exit "Error: Invalid input for amount_nodes: '$amount_nodes'." ${LINENO}
+      err_and_exit "Error: Invalid input for amount_nodes: '$amount_nodes'."
     fi
 
     amount_nodes_max=$(yq '.node | length' < $cluster_plan_file)
     if [[ $amount_nodes -gt $amount_nodes_max ]]; then
-      err_and_exit "Error: Amount of real nodes is less than requested. Real: '$amount_nodes_max', requested: '$amount_nodes'." ${LINENO}
+      err_and_exit "Error: Amount of real nodes is less than requested. Real: '$amount_nodes_max', requested: '$amount_nodes'."
     fi
 
     #if [[ -n  $install_core ]]; then
@@ -677,7 +694,7 @@ function vkube-k3s.install() {
         #   vlib.trace "csi_synology_host_protocol_class_location=$csi_synology_host_protocol_class_location"
         # ;;
         * )
-          err_and_exit "Unsupported kubernetes type '$kubernetes_type'. Expected: k3s, k3d" ${LINENO};
+          err_and_exit "Unsupported kubernetes type '$kubernetes_type'. Expected: k3s, k3d"
       esac
       inf "New kubernetes cluster '$cluster_name' is installed on servers described in cluster plan YAML file '$cluster_plan_file'\n"
       inf "To use kubectl: Run 'export KUBECONFIG=~/.kube/$cluster_name' or 'ek $cluster_name'\n"
@@ -699,7 +716,7 @@ function vkube-k3s.install() {
   fi
 
   return 0
-  err_and_exit "exit" ${LINENO}
+  err_and_exit "exit"
 
 
   # Longhorn
@@ -961,7 +978,7 @@ function vkube-k3s.get-storage-class-type() { # backup2-synology-csi-nfs-test
   [[ -z $1 ]] && vlib.error-printf "Missing storage class name parameter"
   #vlib.trace "storage class=$1"
   if ! command kubectl get storageclass $1 &> /dev/null; then
-    err_and_exit "Storage class '$1' is not found in cluster."  ${LINENO}
+    err_and_exit "Storage class '$1' is not found in cluster."
   fi
   #local yaml
   #yaml=$(kubectl get storageclass $1 -o yaml | yq '.metadata.labels[] | select(.name == "vkube/storage-type")')
@@ -970,7 +987,7 @@ function vkube-k3s.get-storage-class-type() { # backup2-synology-csi-nfs-test
   local type
   type=$(kubectl get storageclass $1 -o yaml  | yq '.metadata.labels.vkube/storage-type')
   #vlib.trace "storage type=$type"
-  #err_and_exit "Not implemented" ${LINENO}
+  #err_and_exit "Not implemented"
   echo "$type"
 }
 function vkube-k3s.csi-synology-install() {
@@ -997,10 +1014,10 @@ function vkube-k3s.csi-synology-install() {
   vlib.trace "synology_csi_plan=${synology_csi_plan}"
   run "line '$LINENO';vlib.is-file-exists-with-trace '${synology_csi_plan}'"
   if [[ $(yq --exit-status 'tag == "!!map" or tag== "!!seq"' "${synology_csi_plan}" > /dev/null) ]]; then
-    err_and_exit "Error: Invalid format for YAML file: '${synology_csi_plan}'." ${LINENO}
+    err_and_exit "Error: Invalid format for YAML file: '${synology_csi_plan}'."
   fi
   # if [[ $(yamllint ${synology_csi_plan} > /dev/null) ]]; then
-  #   err_and_exit "Error: Not valid csi synology plan file: '${synology_csi_plan}'." ${LINENO}
+  #   err_and_exit "Error: Not valid csi synology plan file: '${synology_csi_plan}'."
   # fi
 
   if [[ -n ${args[--force]} ]] && [[ -a "$vkube_data_folder/generated-synology-csi-storage-classes.yaml" ]]; then # file exists
@@ -1032,17 +1049,17 @@ function vkube-k3s.csi-synology-install() {
     eval "$( yq '.[] | ( select(kind == "scalar") | "csi_synology_host_" + key + "='\''" + . + "'\''")' <<<$csi_synology_host)"
     vlib.trace "storage host name=$csi_synology_host_name"
     if [[ -z $csi_synology_host_name ]]; then
-      err_and_exit "Empty host name. Configuration YAML file: '${synology_csi_plan}'." ${LINENO}
+      err_and_exit "Empty host name. Configuration YAML file: '${synology_csi_plan}'."
     fi
     if [[ -v host_names_dic["${csi_synology_host_name}"] ]]; then
       vlib.trace "host names(${#host_names_dic[@]})=" "${!host_names_dic[@]}"
-      err_and_exit "Host name is not unique. Configuration YAML file: '${synology_csi_plan}'. Host name '$csi_synology_host_name'." ${LINENO}
+      err_and_exit "Host name is not unique. Configuration YAML file: '${synology_csi_plan}'. Host name '$csi_synology_host_name'."
     fi
     host_names_dic["${csi_synology_host_name}"]='y'
     readarray csi_synology_host_protocols < <(echo $csi_synology_host | yq -o=j -I=0 ".protocols[]")
     vlib.trace "storage protocols count=${#csi_synology_host_protocols[@]}"
     if [[ ${#csi_synology_host_protocols[@]} -eq 0 ]]; then
-      err_and_exit "There are no storage protocol for host. Configuration YAML file: '${synology_csi_plan}'. Host '$csi_synology_host_name'." ${LINENO}
+      err_and_exit "There are no storage protocol for host. Configuration YAML file: '${synology_csi_plan}'. Host '$csi_synology_host_name'."
     fi
     i_protocol=-1
     #vlib.trace "reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
@@ -1058,14 +1075,14 @@ function vkube-k3s.csi-synology-install() {
         vlib.trace "protocol names(${#protocol_names[@]})=" "${!protocol_names[@]}"
         #vlib.trace "storage host=$csi_synology_host"
         #vlib.trace "storage protocol=$csi_synology_host_protocol"
-        err_and_exit "Storage protocol name is not unique. Configuration YAML file: '${synology_csi_plan}'. Host name '$csi_synology_host_name'. Protocol name '$csi_synology_host_protocol_name'." ${LINENO}
+        err_and_exit "Storage protocol name is not unique. Configuration YAML file: '${synology_csi_plan}'. Host name '$csi_synology_host_name'. Protocol name '$csi_synology_host_protocol_name'."
       fi
       protocol_names["${csi_synology_host_protocol_name}"]='y'
       #readarray csi_synology_host_protocol_classes < <(yq -o=j -I=0 ".hosts[$i_host].protocols[$i_protocol].classes[]" "${synology_csi_plan}")
       readarray csi_synology_host_protocol_classes < <(echo $csi_synology_host_protocol | yq -o=j -I=0 ".classes[]")
       vlib.trace "storage classes count=${#csi_synology_host_protocol_classes[@]}"
       if [[ ${#csi_synology_host_protocol_classes[@]} -eq 0 ]]; then
-        err_and_exit "There are no storage class for protocol. Configuration YAML file: '${synology_csi_plan}'. Host '$csi_synology_host_name'. Protocol '$csi_synology_host_protocol_name'." ${LINENO}
+        err_and_exit "There are no storage class for protocol. Configuration YAML file: '${synology_csi_plan}'. Host '$csi_synology_host_name'. Protocol '$csi_synology_host_protocol_name'."
       fi
       #vlib.trace "reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
       for csi_synology_host_protocol_class in "${csi_synology_host_protocol_classes[@]}"; do
@@ -1078,21 +1095,21 @@ function vkube-k3s.csi-synology-install() {
           if [[ -n ${args[--force]} ]]; then
             run "line '$LINENO';kubectl delete storageclass $csi_synology_host_protocol_class_name --wait --ignore-not-found=true"
           else
-            err_and_exit "Storage class '$csi_synology_host_protocol_class_name' already exists in cluster. Use --force flag to delete anyway." ${LINENO};
+            err_and_exit "Storage class '$csi_synology_host_protocol_class_name' already exists in cluster. Use --force flag to delete anyway."
           fi
         fi
         #vlib.trace "reclaimPolicy=$csi_synology_host_protocol_class_reclaimPolicy"
         if [[ -z $csi_synology_host_protocol_class_location ]]; then
-          err_and_exit "Empty location. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Empty location. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'."
         fi
         if [[ -z $csi_synology_host_protocol_class_reclaimPolicy ]]; then
-          err_and_exit "Empty reclaimPolicy. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Empty reclaimPolicy. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'."
         fi
         if [[ -z $csi_synology_host_protocol_class_allowVolumeExpansion ]]; then
-          err_and_exit "Empty allowVolumeExpansion. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Empty allowVolumeExpansion. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'."
         fi
         # if [[ -z $csi_synology_host_protocol_class_mountPermissions ]]; then
-        #   err_and_exit "Empty mountPermissions. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        #   err_and_exit "Empty mountPermissions. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'."
         # fi
         case $csi_synology_host_protocol_name in
           synology-csi-iscsi )
@@ -1174,7 +1191,7 @@ allowVolumeExpansion: $csi_synology_host_protocol_class_allowVolumeExpansion
             vlib.trace "csi_synology_host_protocol_class_location=$csi_synology_host_protocol_class_location"
           ;;
           * )
-            err_and_exit "Unsupported storage protocol '$name'. Expected: ISCSI, SMB, NFS" ${LINENO};
+            err_and_exit "Unsupported storage protocol '$name'. Expected: ISCSI, SMB, NFS"
         esac
         #region
         separator="---
@@ -1252,14 +1269,14 @@ function install-k3s() {
       # k3s Version
       vlib.check-github-release-version 'k3s' https://api.github.com/repos/k3s-io/k3s/releases 'k3s_ver'
       if ! [[ $k3s_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
-        err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'." ${LINENO}
+        err_and_exit "Error: Invalid input for k3s_ver: '$k3s_ver'."
       fi
     ;;
     k3d )
       # k3d Version
       vlib.check-github-release-version 'k3d' https://api.github.com/repos/k3d-io/k3d/releases 'k3d_ver'
       if ! [[ $k3d_ver =~ ^v[1-2]\.[0-9]{1,2}\.[0-9]{1,2}\+((k3s1)|(rke2))$ ]]; then
-        err_and_exit "Error: Invalid input for k3s_ver: '$k3d_ver'." ${LINENO}
+        err_and_exit "Error: Invalid input for k3s_ver: '$k3d_ver'."
       fi
     ;;
     * ) 
@@ -1272,11 +1289,11 @@ function install-k3s() {
     vlib.check-github-release-version 'kube vip' https://api.github.com/repos/kube-vip/kube-vip/releases 'kube_vip_ver'
     # Version of Kube-VIP to deploy
     if ! [[ $kube_vip_ver =~ ^v[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}$ ]]; then
-      err_and_exit "Error: Invalid input for kube_vip_ver: '$kube_vip_ver'." ${LINENO}
+      err_and_exit "Error: Invalid input for kube_vip_ver: '$kube_vip_ver'."
     fi
     # Kube-VIP mode
     if ! [[ "$kube_vip_mode" == "ARP" || "BGP" ]]; then
-      err_and_exit "Error: Invalid kube_vip_mode: '$kube_vip_mode'. Expected 'ARP' or 'BGP'." ${LINENO}
+      err_and_exit "Error: Invalid kube_vip_mode: '$kube_vip_mode'. Expected 'ARP' or 'BGP'."
     fi
     inf "kube_vip_mode: '$kube_vip_mode'\n"
   fi
@@ -1435,7 +1452,7 @@ EOF1
       # kubectl patch node k8s-worker-1 --type merge --patch-file /home/bino/k0s-sriwijaya/longhorn/lhpatch.yaml
     ;;
     * )
-      err_and_exit "Expected parameters: 1 - mount, 2 - generate yaml" ${LINENO};
+      err_and_exit "Expected parameters: 1 - mount, 2 - generate yaml"
   esac
 }
 
@@ -1462,7 +1479,7 @@ longhorn-storage-class-create() {
     if [[ -n ${args[--force]} ]]; then
       run "line '$LINENO';kubectl delete storageclass $storage_class --wait --ignore-not-found=true"
     else
-      err_and_exit "Storage class '$storage_class' already exists in cluster. Use --force flag to delete anyway." ${LINENO};
+      err_and_exit "Storage class '$storage_class' already exists in cluster. Use --force flag to delete anyway."
     fi
   fi
 
@@ -1495,11 +1512,11 @@ longhorn-install() {
   if [[ -z ${args[--storage-classes-only]} ]]; then
     hl.blue "$parent_step$((++install_step)). Longhorn installation. (Line:$LINENO)"
     if ! [[ -e ${cluster_plan_file} ]]; then
-      err_and_exit "Cluster plan file '${cluster_plan_file}' is not found" ${LINENO};
+      err_and_exit "Cluster plan file '${cluster_plan_file}' is not found"
     fi
 
     if command kubectl get deploy longhorn-ui -n longhorn-system &> /dev/null; then
-      err_and_exit "Longhorn already installed."  ${LINENO} "$0"
+      err_and_exit "Longhorn already installed."
     fi
 
     declare -A node_disk_config
@@ -1626,7 +1643,7 @@ longhorn-install() {
   #   if [[ -n ${args[--force]} ]]; then
   #     run "line '$LINENO';kubectl delete storageclass longhorn-ssd --wait --ignore-not-found=true"
   #   else
-  #     err_and_exit "Storage class 'longhorn-ssd' already exists in cluster. Use --force flag to delete anyway." ${LINENO};
+  #     err_and_exit "Storage class 'longhorn-ssd' already exists in cluster. Use --force flag to delete anyway."
   #   fi
   # fi
   # run "line '$LINENO';yq -i '
@@ -1644,7 +1661,7 @@ longhorn-install() {
   #   if [[ -n ${args[--force]} ]]; then
   #     run "line '$LINENO';kubectl delete storageclass longhorn-nvme --wait --ignore-not-found=true"
   #   else
-  #     err_and_exit "Storage class 'longhorn-nvme' already exists in cluster. Use --force flag to delete anyway." ${LINENO};
+  #     err_and_exit "Storage class 'longhorn-nvme' already exists in cluster. Use --force flag to delete anyway."
   #   fi
   # fi
   # run "line '$LINENO';yq -i '
@@ -1675,11 +1692,11 @@ longhorn-uninstall() {
   hl.blue "$parent_step$((++install_step)). Uninstalling Longhorn. (Line:$LINENO)"
 
   if ! command kubectl get deploy longhorn-ui -n longhorn-system &> /dev/null; then
-    err_and_exit "Longhorn not installed yet."  ${LINENO} "$0"
+    err_and_exit "Longhorn not installed yet."
   fi
 
   if ! command kubectl get deploy -l app.kubernetes.io/version=$longhorn_ver -n longhorn-system &> /dev/null; then
-    err_and_exit "Trying uninstall Longhorn version '$longhorn_ver', but this version is not installed."  ${LINENO} "$0"
+    err_and_exit "Trying uninstall Longhorn version '$longhorn_ver', but this version is not installed."
   fi
 
   # manually deleting stucked-namespace
@@ -1721,7 +1738,7 @@ exit
     sleep $wait_period
     ((wait_time+=wait_period))
     if [[ $wait_time -gt $wait_timeout ]]; then
-      err_and_exit "Timeout. Wait time $wait_time sec"  ${LINENO} "$0"
+      err_and_exit "Timeout. Wait time $wait_time sec"
     fi
   done
   run "line '$LINENO';kubectl delete deployment longhorn-ui -n longhorn-system"
@@ -1736,7 +1753,7 @@ exit
     ((wait_time+=wait_period))
     echo $wait_time
     if [[ $wait_time -gt $wait_timeout ]]; then
-      err_and_exit "Timeout. Wait time $wait_time sec"  ${LINENO} "$0"
+      err_and_exit "Timeout. Wait time $wait_time sec"
     fi
   done
 
@@ -1772,7 +1789,7 @@ longhorn-restore()
 check-longhorn-exclusive-params()
 {
   if [[ longhorn_number_exclusive_params -gt 0 ]]; then
-    err_and_exit "Only one exclusive operation is allowed"  ${LINENO} "$0"
+    err_and_exit "Only one exclusive operation is allowed"
   fi
 }
 #endregion
@@ -1911,17 +1928,17 @@ function install-storage() {
     eval "$( yq '.[] | ( select(kind == "scalar") | "storage_server_" + key + "='\''" + . + "'\''")' <<<$storage_server)"
     vlib.trace "storage server name=$storage_server_name"
     if [[ -z $storage_server_name ]]; then
-      err_and_exit "Empty host name. Configuration YAML file: '${cluster_plan_file}'." ${LINENO}
+      err_and_exit "Empty host name. Configuration YAML file: '${cluster_plan_file}'."
     fi
     if [[ -v host_names_dic["${storage_server_name}"] ]]; then
       vlib.trace "host names(${#host_names_dic[@]})=" "${!host_names_dic[@]}"
-      err_and_exit "Host name is not unique. Configuration YAML file: '${cluster_plan_file}'. Host name '$storage_server_name'." ${LINENO}
+      err_and_exit "Host name is not unique. Configuration YAML file: '${cluster_plan_file}'. Host name '$storage_server_name'."
     fi
     host_names_dic["${storage_server_name}"]='y'
     readarray storage_server_protocols < <(echo $storage_server | yq -o=j -I=0 ".protocols[]")
     vlib.trace "storage protocols count=${#storage_server_protocols[@]}"
     if [[ ${#storage_server_protocols[@]} -eq 0 ]]; then
-      err_and_exit "There are no storage protocol for host. Configuration YAML file: '${cluster_plan_file}'. Host '$storage_server_name'." ${LINENO}
+      err_and_exit "There are no storage protocol for host. Configuration YAML file: '${cluster_plan_file}'. Host '$storage_server_name'."
     fi
     if [[ -n ${args[--force]} ]] && [[ -a "$vkube_data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml" ]]; then # file exists
       run "line '$LINENO';kubectl delete -f '$vkube_data_folder/generated-csi-driver-nfs-smb-storage-classes.yaml' --ignore-not-found=true"
@@ -1937,20 +1954,20 @@ function install-storage() {
       eval "$( yq '.[] | ( select(kind == "scalar") | "storage_server_protocol_" + key + "='\''" + . + "'\''")' <<<$storage_server_protocol)"
       vlib.trace "storage protocol name=$storage_server_protocol_name"
       if [[ -z $storage_server_protocol_name ]]; then
-        err_and_exit "Empty protocol name. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'." ${LINENO}
+        err_and_exit "Empty protocol name. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'."
       fi
       if [[ -v protocol_names["${storage_server_protocol_name}"] ]]; then
         #echo "${!protocol_names[@]}" "${protocol_names[@]}"
         vlib.trace "protocol names(${#protocol_names[@]})=" "${!protocol_names[@]}"
         #vlib.trace "storage host=$storage_server"
         #vlib.trace "storage protocol=$storage_server_protocol"
-        err_and_exit "Storage protocol name is not unique. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol name '$storage_server_protocol_name'." ${LINENO}
+        err_and_exit "Storage protocol name is not unique. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol name '$storage_server_protocol_name'."
       fi
       protocol_names["${storage_server_protocol_name}"]='y'
       readarray storage_server_protocol_classes < <(echo $storage_server_protocol | yq -o=j -I=0 ".classes[]")
       vlib.trace "storage classes count=${#storage_server_protocol_classes[@]}"
       if [[ ${#storage_server_protocol_classes[@]} -eq 0 ]]; then
-        err_and_exit "There are no storage class for protocol. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'." ${LINENO}
+        err_and_exit "There are no storage class for protocol. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'."
       fi
       #vlib.trace "reclaimPolicy=$storage_server_protocol_class_reclaimPolicy"
       for storage_server_protocol_class in "${storage_server_protocol_classes[@]}"; do
@@ -1961,22 +1978,22 @@ function install-storage() {
         vlib.trace "storage class name=$storage_server_protocol_class_name"
         #vlib.trace "reclaimPolicy=$storage_server_protocol_class_reclaimPolicy"
         if [[ -z $storage_server_protocol_secret_folder && -z $storage_server_protocol_secret_pass_folder ]]; then
-          err_and_exit "Both 'secret_folder' and 'secret_pass_folder' are empty. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Both 'secret_folder' and 'secret_pass_folder' are empty. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'."
         fi
         if [[ -n $storage_server_protocol_secret_folder && -n $storage_server_protocol_secret_pass_folder ]]; then
-          err_and_exit "Both 'secret_folder' and 'secret_pass_folder' are not empty. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Both 'secret_folder' and 'secret_pass_folder' are not empty. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'."
         fi
         if [[ -z $storage_server_protocol_class_location ]]; then
-          err_and_exit "Empty location. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Empty location. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'."
         fi
         if [[ -z $storage_server_protocol_class_reclaimPolicy ]]; then
-          err_and_exit "Empty reclaimPolicy. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Empty reclaimPolicy. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'."
         fi
         if [[ -z $storage_server_protocol_class_allowVolumeExpansion ]]; then
-          err_and_exit "Empty allowVolumeExpansion. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+          err_and_exit "Empty allowVolumeExpansion. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'."
         fi
         # if [[ -z $storage_server_protocol_class_mountPermissions ]]; then
-        #   err_and_exit "Empty mountPermissions. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'." ${LINENO}
+        #   err_and_exit "Empty mountPermissions. Configuration YAML file: '${cluster_plan_file}'. Storage server '$storage_server_name'. Protocol '$storage_server_protocol_name'. Storage class '$storage_server_protocol_class_name'."
         # fi
         
         # if ! [[ -v folder_cred_dic["${secret_folder_name}"] ]]; then
@@ -2112,7 +2129,7 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
           ;;
           * )
             echo "      unknown"  >&3
-            err_and_exit "Unsupported storage protocol '$name'. Expected: csi-driver-smb or csi-driver-nfs" ${LINENO};
+            err_and_exit "Unsupported storage protocol '$name'. Expected: csi-driver-smb or csi-driver-nfs"
         esac
         #region
         separator="---
@@ -2123,7 +2140,7 @@ mountOptions: # https://linux.die.net/man/8/mount.cifs
           if [[ -n ${args[--force]} ]]; then
             run "line '$LINENO';kubectl delete storageclass $storage_class --wait --ignore-not-found=true"
           else
-            err_and_exit "Storage class '$storage_class' already exists in cluster. Use --force flag to delete anyway." ${LINENO};
+            err_and_exit "Storage class '$storage_class' already exists in cluster. Use --force flag to delete anyway."
           fi
         fi
       done
@@ -2429,14 +2446,19 @@ function vkube-k3s.app-install() {
   if [ -n "${args[--variant]}" ]; then
     _variant="${args[--variant]}"
   fi
+  if [ -z "${_deployment}" ]; then
+    _deployment="${1}"
+  fi
   if [ -n "${args[--deployment]}" ]; then
     _deployment="${args[--deployment]}"
   fi
+
+  hl.blue "$parent_step$((++install_step)). Check '$1' container releases. (Line:$LINENO)"
+
   case ${1} in
     busybox )
       # https://hub.docker.com/_/busybox
       # https://github.com/docker-library/busybox/blob/master/versions.json
-      hl.blue "$parent_step$((++install_step)). Installing busybox. (Line:$LINENO)"
       if [ -z "$busybox_ver" ]; then
         warn-and-trace "Variable 'busybox_ver' is not set in cluster-plan.yaml file. Latest stable version will be used."
         _release="stable"
@@ -2454,13 +2476,19 @@ function vkube-k3s.app-install() {
       vkube-k3s.app-check-releses 'https://raw.githubusercontent.com/docker-library/busybox/refs/heads/master/versions.json' "$_ver" "$_release"
     ;;
     * ) 
-      err_and_exit "Unsupported app type '${1}'."
+      # https://hub.docker.com/_/alpine
+      # https://github.com/alpinelinux/docker-alpine
+      warn-and-trace "General app type '$1'. Version '$_release'. Try to install."
+      #err_and_exit "Unsupported app type '$1'. Version '$_release'."
     ;;
   esac
 
-  if [ -z "${_deployment}" ]; then
-    _deployment="${1}"
-  fi
+  vlib.trace "_deployment=$_deployment"
+  vlib.trace "--namespace=${args[--namespace]}"
+  vkube-k3s.fail-if-already-deployed "${args[--namespace]}" "$_deployment"
+  # if [[ $(vkube-k3s.fail-if-already-deployed "${args[--namespace]}" "$_deployment") -eq 1 ]]; then
+  #   err_and_exit "App '$_deployment' is already installed in namespace '${args[--namespace]}'."
+  # fi
 
   local _storage_class
   for _storage_class in "${_storage_classes[@]}"; do
@@ -2475,7 +2503,7 @@ function vkube-k3s.app-install() {
   txt_deploy="kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: ${1}
+  name: ${_deployment}
   namespace: ${args[--namespace]}
   labels:
     app: ${1}
@@ -2522,7 +2550,7 @@ spec:
     vlib.trace "__storage_type=$__storage_type"
 
     # get storage class label vkube/storage-type
-    #err_and_exit "Not implemented" ${LINENO}
+    #err_and_exit "Not implemented"
     #region
     txt+="${separator}apiVersion: v1
 kind: PersistentVolumeClaim
@@ -2541,7 +2569,7 @@ spec:
     case $__storage_type in
       iscsi )
         [[ "${access-mode}" == "ReadWriteMany" ]] && warn-and-trace "ReadWriteMany access mode is not supported for ISCSI"
-        #err_and_exit "Not implemented" ${LINENO}
+        #err_and_exit "Not implemented"
       ;;
       smb )
       ;;
@@ -2556,24 +2584,28 @@ spec:
       ;;
       * )
         if [[ -z $__storage_type ]]; then
-          err_and_exit "Storage class '$__s with label 'vkube/storage-type' is not found in kubernetes cluster" ${LINENO};
+          err_and_exit "Storage class '$__s with label 'vkube/storage-type' is not found in kubernetes cluster"
         else
-          err_and_exit "Storage class '$__s with label 'vkube/storage-type: $$__storage_type' is not supported" ${LINENO};
+          if [[ "$_storage_class" != "local-path" ]]; then
+            err_and_exit "Storage class '$__s with label 'vkube/storage-type: $$__storage_type' is not supported"
+          fi
         fi
     esac
     #region
     separator="---
 "
     #_mount_points[_i]
-    txt_init_args+="
+    if [ -n "$__s" ]; then
+      txt_init_args+="
           mkdir -p /home/${args[name]}-$__s-vol && chown -R 999:999 /home/${args[name]}-$__s-vol"
-    txt_deploy_vol+="
+      txt_deploy_vol+="
       - name: ${args[name]}-$__s-vol
         persistentVolumeClaim:
           claimName: ${args[name]}-$__s-pvc"
-    txt_deploy_vol_mount+="
+      txt_deploy_vol_mount+="
           - name: ${args[name]}-$__s-vol
             mountPath: /home/${args[name]}-$__s-vol # The mount point inside the container"
+    fi
     #endregion
   done
 
@@ -2609,31 +2641,11 @@ spec:
     run "line '$LINENO';kubectl delete -f '$_path' --ignore-not-found=true"
   fi
   vlib.trace "txt_deploy=$txt_deploy"
-  run "line '$LINENO';echo '$txt_deploy' > '$_path'"
+  run "line '$LINENO';echo \"$txt_deploy\" > '$_path'"
   run "line '$LINENO';kubectl apply -f '$_path'"
 
 
-  
-  err_and_exit "Not implemented" ${LINENO}
-
-
-  # ${args[--storage-class]}
-
-  # if ! [[ -e ${cluster_plan_file} ]]; then
-  #   err_and_exit "Cluster plan file '${cluster_plan_file}' is not found" ${LINENO};
-  # fi
-  # #echo $node_root_password
-  # if [[ -z $node_root_password ]]; then
-  #   node_root_password=""
-  #   vlib.read-password node_root_password "Please enter root password for cluster nodes:"
-  #   echo
-  # fi
-
-  # hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
-  # if command kubectl get deploy busybox -n busybox-system &> /dev/null; then
-  #   err_and_exit "Busybox already installed."  ${LINENO} "$0"
-  # fi
-
+  hl.blue "NEED TO REMOVE ??? (Line:$LINENO)"
   #region
   txt="apiVersion: v1
 kind: PersistentVolume
@@ -2678,71 +2690,26 @@ spec:
 "
   #endregion
 
-  #exit 1
-  err_and_exit "Not implemented" ${LINENO}
 }
-function vkube-k3s.app-uninstall() {
+function vkube-k3s.app-deployment-uninstall() {
   if [ -z "$1" ]; then
-    err_and_exit "Name of application container is missing. Parameter \$1."
+    err_and_exit "Name of application deployment is missing. Parameter \$1."
   fi
 
 
-  hl.blue "$parent_step$((++install_step)). Uninstalling Busybox. (Line:$LINENO)"
+  hl.blue "$parent_step$((++install_step)). Uninstalling '$1'. (Line:$LINENO)"
 
-  if ! command kubectl get deploy busybox -n busybox-system &> /dev/null; then
-    err_and_exit "Busybox not installed yet."  ${LINENO} "$0"
+  if ! command kubectl get deploy $1 -n ${args[--namespace]} &> /dev/null; then
+    err_and_exit "Deployment '$1' is not installed yet in namespace '${args[--namespace]}'."
   fi
 
-  if ! command kubectl get deploy -l app.kubernetes.io/version=$busybox_ver -n busybox-system &> /dev/null; then
-    err_and_exit "Trying uninstall Busybox version '$busybox_ver', but this version is not installed."  ${LINENO} "$0"
+  run "line $LINENO;kubectl delete deployment $1 -n ${args[--namespace]} --wait=true"
+  if [[ "${args[--namespace]}" != "default" ]]; then
+    sleep 10
+    #echo "kuku1=$(kubectl get pods -n ${args[--namespace]} --ignore-not-found 2> /dev/null | wc -l)" >&3
+    if [[ $(kubectl get deployments -n ${args[--namespace]} --ignore-not-found 2> /dev/null | wc -l) -eq 0 ]]; then
+      run "line '$LINENO';kubectl delete namespace ${args[--namespace]}"
+    fi
   fi
-
-  # busybox_installed_ver=$( busyboxctl version )
-  # if ! [ $busybox_installed_ver == $busybox_ver ]; then
-  #   err_and_exit "Trying uninstall Busybox version '$busybox_ver', but expected '$busybox_installed_ver'."  ${LINENO} "$0"
-  # fi
-
-  # manually deleting stucked-namespace
-  #kubectl get namespace "busybox-system" -o json | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/" | kubectl replace --raw /api/v1/namespaces/busybox-system/finalize -f -
-  #kubectl get namespace "stucked-namespace" -o json \
-  #  | tr -d "\n" | sed "s/\"finalizers\": \[[^]]\+\]/\"finalizers\": []/" \
-  #  | kubectl replace --raw /api/v1/namespaces/stucked-namespace/finalize -f -
-
-  # busybox deleting-confirmation-flag
-  # kubectl get lhs -n busybox-system
-  # can be edit in k9s or apply deleting-confirmation-flag.yaml
-  local dir="$(dirname "$0")"
-  #run "line $LINENO;kubectl -n busybox-system patch -p '{\"value\": \"true\"}' --type=merge lhs deleting-confirmation-flag"
-  #run "line $LINENO;helm uninstall busybox -n busybox-system"
-  #run "line $LINENO;kubectl apply -f ./101-busybox/deleting-confirmation-flag.yaml"
-
-  run "line $LINENO;kubectl create -f https://raw.githubusercontent.com/busybox/busybox/$busybox_ver/uninstall/uninstall.yaml"
-  #kubectl get job/busybox-uninstall -n busybox-system -w
-
-  # https://medium.com/@sirtcp/how-to-resolve-stuck-kubernetes-namespace-deletions-by-cleaning-finalizers-38190bf3165f
-  # Get all resorces
-  #kubectl api-resources
-  # Get all resorces for namespace
-  #kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get --show-kind --ignore-not-found -n busybox-system
-
-  # kubectl wait --for jsonpath='{.status.state}'=AtLatestKnown sub mysub -n myns --timeout=3m
-  #run "line '$LINENO';wait-for-success 'kubectl wait --for=condition=complete job/busybox-uninstall -n busybox-system'"
-  run "line '$LINENO';kubectl wait --for=condition=complete job/busybox-uninstall -n busybox-system --timeout=5m"
-  #run "line '$LINENO';wait-for-success \"kubectl get job/busybox-uninstall -n busybox-system -o jsonpath='{.status.conditions[?(@.type==\"Complete\")].status}' | grep True\""
-
-  # crd_array=(backingimagedatasources backingimagemanagers backingimages backupbackingimages backups backuptargets /
-  #   backupvolumes engineimages engines instancemanagers nodes orphans recurringjobs replicas settings sharemanagers /
-  #   snapshots supportbundles systembackups systemrestores volumeattachments volumes)
-  # for crd in "${crd_array[@]}"; do
-  #   run "line '$LINENO';kubectl patch crd $crd -n busybox-system -p '{"metadata":{"finalizers":[]}}' --type=merge"
-  #   run "line '$LINENO';kubectl delete crd $crd -n busybox-system"
-  #   #run "line '$LINENO';kubectl delete crd $crd"
-  # done
-
-  run "line '$LINENO';kubectl delete namespace busybox-system"
-  run "line '$LINENO';kubectl delete storageclass busybox-ssd"
-  run "line '$LINENO';kubectl delete storageclass busybox-nvme"
-
-  run "line '$LINENO';kubectl delete namespace busybox-system"
 }
 #endregion app

@@ -5,6 +5,7 @@
 <!-- Markdown All in One -->
 - [Home network](#home-network)
   - [TODO](#todo)
+    - [Network monitor](#network-monitor)
     - [Load Balancer](#load-balancer)
     - [Pi-hole](#pi-hole)
     - [bash](#bash)
@@ -83,6 +84,12 @@
       - [PostgreSQL](#postgresql)
 
 ## TODO
+
+### Network monitor
+
+* [Sniffnet](https://sniffnet.net/)
+  * https://github.com/GyulyVGC/sniffnet
+* [Wireshark lets you dive deep into your network traffic](https://www.wireshark.org/)
 
 ### Load Balancer
 

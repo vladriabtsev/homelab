@@ -40,7 +40,7 @@ busybox-install-new()
   # https://docs.aws.amazon.com/filegateway/latest/files3/use-smb-csi.html
 
   if ! [[ -e ${cluster_plan_file} ]]; then
-    err_and_exit "Cluster plan file '${cluster_plan_file}' is not found" ${LINENO};
+    err_and_exit "Cluster plan file '${cluster_plan_file}' is not found"
   fi
   #echo $node_root_password
   if [[ -z $node_root_password ]]; then
@@ -51,7 +51,7 @@ busybox-install-new()
 
   hl.blue "$parent_step$((++install_step)). Busybox installation. (Line:$LINENO)"
   if command kubectl get deploy busybox -n busybox-system &> /dev/null; then
-    err_and_exit "Busybox already installed."  ${LINENO} "$0"
+    err_and_exit "Busybox already installed."
   fi
 
 }
@@ -60,16 +60,16 @@ busybox-uninstall()
   hl.blue "$parent_step$((++install_step)). Uninstalling Busybox. (Line:$LINENO)"
 
   if ! command kubectl get deploy busybox -n busybox-system &> /dev/null; then
-    err_and_exit "Busybox not installed yet."  ${LINENO} "$0"
+    err_and_exit "Busybox not installed yet."
   fi
 
   if ! command kubectl get deploy -l app.kubernetes.io/version=$busybox_ver -n busybox-system &> /dev/null; then
-    err_and_exit "Trying uninstall Busybox version '$busybox_ver', but this version is not installed."  ${LINENO} "$0"
+    err_and_exit "Trying uninstall Busybox version '$busybox_ver', but this version is not installed."
   fi
 
   # busybox_installed_ver=$( busyboxctl version )
   # if ! [ $busybox_installed_ver == $busybox_ver ]; then
-  #   err_and_exit "Trying uninstall Busybox version '$busybox_ver', but expected '$busybox_installed_ver'."  ${LINENO} "$0"
+  #   err_and_exit "Trying uninstall Busybox version '$busybox_ver', but expected '$busybox_installed_ver'."
   # fi
 
   # manually deleting stucked-namespace
@@ -141,7 +141,7 @@ busybox-restore()
 check-busybox-exclusive-params()
 {
   if [[ busybox_number_exclusive_params -gt 0 ]]; then
-    err_and_exit "Only one exclusive operation is allowed"  ${LINENO} "$0"
+    err_and_exit "Only one exclusive operation is allowed"
   fi
 }
 
@@ -195,7 +195,7 @@ while getopts "ovdhs:n:w:t:i:u:g:" opt
 do
   case $opt in
     s )
-      if [[ $plan_is_provided -eq 1 ]]; then err_and_exit "Cluster plan is provided already" ${LINENO} "$0"; fi
+      if [[ $plan_is_provided -eq 1 ]]; then err_and_exit "Cluster plan is provided already"; fi
       cluster_plan_file="$OPTARG"
       plan_is_provided=1
       vlib.cluster_plan_read
@@ -210,7 +210,7 @@ do
       parent_step="$OPTARG."
     ;;
     i )
-      if [[ $plan_is_provided -eq 0 ]]; then err_and_exit "Cluster plan is not provided" ${LINENO} "$0"; fi
+      if [[ $plan_is_provided -eq 0 ]]; then err_and_exit "Cluster plan is not provided"; fi
       if [[ $busybox_number_exclusive_params -gt 0 ]]; then err_and_exit "Only one exclusive operation is allowed" ${LINENO} "$0"; fi
       ((busybox_number_exclusive_params++))
       busybox-check-version "$OPTARG" 1

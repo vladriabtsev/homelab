@@ -8,9 +8,18 @@ setup() {
   load 'test_helper/bats-support/load' # this is required by bats-assert!
   load 'test_helper/bats-assert/load'  
   load 'test_helper/bats-file/load'  
+  load 'test_helper/bats-detik/lib/utils'  
+  load 'test_helper/bats-detik/lib/detik'
   
+  DETIK_CLIENT_NAME="kubectl" 
+
   set -e # exit on error
-  source ../vlib.bash
+  source ../vkube-k3s.bash
+  
+  # if [ -z "$SSH_AUTH_SOCK" ]; then
+  #   eval "$(ssh-agent -s)" # start ssh agent
+  #   ssh-add ~/.ssh/id_rsa
+  # fi
 }
 #teardown() {
   #echo "teardown"
@@ -125,7 +134,7 @@ setup() {
   assert_output --partial 'vlib.bats'
   refute_output --partial 'eval ls' # --xtrace
 
-  echo "${MY_LOG_DIR}vkube-exec.log" >&3
+  #echo "${MY_LOG_DIR}vkube-exec.log" >&3
   # https://github.com/bats-core/bats-file
   assert_file_exists "${MY_LOG_DIR}vkube_exec_command.log"
   #assert_files_equal "${MY_LOG_DIR}vkube-exec.log" /path/to/file2
@@ -168,66 +177,191 @@ setup() {
 #region apps
 
   # bats test_tags=tag:busybox
-  @test "../vkube --trace --cluster-plan k3d-test app" {
+  @test "Can't app command without subcommand" {
     run ../vkube --trace --cluster-plan k3d-test app
     assert_failure
     #echo "output=$output" >&3
     assert_output --partial 'Usage:'
-}
+  }
   # bats test_tags=tag:busybox
-  @test "../vkube --trace --cluster-plan k3d-test app install" {
+  @test "Can't app install command without subcommand" {
     run ../vkube --trace --cluster-plan k3d-test app install
     assert_failure
     #echo "output=$output" >&3
     assert_output --partial 'Usage:'
   }
   # bats test_tags=tag:busybox
-  @test "../vkube --trace --cluster-plan k3d-test app install busybox -c local-path" {
-    # if ! kubectl get ns/longhorn-system; then
-    #   skip "Longhorn is not installed"
-    # fi
+  @test "Can't app install busybox with storage class, but without mounting point" {
     run ../vkube --trace --cluster-plan k3d-test app install busybox -c local-path
     assert_failure
     #echo "output=$output" >&3
     assert_output --partial 'Expecting equal amount'
   }
   # bats test_tags=tag:busybox
-  @test "../vkube --trace --cluster-plan k3d-test app install busybox -m /mnt/local-path" {
-    # if ! kubectl get ns/longhorn-system; then
-    #   skip "Longhorn is not installed"
-    # fi
+  @test "Can't app install busybox with mounting point, but without storage class" {
     run ../vkube --trace --cluster-plan k3d-test app install busybox -m /mnt/local-path
     assert_failure
     #echo "output=$output" >&3
     assert_output --partial 'Expecting equal amount'
   }
   # bats test_tags=tag:busybox
-  @test "../vkube --trace --cluster-plan k3d-test app install busybox -c unknown-storage-class -m /mnt/local-path" {
-    # if ! kubectl get ns/longhorn-system; then
-    #   skip "Longhorn is not installed"
-    # fi
+  @test "Can't app install busybox with unknown storage class" {
     run ../vkube --trace --cluster-plan k3d-test app install busybox -c unknown-storage-class -m /mnt/local-path
     assert_failure
     #echo "output=$output" >&3
     assert_output --partial "Storage class 'unknown-storage-class' is not found in cluster"
   }
-  # bats test_tags=tag:busybox-one
-  @test "../vkube --trace --cluster-plan k3d-test app install busybox # without storage" {
-    # if ! kubectl get ns/longhorn-system; then
-    #   skip "Longhorn is not installed"
-    # fi
+  # bats test_tags=tag:busybox
+  @test "Can app install busybox without storage class" {
     run ../vkube --trace --cluster-plan k3d-test app install busybox
     assert_success
-    echo "output=$output" >&3
+    #echo "output=$output" >&3
+
+    DETIK_CLIENT_NAMESPACE="default"
+    sleep 10
+    # echo '         Verify there are 1 pods named ^busybox' >&3
+    # run verify "there are 1 pods named '^busybox'"
+    # assert_success
+
+    #echo '         Verify that status is running' >&3
+    run try "at most 10 times every 5s to get pods named '^busybox' and verify that 'status' is 'running'"
+    assert_success
   }
   # bats test_tags=tag:busybox
-  @test "../vkube --trace --cluster-plan k3d-test app install busybox -c local-path -m /mnt/local-path" {
-    # if ! kubectl get ns/longhorn-system; then
-    #   skip "Longhorn is not installed"
-    # fi
-    run ../vkube --trace --cluster-plan k3d-test app install busybox -c local-path -m /mnt/local-path
+  @test "Can't app install busybox in same namespace twice" {
+    run ../vkube --trace --cluster-plan k3d-test app install busybox
+    assert_failure
+    #echo "output=$output" >&3
+  }
+  # bats test_tags=tag:busybox
+  @test "Can uninstall deployment busybox" {
+    run ../vkube --trace --cluster-plan k3d-test app uninstall deployment busybox
     assert_success
-    echo "output=$output" >&3
+    #echo "output=$output" >&3
+
+    DETIK_CLIENT_NAMESPACE="default"
+    sleep 10
+    #echo '         Verify there are 0 pods named ^busybox' >&3
+    run verify "there are 1 pods named '^busybox'"
+    assert_success
+
+    # test namespace is deleted
+    run vkube-k3s.is-namespace-exist "default"
+    [ "$status" -eq 0 ]
+  }
+  # bats test_tags=tag:busybox
+  @test "Can app install busybox with storage class and in specified namespace" {
+    run ../vkube --trace --cluster-plan k3d-test app -n busybox-test-namespace install busybox -c local-path -m /mnt/local-path
+    assert_success
+    #echo "output=$output" >&3
+
+    # test is started in appropriate namespace
+  }
+  # bats test_tags=tag:busybox
+  @test "Can't uninstall not installed deployment in empty namespace" {
+    run ../vkube --trace --cluster-plan k3d-test app uninstall deployment busybox
+    assert_failure
+    #echo "output=$output" >&3
+
+    # test uninstall with namespace deletion
+  }
+  # bats test_tags=tag:busybox
+  @test "Can uninstall busybox with storage class and in specified namespace" {
+    run ../vkube --trace --cluster-plan k3d-test app -n busybox-test-namespace uninstall deployment busybox
+    assert_success
+    #echo "output=$output" >&3
+
+    # test uninstall with namespace deletion
+  }
+  # bats test_tags=tag:alpine
+  @test "Can deploy general container in custom namespace" {
+    run ../vkube --trace --cluster-plan k3d-test app -n alpine install general alpine
+    sleep 10
+    assert_success
+    #echo "output=$output" >&3
+
+    DETIK_CLIENT_NAMESPACE="alpine"
+    sleep 10
+    #echo '         Verify there is 1 deployment named ^alpine' >&3
+    run verify "there are 1 deployment named '^alpine'"
+    assert_success
+
+    #echo '         Verify that status is running' >&3
+    run try "at most 10 times every 5s to get pods named '^alpine' and verify that 'status' is 'running'"
+    assert_success
+
+    run vkube-k3s.is-namespace-exist "alpine"
+    [ "$status" -eq 0 ]
+  }
+  # bats test_tags=tag:alpine
+  @test "Can deploy general container with custom deployment name in custom namespace" {
+    run ../vkube --trace --cluster-plan k3d-test app -n alpine install general --deployment alpine2 alpine
+    sleep 10
+    assert_success
+    #echo "output=$output" >&3
+
+    DETIK_CLIENT_NAMESPACE="alpine"
+    sleep 10
+    #echo '         Verify there is 1 deployment named ^alpine2' >&3
+    run verify "there are 1 deployment named '^alpine2'"
+    assert_success
+
+    #echo '         Verify that status is running' >&3
+    run try "at most 10 times every 5s to get pods named '^alpine2' and verify that 'status' is 'running'"
+    assert_success
+
+    run vkube-k3s.is-namespace-exist "alpine"
+    [ "$status" -eq 0 ]
+  }
+  # bats test_tags=tag:alpine
+  @test "Can uninstall deployment container in custom namespace" {
+    run ../vkube --trace --cluster-plan k3d-test app -n alpine uninstall deployment alpine
+    sleep 10
+    assert_success
+    #echo "output=$output" >&3
+
+    DETIK_CLIENT_NAMESPACE="default"
+    sleep 10
+    #echo '         Verify there are 0 pods named ^alpine' >&3
+    run verify "there are 0 pods named '^alpine'"
+    assert_success
+
+    run vkube-k3s.is-namespace-exist "alpine"
+    [ "$status" -eq 0 ]
+  }
+  # bats test_tags=tag:alpine
+  @test "Can't uninstall not installed general container in custom namespace" {
+    run ../vkube --trace --cluster-plan k3d-test app -n alpine uninstall deployment alpine
+    sleep 10
+    assert_failure
+    #echo "output=$output" >&3
+
+    assert_output --partial "Deployment 'alpine' is not installed yet in namespace 'alpine'"
+
+    run vkube-k3s.is-namespace-exist "alpine"
+    [ "$status" -eq 0 ]
+  }
+  # bats test_tags=tag:alpine
+  @test "Can't uninstall deployment if wrong namespace" {
+    run ../vkube --trace --cluster-plan k3d-test app uninstall deployment alpine2
+    sleep 10
+    assert_failure
+    #echo "output=$output" >&3
+
+    assert_output --partial "Deployment 'alpine2' is not installed yet in namespace 'default'"
+
+    run vkube-k3s.is-namespace-exist "alpine"
+    [ "$status" -eq 0 ]
+  }
+  # bats test_tags=tag:alpine
+  @test "Delete namespace when last deployment uninstalled" {
+    run ../vkube --trace --cluster-plan k3d-test app -n alpine uninstall deployment alpine2
+    sleep 10
+    assert_success
+    #echo "output=$output" >&3
+
+    run vkube-k3s.is-namespace-exist "alpine"
+    [ "$status" -eq 1 ]
   }
 
 #endregion apps
