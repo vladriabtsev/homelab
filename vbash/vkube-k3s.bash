@@ -18,13 +18,16 @@
 function vkube-k3s.get-pod-image-version() {
   # return container image version
   [[ -z $1 ]] && vlib.error-printf "Missing namespace parameter"
-  [[ -z $2 ]] && vlib.error-printf "Missing pod name parameter"
+  [[ -z $2 ]] && vlib.error-printf "Missing container type flag: true - search in 'containers', false - in 'initContainers'"
   [[ -z $3 ]] && vlib.error-printf "Missing container image name without version parameter"
 
   # jsonpath filtering is not working !!! https://kubernetes.io/docs/reference/kubectl/jsonpath/
-  # kubectl get pods -n synology-csi -l app=synology-csi-controller -o jsonpath='{.items[0].spec.containers[?(@.name=="csi-plugin")]}' | jq '.image'
-  # kubectl get deployment velero -n velero -o jsonpath='{.items[0].spec.containers[?(@.name==\"velero/velero\")]}' | jq '.image'
-  local image=$(eval "kubectl get deployment $2 -n $1 -o jsonpath='{.items[0].spec.containers[?(@.name==\"$3\")]}' | jq '.image'")
+  local image
+  if [[ "$2" == "true" ]]; then
+    image=$(eval "kubectl get pod -n $1 -o json | jq -r '.items[].spec.containers[] | select(.image | test(\"$3:\")).image' | uniq")
+  else
+    image=$(eval "kubectl get pod -n $1 -o json | jq -r '.items[].spec | .initContainers[]? | select(.image | test(\"$3:\")).image' | uniq")
+  fi
   #echo "image=$image" >&3
   local ver="${image#*:}"
   ver="${ver/%\"/}"
@@ -773,6 +776,9 @@ function vkube-k3s.install() {
   if [[ $install_storage_at_least_one -eq 1 ]]; then
     install-storage
   fi
+
+  # https://kubernetes.io/docs/tasks/access-application-cluster/list-all-running-container-images/
+  inf "Count container images in cluster:\n$(kubectl get pods --all-namespaces -o jsonpath="{.items[*].spec['initContainers', 'containers'][*].image}" |tr -s '[[:space:]]' '\n' |sort |uniq -c)\n"
 
   return 0
   err_and_exit "exit"
@@ -1894,13 +1900,16 @@ function install-storage() {
 
       # check velero version
       local need_install
-      curr_ver=$(vkube-k3s.get-pod-image-version "$velero_namespace" "velero" "velero/velero")
+      curr_ver=$(vkube-k3s.get-pod-image-version "$velero_namespace" true "velero/velero")
+      vlib.trace "current image velero/velero:$curr_ver"
       if [[ "$curr_ver" != "$velero_ver" ]]; then need_install=1; fi
       # check velero aws plugin version
-      curr_ver=$(vkube-k3s.get-pod-image-version "$velero_namespace" "velero" "velero/velero-plugin-for-aws")
+      curr_ver=$(vkube-k3s.get-pod-image-version "$velero_namespace" false "velero/velero-plugin-for-aws")
+      vlib.trace "current image velero/velero-plugin-for-aws:$curr_ver"
       if [[ "$curr_ver" != "$velero_aws_plugin_ver" ]]; then need_install=1; fi
       if [ $need_install -eq 1 ]; then
-        run "velero install \
+        run "velero uninstall --force --wait"
+        run "velero install --wait \
           --provider aws \
           --image velero/velero:$velero_ver \
           --plugins velero/velero-plugin-for-aws:$velero_aws_plugin_ver \
