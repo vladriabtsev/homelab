@@ -31,11 +31,12 @@ setup() {
   # make executables in src/ visible to PATH
   PATH="$DIR/../src:$PATH"
 
-  $vkube_data_folder="./vkube-data/k3d-test"
-  if [ -z "$SSH_AUTH_SOCK" ]; then
-    eval "$(ssh-agent -s)" # start ssh agent
-    ssh-add ~/.ssh/id_rsa
-  fi
+  #vkube_data_folder="./vkube-data/k3d-test"
+  #echo "" >&3
+  # if [ -z "$SSH_AUTH_SOCK" ]; then
+  #   eval "$(ssh-agent -s)" # start ssh agent
+  #   ssh-add ~/.ssh/id_rsa
+  # fi
 }
 #teardown() {
   #echo "teardown"
@@ -164,6 +165,18 @@ setup() {
   }
 #endregion secret
 
+# # bats test_tags=tag:tools
+# @test "velero installation" {
+#   #run "rm /usr/local/bin/velero"
+#   run ls
+#   assert_success
+#   # run vkube-k3s.install-velero
+#   # assert_success
+#   # ___ver=$(velero version | awk '/Version:/ {print $3}')
+#   # [ "$___ver" == "4.0.18" ]
+#   # echo "output=$output" >&3
+# }
+
 # bats test_tags=tag:core
 @test "k3d core installation" {
   #if command -v k3d version &> /dev/null; then
@@ -197,6 +210,45 @@ setup() {
   [ "$status" -eq 1 ]
   run vkube-k3s.is-namespace-exist "synology-csi"
   [ "$status" -eq 1 ]
+}
+
+# bats test_tags=tag:velero
+@test "velero installation" {
+  
+  # 1. Install velero server in cluster
+
+  velero install \
+    --provider aws \
+    --bucket $BUCKET \
+    --secret-file ./credentials-velero \
+    --backup-location-config region=$REGION \
+    --snapshot-location-config region=$REGION
+
+  run "../vkube --cluster-plan k3d-test app install velero"
+  assert_success
+  
+  # Install nginx with persistent volume
+
+  # Create data on nginx persistent volume
+
+  # velero backup create backup-name
+  # Velero schedule create example-schedule --schedule="0 3 * * *"
+  # velero backup create --from-schedule example-schedule
+  # velero backup get
+
+  # Delete nginx namespace
+
+  # velero restore create --from-backup backup-name
+
+  # Check nginx is restored
+
+
+  # run vkube-k3s.install-velero
+  # assert_success
+  # ___ver=$(velero version | awk '/Version:/ {print $3}')
+  # [ "$___ver" == "4.0.18" ]
+  # echo "output=$output" >&3
+  assert_failure
 }
 
 #region storage install and uninstall
@@ -435,6 +487,13 @@ setup() {
     #echo "output=$output" >&3
   }
 
+  # bats test_tags=tag:storage-speed-one
+  @test "../vkube --cluster-plan k3d-test k3s storage-speed 'direct-pv-del'" {
+    run ../vkube --cluster-plan k3d-test k3s storage-speed 'direct-pv-del'
+    assert_success
+    #echo "output=$output" >&3
+  }
+
   # bats test_tags=tag:storage-speed
   @test "../vkube --cluster-plan k3d-test k3s storage-speed 'longhorn'" {
     if ! kubectl get ns/longhorn-system; then
@@ -643,6 +702,23 @@ setup() {
   #   echo "$(kubectl -n storage-speedtest logs -l app=$storage-storage-speedtest,job=write-read)" >&3
   # } 
 #endregion general storage tests ???
+
+# bats test_tags=tag:minio
+# @test "../vkube --trace --cluster-plan k3d-test install minio --release v4.0.18 --storage-class office-synology-csi-nfs-test --deployment test-minio" {
+#   echo "      Step $[step=$step+1]. ../vkube --trace install minio --release v4.0.18 --storage-class office-synology-csi-nfs-test --deployment test-minio" >&3
+#   run ../vkube --trace --cluster-plan k3d-test install minio --release v4.0.18 --storage-class office-synology-csi-nfs-test --deployment test-minio
+#   assert_success
+
+#   sleep 10
+
+#   DETIK_CLIENT_NAMESPACE="default"
+#   run verify "there is 1 pod named 'test-minio'"
+#   assert_success
+
+#   ___ver=$(vkube-k3s.get-pod-image-version default test-minio minio)
+#   [ "$status" -eq 0 ]
+#   [ "$___ver" == "4.0.18" ]
+# }
 
 # bats test_tags=tag:longhorn
 @test "k3d longhorn installation" {

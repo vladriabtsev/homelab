@@ -834,7 +834,7 @@ function vlib.check-github-release-version() {
       inf-and-trace "Version of '$1' is empty. Will use '$ver' version. Latest: ${releases[*]}\n"
     else
       if ! [ "$latest" == "$ver" ]; then
-        warn-and-trace "Version of '$1' is '$ver'. Latest: ${releases[*]}\n"
+        warn "Version of '$1' is '$ver'. Latest: ${releases[*]}\n"
       else
         inf "Version of '$1' is '$ver'. Latest: ${releases[*]}\n"
       fi

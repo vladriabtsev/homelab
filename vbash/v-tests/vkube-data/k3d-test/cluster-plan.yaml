@@ -1,7 +1,7 @@
 cluster_name: test
 amount_nodes: 1
 kubernetes_type: k3d # k3s, k3d, k8s
-k3d_ver: v5.8.3 # https://github.com/k3d-io/k3d/releases
+k3d_ver: v5.8.2 # https://github.com/k3d-io/k3d/releases
 k3s_ver: v1.33.0+k3s1 # https://github.com/k3s-io/k3s/releases
 #cluster_token: kuku
 #cluster_token_file: ~/cluster_token_file
@@ -141,6 +141,18 @@ storage_servers:
 #       location: /volume1
 
 ##########################
+# B A C K U P, expecting local minio server exists
+##########################
+velero_use: 1 # https://velero.io/
+velero_ver: v1.16.1 # v1.15.2 # latest if empty
+velero_aws_plugin_ver: v1.12.1 # latest if empty (https://github.com/vmware-tanzu/velero-plugin-for-aws)
+velero_namespace: # 'velero' is default
+velero_credentials_file_path: ${HOME}/.ssh/velero/credentials-velero # minio server credentials
+# https://min.io/docs/minio/linux/reference/minio-mc.html#quickstart
+velero_minio_url: http://192.168.100.227:9000 # local minio server URL
+velero_minio_bucket_name: # bucket name, cluster name if empty
+
+##########################
 # A P P L I C A T I O N S
 ##########################
 
@@ -160,8 +172,6 @@ cert_manager_ver: v1.13.2 # auto upgrade to latest if empty
 cert_manager_issuer: ca # https://cert-manager.io/docs/configuration/ca/
 # https://github.com/rancher/rancher
 rancher_ver: v2.9.5 # auto upgrade to latest if empty
-# https://velero.io/docs/v1.15/basic-install/
-velero_ver: v1.15.2 # auto upgrade to latest if empty
 # https://github.com/metallb/metallb
 metal_lb_ver: v0.14.9 # auto upgrade to latest if empty
 # https://github.com/argoproj/argo-cd

@@ -123,5 +123,6 @@ commands:
 #     default: latest
 
 examples:
-  - ./vkube busybox --help
-  - ./vkube busybox install mybusybox --synology-csi-plan ../synology-csi-plan.yaml
+  - ./vkube app install busybox --help
+  - ./vkube app install busybox mybusybox --synology-csi-plan ../synology-csi-plan.yaml
+  - ./vkube app install velero velero

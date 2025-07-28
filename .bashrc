@@ -149,6 +149,7 @@ homelab() {
       echo "For k3d-test: ./bats/bin/bats ./"
       echo "./bats/bin/bats ./vkube-k3s.bats --filter-tags tag:tagname"
       echo "  Tag names: secret, core, storage, storage-separate, storage-speed"
+      echo "../vkube --trace  --cluster-plan k3d-test app install minio --release v4.0.18 --storage-class office-synology-csi-nfs-test --deployment test-minio"
     elif [[ "$1" = "k3s-HA" ]]; then
       cd vbash
       ek k3s-HA

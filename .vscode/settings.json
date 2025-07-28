@@ -2,6 +2,7 @@
     "editor.insertSpaces": false,
     "editor.wrappingColumn": 0,
     "cSpell.words": [
+        "Velero",
         "vlib"
     ],
 }

@@ -23,7 +23,8 @@ function vkube-k3s.get-pod-image-version() {
 
   # jsonpath filtering is not working !!! https://kubernetes.io/docs/reference/kubectl/jsonpath/
   # kubectl get pods -n synology-csi -l app=synology-csi-controller -o jsonpath='{.items[0].spec.containers[?(@.name=="csi-plugin")]}' | jq '.image'
-  local image=$(eval "kubectl get pods -n $1 -l app=$2 -o jsonpath='{.items[0].spec.containers[?(@.name==\"$3\")]}' | jq '.image'")
+  # kubectl get deployment velero -n velero -o jsonpath='{.items[0].spec.containers[?(@.name==\"velero/velero\")]}' | jq '.image'
+  local image=$(eval "kubectl get deployment $2 -n $1 -o jsonpath='{.items[0].spec.containers[?(@.name==\"$3\")]}' | jq '.image'")
   #echo "image=$image" >&3
   local ver="${image#*:}"
   ver="${ver/%\"/}"
@@ -233,6 +234,128 @@ function vkube-k3s.get-node-admin-password() {
   fi
   echo "$password"
 }
+function vkube-k3s.install-jq() {
+  # Check jq
+  if ! echo '{"foo": 0}' | jq . &> /dev/null; then
+    if [ -n "$user_pc_stop_if_tools_need_install" ] && [ $user_pc_stop_if_tools_need_install -eq 1 ]; then
+      _flag_precheck=1
+      warn-and-trace "Tool 'jq' is not found. Need to be installed. See: https://github.com/jqlang/jq\n"
+    else
+      err_and_exit "Tool 'jq' is not found. Need to be installed. See: https://github.com/jqlang/jq"
+    fi
+  # else
+  #   ver_curr=$(jq | awk '/version/ {print $7}') # not working
+  #   #vlib.trace "Current jq version=$ver_curr"
+  #   vlib.check-github-release-version 'jq' https://api.github.com/repos/jqlang/jq/releases 'ver_curr'
+  fi
+}
+function vkube-k3s.install-kubectl() {
+  # Check kubectl
+  # https://v1-32.docs.kubernetes.io/docs/tasks/tools/install-kubectl-linux/
+  if ! command -v kubectl version > /dev/null 2> /dev/null; then
+    if [ -n "$user_pc_stop_if_tools_need_install" ] && [ $user_pc_stop_if_tools_need_install -eq 1 ]; then
+      _flag_precheck=1
+      warn-and-trace "Tool 'kubectl' is not found. Need to be installed.\n"
+    else
+      echo -e " Kubectl not found, installing ..."
+      run "line '$LINENO';curl -LO 'https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl'"
+      run "line '$LINENO';sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl"
+      curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+      sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+    fi
+  else
+    ver_curr=$(kubectl version | awk '/Client Version:/ {print $3}')
+    vlib.check-github-release-version 'kubectl' https://api.github.com/repos/kubernetes/kubernetes/releases 'ver_curr'
+  fi
+}
+function vkube-k3s.install-helm() {
+  # Check helm
+  if ! command -v helm version &> /dev/null; then
+    if [ -n "$user_pc_stop_if_tools_need_install" ] && [ $user_pc_stop_if_tools_need_install -eq 1 ]; then
+      _flag_precheck=1
+      warn-and-trace "Tool 'helm' is not found. Need to be installed.\n"
+    else
+      echo -e " Helm not found, installing ..."
+      # run "line '$LINENO';curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
+      # run "line '$LINENO';chmod 700 get_helm.sh"
+      # run "line '$LINENO';./get_helm.sh"
+      # run "line '$LINENO';rm ./get_helm.sh"
+      curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+      chmod 700 get_helm.sh
+      ./get_helm.sh
+      rm ./get_helm.sh
+    fi
+  else
+    ver_curr=$(helm version | awk -F '\"' '{print $2}')
+    vlib.check-github-release-version 'helm' https://api.github.com/repos/helm/helm/releases 'ver_curr'
+  fi
+}
+function vkube-k3s.install-k3-tools() {
+  if [[ "$kubernetes_type" = "k3d" ]]; then
+    # Install k3d
+    if ! command -v k3d version &> /dev/null; then
+      if [ -n "$user_pc_stop_if_tools_need_install" ] && [ $user_pc_stop_if_tools_need_install -eq 1 ]; then
+        _flag_precheck=1
+        warn-and-trace "Tool 'k3d' is not found. Need to be installed.\n"
+      else
+        echo -e " k3d not found, installing ..."
+        if [ -z $k3d_ver ]; then # latest version
+          wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+        else # specific version
+          wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=$k3d_ver bash
+        fi
+      fi
+    else
+      ver_curr=$(k3d version | awk '/k3d version/ {print $3}')
+      vlib.check-github-release-version 'k3d' https://api.github.com/repos/k3d-io/k3d/releases 'ver_curr'
+    fi
+  else
+    # Install k3sup
+    if ! command -v k3sup version &> /dev/null; then
+      if [ -n "$user_pc_stop_if_tools_need_install" ] && [ $user_pc_stop_if_tools_need_install -eq 1 ]; then
+        _flag_precheck=1
+        warn-and-trace "Tool 'k3sup' is not found. Need to be installed. See: https://github.com/alexellis/k3sup\n"
+      else
+        run "line '$LINENO';curl -sLS https://get.k3sup.dev | sh"
+        run "line '$LINENO';sudo install k3sup /usr/local/bin/"
+      fi
+    else
+      ver_curr=$(k3sup version | awk '/Version:/ {print $2}')
+      vlib.check-github-release-version 'k3sup' https://api.github.com/repos/alexellis/k3sup/releases 'ver_curr'
+    fi
+  fi
+}
+function vkube-k3s.install-velero-get() {
+      run "line '$LINENO';curl -LO 'https://github.com/vmware-tanzu/velero/releases/download/$1/velero-$1-linux-amd64.tar.gz'"
+      run "line '$LINENO';tar -xf velero-$1-linux-amd64.tar.gz"
+      run "line '$LINENO';sudo mv ./velero-$1-linux-amd64/velero /usr/local/bin/"
+      run "line '$LINENO';rm velero-$1-linux-amd64.tar.gz"
+      run "line '$LINENO';rm -r ./velero-$1-linux-amd64/"
+}
+function vkube-k3s.install-velero() {
+  if [[ $velero_use -eq 1 ]]; then
+    ver_curr="$velero_ver"
+    vlib.check-github-release-version 'velero client' 'https://api.github.com/repos/vmware-tanzu/velero/releases' 'ver_curr'
+    if ! command -v velero version > /dev/null 2> /dev/null; then # not installed
+      if [ -n "$user_pc_stop_if_tools_need_install" ] && [ $user_pc_stop_if_tools_need_install -eq 1 ]; then
+        _flag_precheck=1
+        warn-and-trace "Tool 'velero client' is not found. Need to be installed. https://velero.io/docs/$ver_curr/basic-install/ \n"
+      else
+        # https://bluelight.co/blog/how-to-install-velero
+        echo -e " Velero client binary is not found, installing ..."
+        # curl -LO 'https://github.com/vmware-tanzu/velero/releases/tag/v1.16.1'
+        vkube-k3s.install-velero-get "$ver_curr"
+        run "helm repo add vmware-tanzu https://vmware-tanzu.github.io/helm-charts"
+      fi
+    else # installed
+      ver_curr=$(velero version --client-only | awk '/Version:/ {print $2}')
+      if [[ -n "$ver_curr" ]] && [[ -n "$velero_ver" ]] && [[ "$velero_ver" != "$ver_curr" ]]; then
+        echo -e " Velero client binary version is not same as requested in cluster plan '$cluster_plan_file', installing ..."
+        vkube-k3s.install-velero-get "$velero_ver"
+      fi
+    fi
+  fi
+}
 function vkube-k3s.install_tools() {
   # For testing purposes - in case time is wrong due to VM snapshots
   sudo timedatectl set-ntp off
@@ -251,77 +374,12 @@ function vkube-k3s.install_tools() {
   #   # run "line '$LINENO';chmod 644 /home/$user/.ssh/$certName.pub"
   # fi
 
-  # Check jq
-  if ! echo '{"foo": 0}' | jq . &> /dev/null; then
-    _flag_precheck=1
-    err_and_exit "Tool 'jq' is not found. Need to be installed. See: https://github.com/jqlang/jq"
-  # else
-  #   ver_curr=$(jq | awk '/version/ {print $7}') # not working
-  #   #vlib.trace "Current jq version=$ver_curr"
-  #   vlib.check-github-release-version 'jq' https://api.github.com/repos/jqlang/jq/releases 'ver_curr'
-  fi
+  vkube-k3s.install-jq
+  vkube-k3s.install-kubectl
 
-  # Check kubectl
-  # https://v1-32.docs.kubernetes.io/docs/tasks/tools/install-kubectl-linux/
-  if ! command -v kubectl version > /dev/null 2> /dev/null; then
-    _flag_precheck=1
-    warn-and-trace "Tool 'kubectl' is not found. Need to be installed.\n"
-    # echo -e " Kubectl not found, installing ..."
-    # run "line '$LINENO';curl -LO 'https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl'"
-    # run "line '$LINENO';sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl"
-    # curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-    # sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-  else
-    ver_curr=$(kubectl version | awk '/Client Version:/ {print $3}')
-    vlib.check-github-release-version 'kubectl' https://api.github.com/repos/kubernetes/kubernetes/releases 'ver_curr'
-  fi
-
-  # Check helm
-  if ! command -v helm version &> /dev/null; then
-    # echo -e " Helm not found, installing ..."
-    # # run "line '$LINENO';curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3"
-    # # run "line '$LINENO';chmod 700 get_helm.sh"
-    # # run "line '$LINENO';./get_helm.sh"
-    # # run "line '$LINENO';rm ./get_helm.sh"
-    # curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-    # chmod 700 get_helm.sh
-    # ./get_helm.sh
-    # rm ./get_helm.sh
-
-    _flag_precheck=1
-    warn-and-trace "Tool 'helm' is not found. Need to be installed.\n"
-  else
-    ver_curr=$(helm version | awk -F '\"' '{print $2}')
-    vlib.check-github-release-version 'helm' https://api.github.com/repos/helm/helm/releases 'ver_curr'
-  fi
-
-  if [[ "$kubernetes_type" = "k3d" ]]; then
-    # Install k3d
-    if ! command -v k3d version &> /dev/null; then
-      _flag_precheck=1
-      warn-and-trace "Tool 'k3d' is not found. Need to be installed.\n"
-      # echo -e " k3d not found, installing ..."
-      # if [ -z $k3d_ver ]; then # latest version
-      #   wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
-      # else # specific version
-      #   wget -q -O - https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=$k3d_ver bash
-      # fi
-    else
-      ver_curr=$(k3d version | awk '/k3d version/ {print $3}')
-      vlib.check-github-release-version 'k3d' https://api.github.com/repos/k3d-io/k3d/releases 'ver_curr'
-    fi
-  else
-    # Install k3sup
-    if ! command -v k3sup version &> /dev/null; then
-      _flag_precheck=1
-      warn-and-trace "Tool 'k3sup' is not found. Need to be installed. See: https://github.com/alexellis/k3sup\n"
-      # run "line '$LINENO';curl -sLS https://get.k3sup.dev | sh"
-      # run "line '$LINENO';sudo install k3sup /usr/local/bin/"
-    else
-      ver_curr=$(k3sup version | awk '/Version:/ {print $2}')
-      vlib.check-github-release-version 'k3sup' https://api.github.com/repos/alexellis/k3sup/releases 'ver_curr'
-    fi
-  fi
+  vkube-k3s.install-helm
+  vkube-k3s.install-k3-tools
+  vkube-k3s.install-velero
 
   # Install brew https://brew.sh/
   # if ! command -v brew help &> /dev/null; then
@@ -332,6 +390,7 @@ function vkube-k3s.install_tools() {
   #   #run "line '$LINENO';./install.sh"
   #   #run "line '$LINENO';rm ./install.sh"
   # fi
+
   if [ -n "$_flag_precheck" ] && [ $_flag_precheck -eq 1 ]; then
     err_and_exit "Some tools are required to be installed."
   fi
@@ -555,27 +614,26 @@ function vkube-k3s.install() {
     __install_all=0
   fi
   if [[ -n ${args[--storage]} ]]; then
+
     install_storage_at_least_one=1
     install_storage=1
     __install_all=0
-  elif [[ -n ${args[--csi-driver-nfs]} || -n ${args[--csi-driver-smb]} || -n ${args[--csi-synology]} || -n ${args[--longhorn]} || -n ${args[--nfs-subdir-external-provisioner-use]} ]]; then
+  elif [[ -n ${args[--velero]} ]] || [[ -n ${args[--csi-driver-nfs]} || -n ${args[--csi-driver-smb]} || -n ${args[--csi-synology]} || -n ${args[--longhorn]} || -n ${args[--csi-driver-direct-pv]} || -n ${args[--nfs-subdir-external-provisioner-use]} ]]; then
     install_storage_at_least_one=1
+    velero_use=0
     local_storage_use=0
     csi_driver_nfs_use=0
     nfs_subdir_external_provisioner_use=0
     csi_driver_smb_use=0
     csi_synology_use=0
     longhorn_use=0
+    csi_driver_direct_pv_use=0
     __install_all=0
-  # elif [[ -n ${args[--local]} || -n ${args[--csi-driver-nfs]} || -n ${args[--csi-driver-smb]} || -n ${args[--csi-synology]} || -n ${args[--longhorn]} || -n ${args[--nfs-subdir-external-provisioner-use]} ]]; then
-  #   install_storage_at_least_one=1
-  #   local_storage_use=0
-  #   csi_driver_nfs_use=0
-  #   nfs_subdir_external_provisioner_use=0
-  #   csi_driver_smb_use=0
-  #   csi_synology_use=0
-  #   longhorn_use=0
-  #   __install_all=0
+  fi
+  if [[ -n ${args[--velero]} ]]; then
+    install_storage_at_least_one=1
+    velero_use=1
+    __install_all=0
   fi
   # if [[ -n ${args[--local]} ]]; then
   #   install_storage_at_least_one=1
@@ -602,6 +660,11 @@ function vkube-k3s.install() {
     longhorn_use=1
     __install_all=0
   fi
+  if [[ -n ${args[--csi-driver-direct-pv]} ]]; then
+    install_storage_at_least_one=1
+    csi_driver_direct_pv_use=1
+    __install_all=0
+  fi
   if [[ -n ${args[--apps]} ]]; then
     install_apps=1
     __install_all=0
@@ -620,18 +683,14 @@ function vkube-k3s.install() {
     csi_synology_use=1
     longhorn_use=1
   fi
-  # echo "      local_storage_use=$local_storage_use" >&3
-  # echo "      csi_driver_nfs_use=$csi_driver_nfs_use" >&3
-  # echo "      csi_driver_smb_use=$csi_driver_smb_use" >&3
-  # echo "      csi_synology_use=$csi_synology_use" >&3
-  # echo "      longhorn_use=$longhorn_use" >&3
-  # echo "      install_storage_at_least_one=$install_storage_at_least_one" >&3
+  vlib.trace-no-stack "velero_use=$velero_use"
   vlib.trace-no-stack "local_storage_use=$local_storage_use"
   vlib.trace-no-stack "csi_driver_nfs_use=$csi_driver_nfs_use"
   vlib.trace-no-stack "csi_driver_smb_use=$csi_driver_smb_use"
   vlib.trace-no-stack "csi_synology_use=$csi_synology_use"
   vlib.trace-no-stack "longhorn_use=$longhorn_use"
   vlib.trace-no-stack "install_storage_at_least_one=$install_storage_at_least_one"
+  vlib.trace-no-stack "csi_driver_direct_pv_use=$csi_driver_direct_pv_use"
   vlib.trace "data folder=$vkube_data_folder"
 
   if [[ ${install_core} -eq 1 ]]; then
@@ -1280,7 +1339,7 @@ function install-k3s() {
       fi
     ;;
     * ) 
-      err_and_exit "Error: Wrong 'kubernetes_type: $kubernetes_type' in cluster plan file. Expecting k3s or k3d."
+      err_and_exit "Error: Wrong 'kubernetes_type: $kubernetes_type' in cluster plan file '$cluster_plan_file'. Expecting k3s or k3d."
     ;;
   esac
   
@@ -1796,6 +1855,67 @@ check-longhorn-exclusive-params()
 
 function install-storage() {
   if [[ -z ${args[--storage-classes-only]} ]]; then
+    if [ -n "$velero_use" ] && [ "$velero_use" -eq 1 ]; then
+      hl.blue "$((++install_step)). Install Velero for backup. (Line:$LINENO)"
+  
+      vlib.check-github-release-version 'velero' 'https://api.github.com/repos/vmware-tanzu/velero/releases' 'velero_ver'
+      vlib.check-github-release-version 'velero aws plugin' 'https://api.github.com/repos/vmware-tanzu/velero-plugin-for-aws/releases' 'velero_aws_plugin_ver'
+  
+      # https://velero.io/
+      # https://velero.io/docs/v1.16/basic-install/
+      # https://vmware-tanzu.github.io/helm-charts/
+      # https://github.com/vmware-tanzu/helm-charts/blob/main/charts/velero/README.md
+      # https://velero.io/docs/v1.16/contributions/minio/
+      # https://velero.io/docs/v1.16/customize-installation/
+      if [ -z "${velero_ver}" ]; then
+        err_and_exit "Velero 'velero_ver' is missing in cluster plan '$cluster_plan_file'."
+      fi
+      if [ -z "${velero_aws_plugin_ver}" ]; then
+        err_and_exit "Velero 'velero_aws_plugin_ver' is missing in cluster plan '$cluster_plan_file'."
+      fi
+      if [ -z "${velero_credentials_file_path}" ]; then
+        # cat <<EOF > credentials-velero
+        # [default]
+        # aws_access_key_id=minio
+        # aws_secret_access_key=minio123
+        # EOF
+        err_and_exit "Velero 'velero_credentials_file_path' is missing in cluster plan '$cluster_plan_file'."
+      fi
+      if [ -z "${velero_minio_url}" ]; then
+        err_and_exit "Velero 'velero_minio_url' is missing in cluster plan '$cluster_plan_file'."
+      fi
+      [ -n "$velero_namespace" ] || velero_namespace="velero"
+      if [ -z "${velero_minio_bucket_name}" ]; then
+        velero_minio_bucket_name="$cluster_name"
+      fi
+      run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist $velero_namespace"
+ 
+      # create/check bucket 'k3d-test'
+
+      # check velero version
+      local need_install
+      curr_ver=$(vkube-k3s.get-pod-image-version "$velero_namespace" "velero" "velero/velero")
+      if [[ "$curr_ver" != "$velero_ver" ]]; then need_install=1; fi
+      # check velero aws plugin version
+      curr_ver=$(vkube-k3s.get-pod-image-version "$velero_namespace" "velero" "velero/velero-plugin-for-aws")
+      if [[ "$curr_ver" != "$velero_aws_plugin_ver" ]]; then need_install=1; fi
+      if [ $need_install -eq 1 ]; then
+        run "velero install \
+          --provider aws \
+          --image velero/velero:$velero_ver \
+          --plugins velero/velero-plugin-for-aws:$velero_aws_plugin_ver \
+          --bucket $velero_minio_bucket_name \
+          --secret-file $velero_credentials_file_path \
+          --use-node-agent \
+          --use-volume-snapshots=false \
+          --uploader-type kopia \
+          --default-volumes-to-fs-backup \
+          --namespace $velero_namespace \
+          --backup-location-config region=minio,s3ForcePathStyle=\"true\",s3Url=$velero_minio_url"
+      else
+        inf "... already installed. (Line:$LINENO)\n"
+      fi
+    fi
     hl.blue "$((++install_step)). Install general the csi storage drivers. (Line:$LINENO)"
     # if use
     #   if is not running
@@ -1821,20 +1941,35 @@ function install-storage() {
 
     # kubectl get pods --all-namespaces -l app=controller,app.kubernetes.io/name=synology-csi -o yaml | grep image:
 
-  #   if [ -n "$local_storage_use" ] && [ "$local_storage_use" -eq 1 ]; then
-  #     # https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
-  #     # https://www.talos.dev/v1.10/kubernetes-guides/configuration/local-storage/
-  #     inf "local (Line:$LINENO)\n"
-  #     err_and_exit "Not implemented yet"
-  #     #region local storage
-  #     run "line '$LINENO';kubectl apply -f - <<<\"apiVersion: storage.k8s.io/v1
-  # kind: StorageClass
-  # metadata:
-  #   name: local-storage
-  # provisioner: kubernetes.io/no-provisioner # indicates that this StorageClass does not support automatic provisioning
-  # volumeBindingMode: WaitForFirstConsumer\""
-  #     #endregion local storage
-  #   fi
+    #   if [ -n "$local_storage_use" ] && [ "$local_storage_use" -eq 1 ]; then
+    #     # https://overcast.blog/provisioning-kubernetes-local-persistent-volumes-full-tutorial-147cfb20ec27
+    #     # https://www.talos.dev/v1.10/kubernetes-guides/configuration/local-storage/
+    #     inf "local (Line:$LINENO)\n"
+    #     err_and_exit "Not implemented yet"
+    #     #region local storage
+    #     run "line '$LINENO';kubectl apply -f - <<<\"apiVersion: storage.k8s.io/v1
+    # kind: StorageClass
+    # metadata:
+    #   name: local-storage
+    # provisioner: kubernetes.io/no-provisioner # indicates that this StorageClass does not support automatic provisioning
+    # volumeBindingMode: WaitForFirstConsumer\""
+    #     #endregion local storage
+    #   fi
+    if [ -n "$csi_direct_pv_use" ] && [ "$csi_direct_pv_use" -eq 1 ]; then
+      inf "csi_direct_pv (Line:$LINENO)\n"
+      # https://github.com/minio/directpv
+      # https://github.com/minio/directpv/blob/master/docs/README.md
+      vlib.check-github-release-version 'csi_direct_pv' https://api.github.com/repos/minio/directpv/releases 'csi_driver_pv_ver'
+      err_and_exit "Not implemented yet"
+      if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n ${csi_driver_nfs_namespace} 2> /dev/null | wc -l) -eq 0 ]]; then
+        run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist $csi_driver_nfs_namespace"
+        run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
+        run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs -n ${csi_driver_nfs_namespace} --version $csi_driver_nfs_ver"
+        # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
+      else
+        inf "... already installed. (Line:$LINENO)\n"
+      fi
+    fi
     if [ -n "$csi_driver_nfs_use" ] && [ "$csi_driver_nfs_use" -eq 1 ]; then
       inf "csi-driver-nfs (Line:$LINENO)\n"
       # https://github.com/kubernetes-csi/csi-driver-nfs
@@ -2440,6 +2575,7 @@ function vkube-k3s.app-install() {
   local _variant
   local _deployment
   local _ver
+  local _namespace
   if [ -n "${args[--release]}" ]; then
     _release="${args[--release]}"
   fi

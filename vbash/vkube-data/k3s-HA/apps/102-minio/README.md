@@ -1,11 +1,11 @@
 # [MinIO](https://min.io/)
 
 * [MinIO Quickstart Guide](https://github.com/minio/minio)
-* [DirectPV](https://github.com/minio/directpv)
 * [MinIO Client Quickstart Guide](https://github.com/minio/mc)
 * [MinIO Operator](https://github.com/minio/operator/blob/master/README.md)
 * [MinIO Object Storage for Kubernetes](https://min.io/docs/minio/kubernetes/upstream/index.html)
 * [NFS Minio Operator](https://github.com/greenstatic/nfs-minio-operator) - sample of operator
+* [DirectPV](https://github.com/minio/directpv)
 
 Services
 

@@ -1,5 +1,35 @@
 # Homelab
 
+## Network services
+
+* [My Wiki](http://office.local/mediawiki)
+* [Longhorn UI, ip:101](http://longhorn.local)
+* [Gitea UI](http://gitea.local)
+* Minio
+  * [MinIO server](./1topics/minio.md), http, office.local:9000, 192.168.100.227:9000, only from 192.168.100.0
+  * TODO [MinIO server console (if ON), http](http://office.local:9001), 192.168.100.227:9001, only from 192.168.100.0
+* [Gitea UI, ip:103](http://gitea.local)
+* [Jenkins UI, ip:109](http://jenkins.local)
+* DB DEV
+  * [PGADMIN, ip:111](pgadmin.local)
+  * [PG15, ip:112](pg15.local)
+  * [PG16, ip:113](pg16.local)
+  * [PG17, ip:114](pg17.local)
+  * [mssql2019, ip:117](mssql2019.local)
+  * [mssql2022, ip:118](mssql2022.local)
+  * [mssql2025, ip:119](mssql2025.local)
+
+## Backups
+
+### [Synology](./1topics/synology.md)
+
+* TODO where backup?
+* Synology, office.local:5100
+  * Backup my dev PC
+  * Backup my desktop PC
+* Synology, backup2.local:5100
+
+
 Git configuration:
 `git config --global core.symlinks true` - no need
 

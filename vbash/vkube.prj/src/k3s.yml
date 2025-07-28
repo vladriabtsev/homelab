@@ -13,6 +13,9 @@ commands:
     #conflicts: [--storage --local --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn]
   - long: --storage
     help: All general storage drivers according cluster plan.
+  - long: --velero
+    help: Velero is an open source tool to safely backup and restore, perform disaster recovery, and migrate Kubernetes cluster resources and persistent volumes.
+    conflicts: [--storage]
   #- long: --local
   #  help: Local storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
   #  conflicts: [--storage]
@@ -24,6 +27,9 @@ commands:
     conflicts: [--storage]
   - long: --csi-synology
     help: Synology CSI storage (NFS, SMB, ISCSI). Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
+    conflicts: [--storage]
+  - long: --csi-driver-direct-pv
+    help: MinIO Direct PV storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
     conflicts: [--storage]
   - long: --longhorn
     help: Longhorn storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --apps flags are not set.
