@@ -214,41 +214,61 @@ setup() {
 
 # bats test_tags=tag:velero
 @test "velero installation" {
-  
-  # 1. Install velero server in cluster
-
-  velero install \
-    --provider aws \
-    --bucket $BUCKET \
-    --secret-file ./credentials-velero \
-    --backup-location-config region=$REGION \
-    --snapshot-location-config region=$REGION
-
-  run "../vkube --cluster-plan k3d-test app install velero"
+  # Prerequisites:
+  #  external MinIO server
+  #  minio client alias
+  run velero restore delete --all --confirm
   assert_success
-  
-  # Install nginx with persistent volume
+  run velero backup delete --all --confirm
+  assert_success
+  run kubectl delete namespace workloads --wait=true --ignore-not-found=true
+  assert_success
 
-  # Create data on nginx persistent volume
 
-  # velero backup create backup-name
-  # Velero schedule create example-schedule --schedule="0 3 * * *"
+  echo "      Step $[step=$step+1]. Install velero server in cluster" >&3
+  run ../vkube --cluster-plan k3d-test --trace k3s install --velero
+  assert_success
+
+  echo "      Step $[step=$step+1]. Install nginx without persistent volume" >&3
+  run kubectl create namespace workloads
+  assert_success
+  run kubectl create deployment nginx -n workloads --image nginx
+  assert_success
+  DETIK_CLIENT_NAMESPACE="workloads"
+  run try "at most 10 times every 30s to get pods named '^nginx' and verify that 'status' is 'running'"
+  assert_success
+
+  echo "      Step $[step=$step+1]. Backup cluster" >&3
+  run velero backup create backup1 --wait
+  assert_success
+  ## Describe the details of the created backup
+  # velero backup describe $BACKUP_NAME
+  ## View the logs of the backup creation process
+  # velero backup logs $BACKUP_NAME
+  ## List all Velero backups
+  # velero get backup
+  ## Schedule
+  # velero schedule create example-schedule --schedule="0 3 * * *"
   # velero backup create --from-schedule example-schedule
-  # velero backup get
 
-  # Delete nginx namespace
+  echo "      Step $[step=$step+1]. Delete namespace workloads" >&3
+  run kubectl delete namespace workloads --wait=true
+  assert_success
+  run verify "there are 0 pods named '^nginx'"
+  assert_success
 
-  # velero restore create --from-backup backup-name
+  echo "      Step $[step=$step+1]. Restore cluster" >&3
+  run velero restore create restore1 --from-backup backup1 --wait
+  assert_success
+  # velero restore get
+  ## Describe the details of the restore operation
+  # velero restore describe restore1
+  ## View the logs of the restore process
+  # velero restore logs restore1
 
-  # Check nginx is restored
-
-
-  # run vkube-k3s.install-velero
-  # assert_success
-  # ___ver=$(velero version | awk '/Version:/ {print $3}')
-  # [ "$___ver" == "4.0.18" ]
-  # echo "output=$output" >&3
-  assert_failure
+  DETIK_CLIENT_NAMESPACE="workloads"
+  run try "at most 10 times every 30s to get pods named '^nginx' and verify that 'status' is 'running'"
+  assert_success
 }
 
 #region storage install and uninstall

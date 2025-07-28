@@ -150,6 +150,7 @@ velero_namespace: # 'velero' is default
 velero_credentials_file_path: ${HOME}/.ssh/velero/credentials-velero # minio server credentials
 # https://min.io/docs/minio/linux/reference/minio-mc.html#quickstart
 velero_minio_url: http://192.168.100.227:9000 # local minio server URL
+velero_minio_mc_alias: myminio100 # created manually, https://min.io/docs/minio/linux/reference/minio-mc/mc-alias-set.html#command-mc.alias.set
 velero_minio_bucket_name: # bucket name, cluster name if empty
 
 ##########################

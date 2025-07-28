@@ -1896,7 +1896,13 @@ function install-storage() {
       fi
       run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist $velero_namespace"
  
-      # create/check bucket 'k3d-test'
+      # Manually created
+      # Configure MinIO client (mc) alias for Velero bucket
+      #run "line '$LINENO';mc alias set $velero_minio_mc_alias $velero_minio_url minio_accesskey minio_secretkey"
+
+      # Manually created
+      # Create a bucket for Velero backups
+      #run "line '$LINENO';mc mb $velero_minio_mc_alias/$velero_minio_bucket_name --ignore-existing"
 
       # check velero version
       local need_install
