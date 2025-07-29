@@ -1,6 +1,6 @@
 #!/bin/bash
-# ./install-k3s.sh -i new ./k3s-HA.yaml
-# ./install-k3s.sh -i remove ./k3s-HA.yaml
+# ./install-k3s.sh -i new ./k3s-ha.yaml
+# ./install-k3s.sh -i remove ./k3s-ha.yaml
 
 source ./../k8s.sh
 source ./../vlib.bash

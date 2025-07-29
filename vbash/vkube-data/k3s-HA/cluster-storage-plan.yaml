@@ -66,7 +66,7 @@ hosts:
 #   dsm_ip4: 192.168.100.223
 #   dsm_port: 5100
 #   https: true
-#   folder_with_dsm_secrets: ${HOME}/.ssh/k3s-HA-csi-synology-secrets # folder with client-info.yam file
+#   folder_with_dsm_secrets: ${HOME}/.ssh/k3s-ha-csi-synology-secrets # folder with client-info.yam file
 #   protocols:
 #   - name: synology-csi-nfs
 #     location: /volume1

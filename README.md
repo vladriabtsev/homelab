@@ -4,14 +4,13 @@
 
 * [My Wiki](http://office.local/mediawiki)
 * [Longhorn UI, ip:101](http://longhorn.local)
-* [Gitea UI](http://gitea.local)
 * Minio
   * [MinIO server](./1topics/minio.md), http, office.local:9000, 192.168.100.227:9000, only from 192.168.100.0
   * TODO [MinIO server console (if ON), http](http://office.local:9001), 192.168.100.227:9001, only from 192.168.100.0
 * [Gitea UI, ip:103](http://gitea.local)
 * [Jenkins UI, ip:109](http://jenkins.local)
 * DB DEV
-  * [PGADMIN, ip:111](pgadmin.local)
+  * [PGADMIN, ip:111](http:pgadmin.local)
   * [PG15, ip:112](pg15.local)
   * [PG16, ip:113](pg16.local)
   * [PG17, ip:114](pg17.local)
@@ -23,6 +22,10 @@
 
 ### [Synology](./1topics/synology.md)
 
+* k3s-ha [Velero](https://velero.io/docs/v1.16/backup-reference/)
+  * `velero schedule create nightly-schedule --schedule="0 3 * * *"` every night at 3 am
+  * `velero backup create --from-schedule nightly-schedule`
+  * `velero backup get`, `velero backup describe nightly-schedule-20250728223504`, `velero backup logs nightly-schedule-20250728223504`
 * TODO where backup?
 * Synology, office.local:5100
   * Backup my dev PC

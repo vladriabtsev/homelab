@@ -1,6 +1,6 @@
 #!/bin/bash
 # MinIO install
-# ./102-minio/install.sh -s ./k3s-HA.yaml -i v1.7.2
+# ./102-minio/install.sh -s ./k3s-ha.yaml -i v1.7.2
 # MinIO uninstall
 # ./102-minio/install.sh -u v1.7.2
 # MinIO upgrade

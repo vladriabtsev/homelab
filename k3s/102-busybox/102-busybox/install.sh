@@ -1,6 +1,6 @@
 #!/bin/bash
 # Busybox install
-# ./102-busybox/install.sh -n busybox -s ./k3s-HA.yaml -i v1.7.2
+# ./102-busybox/install.sh -n busybox -s ./k3s-ha.yaml -i v1.7.2
 # Busybox uninstall
 # ./102-busybox/install.sh -n busybox -u v1.7.2
 

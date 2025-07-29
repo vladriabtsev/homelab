@@ -21,7 +21,7 @@ Installation
 * kubectl create namespace gitea
 * helm install gitea gitea-charts/gitea -n gitea
 * helm uninstall gitea
-* kubectl apply -f ./vkube-data/k3s-HA/apps/103-gitea/svc.yaml
+* kubectl apply -f ./vkube-data/k3s-ha/apps/103-gitea/svc.yaml
 
 vlad Q0 ???
 

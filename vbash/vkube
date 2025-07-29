@@ -26,8 +26,8 @@ vkube_usage() {
   echo
   # :command.usage_commands
   printf "%s\n" "$(bold "Commands:")"
-  printf "  %s   k3s kubernetes\n" "$(green "k3s") "
-  printf "  %s   Application commands\n" "$(green "app") "
+  printf "  %s   Kubernetes cluster\n" "$(green "cluster")"
+  printf "  %s   Application commands\n" "$(green "app")    "
   echo
 
   # :command.long_usage
@@ -119,9 +119,9 @@ vkube_usage() {
     # :command.usage_examples
     printf "%s\n" "$(bold "Examples:")"
     printf "  ./vkube --help\n"
-    printf "  ./vkube k3s install k3s-HA\n"
-    printf "  ./vkube k3s install ../k3s-HA.yaml\n"
-    printf "  ./vkube k3s backup\n"
+    printf "  ./vkube cluster install k3s-ha\n"
+    printf "  ./vkube cluster install ../k3s-ha.yaml\n"
+    printf "  ./vkube cluster backup\n"
     printf "  ./vkube synology-csi install\n"
     echo
 
@@ -159,20 +159,20 @@ vkube_exec_usage() {
 }
 
 # :command.usage
-vkube_k3s_usage() {
-  printf "vkube k3s - k3s kubernetes\n\n"
+vkube_cluster_usage() {
+  printf "vkube cluster - Kubernetes cluster\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s COMMAND\n"
-  printf "  vkube k3s [COMMAND] --help | -h\n"
+  printf "  vkube cluster COMMAND\n"
+  printf "  vkube cluster [COMMAND] --help | -h\n"
   echo
   # :command.usage_commands
   printf "%s\n" "$(bold "Commands:")"
-  printf "  %s   Install k3s kubernetes\n" "$(green "install")      "
+  printf "  %s   Install cluster kubernetes\n" "$(green "install")      "
   printf "  %s   Test speed for storage storage class\n" "$(green "storage-speed")"
-  printf "  %s   Upgrade k3s kubernetes\n" "$(green "upgrade")      "
-  printf "  %s   Backup k3s kubernetes\n" "$(green "backup")       "
-  printf "  %s   Restore k3s kubernetes\n" "$(green "restore")      "
+  printf "  %s   Upgrade cluster kubernetes\n" "$(green "upgrade")      "
+  printf "  %s   Backup cluster kubernetes\n" "$(green "backup")       "
+  printf "  %s   Restore cluster kubernetes\n" "$(green "restore")      "
   echo
 
   # :command.long_usage
@@ -187,30 +187,30 @@ vkube_k3s_usage() {
     # :command.usage_examples
     printf "%s\n" "$(bold "Examples:")"
     printf "  ./vkube --help\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s install\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s install --core --storage\n"
-    printf "  ./vkube --trace --cluster-plan ../k3s-HA.yaml k3s install\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s install --csi-driver-smb\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s install --storage-classes-only\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed office-csi-driver-smb-tmp\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed office-synology-csi-smb-tmp\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed office-synology-csi-nfs-tmp\n"
-    printf "  ./vkube --cluster-plan k3s-HA k3s storage-speed longhorn-nvme --distr busybox\n"
-    printf "  ./vkube k3s upgrade\n"
-    printf "  ./vkube k3s backup\n"
-    printf "  ./vkube k3s restore\n"
+    printf "  ./vkube --cluster-plan k3s-ha cluster install\n"
+    printf "  ./vkube --cluster-plan k3s-ha cluster install --core --storage\n"
+    printf "  ./vkube --trace --cluster-plan ../k3s-ha.yaml cluster install\n"
+    printf "  ./vkube --cluster-plan k3s-ha cluster install --csi-driver-smb\n"
+    printf "  ./vkube --cluster-plan k3s-ha cluster install --storage-classes-only\n"
+    printf "  ./vkube --cluster-plan k3s-ha cluster storage-speed office-csi-driver-smb-tmp\n"
+    printf "  ./vkube --cluster-plan k3s-ha cluster storage-speed\n  office-synology-csi-smb-tmp\n"
+    printf "  ./vkube --cluster-plan k3s-ha cluster storage-speed\n  office-synology-csi-nfs-tmp\n"
+    printf "  ./vkube --cluster-plan k3s-ha cluster storage-speed longhorn-nvme --distr\n  busybox\n"
+    printf "  ./vkube cluster upgrade\n"
+    printf "  ./vkube cluster backup\n"
+    printf "  ./vkube cluster restore\n"
     echo
 
   fi
 }
 
 # :command.usage
-vkube_k3s_install_usage() {
-  printf "vkube k3s install - Install k3s kubernetes\n\n"
+vkube_cluster_install_usage() {
+  printf "vkube cluster install - Install cluster kubernetes\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s install [OPTIONS]\n"
-  printf "  vkube k3s install --help | -h\n"
+  printf "  vkube cluster install [OPTIONS]\n"
+  printf "  vkube cluster install --help | -h\n"
   echo
 
   # :command.long_usage
@@ -284,12 +284,12 @@ vkube_k3s_install_usage() {
 }
 
 # :command.usage
-vkube_k3s_storage_speed_usage() {
-  printf "vkube k3s storage-speed - Test speed for storage storage class\n\n"
+vkube_cluster_storage_speed_usage() {
+  printf "vkube cluster storage-speed - Test speed for storage storage class\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s storage-speed STORAGE-CLASS... [OPTIONS]\n"
-  printf "  vkube k3s storage-speed --help | -h\n"
+  printf "  vkube cluster storage-speed STORAGE-CLASS... [OPTIONS]\n"
+  printf "  vkube cluster storage-speed --help | -h\n"
   echo
 
   # :command.long_usage
@@ -321,12 +321,12 @@ vkube_k3s_storage_speed_usage() {
 }
 
 # :command.usage
-vkube_k3s_upgrade_usage() {
-  printf "vkube k3s upgrade - Upgrade k3s kubernetes\n\n"
+vkube_cluster_upgrade_usage() {
+  printf "vkube cluster upgrade - Upgrade cluster kubernetes\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s upgrade\n"
-  printf "  vkube k3s upgrade --help | -h\n"
+  printf "  vkube cluster upgrade\n"
+  printf "  vkube cluster upgrade --help | -h\n"
   echo
 
   # :command.long_usage
@@ -342,12 +342,12 @@ vkube_k3s_upgrade_usage() {
 }
 
 # :command.usage
-vkube_k3s_backup_usage() {
-  printf "vkube k3s backup - Backup k3s kubernetes\n\n"
+vkube_cluster_backup_usage() {
+  printf "vkube cluster backup - Backup cluster kubernetes\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s backup\n"
-  printf "  vkube k3s backup --help | -h\n"
+  printf "  vkube cluster backup\n"
+  printf "  vkube cluster backup --help | -h\n"
   echo
 
   # :command.long_usage
@@ -363,12 +363,12 @@ vkube_k3s_backup_usage() {
 }
 
 # :command.usage
-vkube_k3s_restore_usage() {
-  printf "vkube k3s restore - Restore k3s kubernetes\n\n"
+vkube_cluster_restore_usage() {
+  printf "vkube cluster restore - Restore cluster kubernetes\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
-  printf "  vkube k3s restore\n"
-  printf "  vkube k3s restore --help | -h\n"
+  printf "  vkube cluster restore\n"
+  printf "  vkube cluster restore --help | -h\n"
   echo
 
   # :command.long_usage
@@ -811,43 +811,43 @@ vkube_exec_command() {
 }
 
 # :command.function
-vkube_k3s_install_command() {
+vkube_cluster_install_command() {
 
-  # src/k3s_install_command.sh
+  # src/cluster_install_command.sh
   #!/usr/bin/env bash
 
   vlib.bashly-init-command
 
   # shellcheck source=/dev/null
-  source "${VBASH}/vkube-k3s.bash"
-  vkube-k3s.command-init
+  source "${VBASH}/vkube-lib.bash"
+  vkube-lib.command-init
 
-  #echo "      vkube-k3s.install()" >&3
-  vkube-k3s.install
+  #echo "      vkube-lib.install()" >&3
+  vkube-lib.install
 
 }
 
 # :command.function
-vkube_k3s_storage_speed_command() {
+vkube_cluster_storage_speed_command() {
 
-  # src/k3s_storage_speed_command.sh
+  # src/cluster_storage_speed_command.sh
   #!/usr/bin/env bash
 
   vlib.bashly-init-command
 
   # shellcheck source=/dev/null
-  source "${VBASH}/vkube-k3s.bash"
-  vkube-k3s.command-init
+  source "${VBASH}/vkube-lib.bash"
+  vkube-lib.command-init
 
-  #echo "      vkube-k3s.install()" >&3
-  vkube-k3s.storage-speed-test
+  #echo "      vkube-lib.install()" >&3
+  vkube-lib.storage-speed-test
 
 }
 
 # :command.function
-vkube_k3s_upgrade_command() {
+vkube_cluster_upgrade_command() {
 
-  # src/k3s_upgrade_command.sh
+  # src/cluster_upgrade_command.sh
   echo "# this file is located in 'src/k3s_upgrade_command.sh'"
   echo "# code for 'vkube k3s upgrade' goes here"
   echo "# you can edit it freely and regenerate (it will not be overwritten)"
@@ -856,9 +856,9 @@ vkube_k3s_upgrade_command() {
 }
 
 # :command.function
-vkube_k3s_backup_command() {
+vkube_cluster_backup_command() {
 
-  # src/k3s_backup_command.sh
+  # src/cluster_backup_command.sh
   echo "# this file is located in 'src/k3s_backup_command.sh'"
   echo "# code for 'vkube k3s backup' goes here"
   echo "# you can edit it freely and regenerate (it will not be overwritten)"
@@ -867,9 +867,9 @@ vkube_k3s_backup_command() {
 }
 
 # :command.function
-vkube_k3s_restore_command() {
+vkube_cluster_restore_command() {
 
-  # src/k3s_restore_command.sh
+  # src/cluster_restore_command.sh
   echo "# this file is located in 'src/k3s_restore_command.sh'"
   echo "# code for 'vkube k3s restore' goes here"
   echo "# you can edit it freely and regenerate (it will not be overwritten)"
@@ -885,15 +885,15 @@ vkube_app_install_general_command() {
   vlib.bashly-init-command
 
   # shellcheck source=/dev/null
-  source "${VBASH}/vkube-k3s.bash"
-  vkube-k3s.command-init
+  source "${VBASH}/vkube-lib.bash"
+  vkube-lib.command-init
 
   #csi_synology_ver=${args[release]}
   #csi_synology_secret_folder=${args[--secret-folder]}
   #csi_synology_snapshot_use=${args[--snapshot]}
 
-  vkube-k3s.check-cluster-plan-path
-  vkube-k3s.app-install "${args[container-name]}"
+  vkube-lib.check-cluster-plan-path
+  vkube-lib.app-install "${args[container-name]}"
 
 }
 
@@ -905,15 +905,15 @@ vkube_app_install_busybox_command() {
   vlib.bashly-init-command
 
   # shellcheck source=/dev/null
-  source "${VBASH}/vkube-k3s.bash"
-  vkube-k3s.command-init
+  source "${VBASH}/vkube-lib.bash"
+  vkube-lib.command-init
 
   #csi_synology_ver=${args[release]}
   #csi_synology_secret_folder=${args[--secret-folder]}
   #csi_synology_snapshot_use=${args[--snapshot]}
 
-  vkube-k3s.check-cluster-plan-path
-  vkube-k3s.app-install busybox
+  vkube-lib.check-cluster-plan-path
+  vkube-lib.app-install busybox
 
 }
 
@@ -925,15 +925,15 @@ vkube_app_uninstall_deployment_command() {
   vlib.bashly-init-command
 
   # shellcheck source=/dev/null
-  source "${VBASH}/vkube-k3s.bash"
-  vkube-k3s.command-init
+  source "${VBASH}/vkube-lib.bash"
+  vkube-lib.command-init
 
   #csi_synology_ver=${args[release]}
   #csi_synology_secret_folder=${args[--secret-folder]}
   #csi_synology_snapshot_use=${args[--snapshot]}
 
-  vkube-k3s.check-cluster-plan-path
-  vkube-k3s.app-deployment-uninstall "${args[general-deployment-name]}"
+  vkube-lib.check-cluster-plan-path
+  vkube-lib.app-deployment-uninstall "${args[general-deployment-name]}"
 
 }
 
@@ -1114,10 +1114,10 @@ parse_requirements() {
       shift $#
       ;;
 
-    k3s)
-      action="k3s"
+    cluster)
+      action="cluster"
       shift
-      vkube_k3s_parse_requirements "$@"
+      vkube_cluster_parse_requirements "$@"
       shift $#
       ;;
 
@@ -1222,14 +1222,14 @@ vkube_exec_parse_requirements() {
 }
 
 # :command.parse_requirements
-vkube_k3s_parse_requirements() {
+vkube_cluster_parse_requirements() {
   # :command.fixed_flags_filter
   while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
       --help | -h)
         long_usage=yes
-        vkube_k3s_usage
+        vkube_cluster_usage
         exit
         ;;
 
@@ -1249,41 +1249,41 @@ vkube_k3s_parse_requirements() {
     install)
       action="install"
       shift
-      vkube_k3s_install_parse_requirements "$@"
+      vkube_cluster_install_parse_requirements "$@"
       shift $#
       ;;
 
     storage-speed)
       action="storage-speed"
       shift
-      vkube_k3s_storage_speed_parse_requirements "$@"
+      vkube_cluster_storage_speed_parse_requirements "$@"
       shift $#
       ;;
 
     upgrade)
       action="upgrade"
       shift
-      vkube_k3s_upgrade_parse_requirements "$@"
+      vkube_cluster_upgrade_parse_requirements "$@"
       shift $#
       ;;
 
     backup)
       action="backup"
       shift
-      vkube_k3s_backup_parse_requirements "$@"
+      vkube_cluster_backup_parse_requirements "$@"
       shift $#
       ;;
 
     restore)
       action="restore"
       shift
-      vkube_k3s_restore_parse_requirements "$@"
+      vkube_cluster_restore_parse_requirements "$@"
       shift $#
       ;;
 
     # :command.command_fallback
     "")
-      vkube_k3s_usage >&2
+      vkube_cluster_usage >&2
       exit 1
       ;;
 
@@ -1318,14 +1318,14 @@ vkube_k3s_parse_requirements() {
 }
 
 # :command.parse_requirements
-vkube_k3s_install_parse_requirements() {
+vkube_cluster_install_parse_requirements() {
   # :command.fixed_flags_filter
   while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
       --help | -h)
         long_usage=yes
-        vkube_k3s_install_usage
+        vkube_cluster_install_usage
         exit
         ;;
 
@@ -1337,7 +1337,7 @@ vkube_k3s_install_parse_requirements() {
   done
 
   # :command.command_filter
-  action="k3s install"
+  action="cluster install"
 
   # :command.parse_requirements_while
   while [[ $# -gt 0 ]]; do
@@ -1477,14 +1477,14 @@ vkube_k3s_install_parse_requirements() {
 }
 
 # :command.parse_requirements
-vkube_k3s_storage_speed_parse_requirements() {
+vkube_cluster_storage_speed_parse_requirements() {
   # :command.fixed_flags_filter
   while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
       --help | -h)
         long_usage=yes
-        vkube_k3s_storage_speed_usage
+        vkube_cluster_storage_speed_usage
         exit
         ;;
 
@@ -1496,7 +1496,7 @@ vkube_k3s_storage_speed_parse_requirements() {
   done
 
   # :command.command_filter
-  action="k3s storage-speed"
+  action="cluster storage-speed"
 
   # :command.parse_requirements_while
   while [[ $# -gt 0 ]]; do
@@ -1541,7 +1541,7 @@ vkube_k3s_storage_speed_parse_requirements() {
 
   # :command.required_args_filter
   if [[ -z ${args['storage-class']+x} ]]; then
-    printf "missing required argument: STORAGE-CLASS\nusage: vkube k3s storage-speed STORAGE-CLASS... [OPTIONS]\n" >&2
+    printf "missing required argument: STORAGE-CLASS\nusage: vkube cluster storage-speed STORAGE-CLASS... [OPTIONS]\n" >&2
 
     exit 1
   fi
@@ -1558,14 +1558,14 @@ vkube_k3s_storage_speed_parse_requirements() {
 }
 
 # :command.parse_requirements
-vkube_k3s_upgrade_parse_requirements() {
+vkube_cluster_upgrade_parse_requirements() {
   # :command.fixed_flags_filter
   while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
       --help | -h)
         long_usage=yes
-        vkube_k3s_upgrade_usage
+        vkube_cluster_upgrade_usage
         exit
         ;;
 
@@ -1577,7 +1577,7 @@ vkube_k3s_upgrade_parse_requirements() {
   done
 
   # :command.command_filter
-  action="k3s upgrade"
+  action="cluster upgrade"
 
   # :command.parse_requirements_while
   while [[ $# -gt 0 ]]; do
@@ -1603,14 +1603,14 @@ vkube_k3s_upgrade_parse_requirements() {
 }
 
 # :command.parse_requirements
-vkube_k3s_backup_parse_requirements() {
+vkube_cluster_backup_parse_requirements() {
   # :command.fixed_flags_filter
   while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
       --help | -h)
         long_usage=yes
-        vkube_k3s_backup_usage
+        vkube_cluster_backup_usage
         exit
         ;;
 
@@ -1622,7 +1622,7 @@ vkube_k3s_backup_parse_requirements() {
   done
 
   # :command.command_filter
-  action="k3s backup"
+  action="cluster backup"
 
   # :command.parse_requirements_while
   while [[ $# -gt 0 ]]; do
@@ -1648,14 +1648,14 @@ vkube_k3s_backup_parse_requirements() {
 }
 
 # :command.parse_requirements
-vkube_k3s_restore_parse_requirements() {
+vkube_cluster_restore_parse_requirements() {
   # :command.fixed_flags_filter
   while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
       --help | -h)
         long_usage=yes
-        vkube_k3s_restore_usage
+        vkube_cluster_restore_usage
         exit
         ;;
 
@@ -1667,7 +1667,7 @@ vkube_k3s_restore_parse_requirements() {
   done
 
   # :command.command_filter
-  action="k3s restore"
+  action="cluster restore"
 
   # :command.parse_requirements_while
   while [[ $# -gt 0 ]]; do
@@ -2410,12 +2410,12 @@ bashly-run() {
 
   case "$action" in
     "exec") vkube_exec_command ;;
-    "k3s") vkube_k3s_command ;;
-    "k3s install") vkube_k3s_install_command ;;
-    "k3s storage-speed") vkube_k3s_storage_speed_command ;;
-    "k3s upgrade") vkube_k3s_upgrade_command ;;
-    "k3s backup") vkube_k3s_backup_command ;;
-    "k3s restore") vkube_k3s_restore_command ;;
+    "cluster") vkube_cluster_command ;;
+    "cluster install") vkube_cluster_install_command ;;
+    "cluster storage-speed") vkube_cluster_storage_speed_command ;;
+    "cluster upgrade") vkube_cluster_upgrade_command ;;
+    "cluster backup") vkube_cluster_backup_command ;;
+    "cluster restore") vkube_cluster_restore_command ;;
     "app") vkube_app_command ;;
     "app install") vkube_app_install_command ;;
     "app install general") vkube_app_install_general_command ;;

@@ -299,7 +299,7 @@ Plugins
 * Install completion `wget https://raw.githubusercontent.com/tmuxinator/tmuxinator/master/completion/tmuxinator.bash -O /etc/bash_completion.d/tmuxinator.bash`
 * Check default editor `echo $EDITOR`. Set editor `export EDITOR='nano'`
 * Start new project `tmuxinator new [project]` or in current folder `tmuxinator new --local [project]`
-  * --local ../k3s-HA for tmux k3s-HA cluster settings
+  * --local ../k3s-ha for tmux k3s-ha cluster settings
 
 ### Send prefix
 

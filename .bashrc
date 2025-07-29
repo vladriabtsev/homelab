@@ -150,21 +150,21 @@ homelab() {
       echo "./bats/bin/bats ./vkube-k3s.bats --filter-tags tag:tagname"
       echo "  Tag names: secret, core, storage, storage-separate, storage-speed"
       echo "../vkube --trace  --cluster-plan k3d-test app install minio --release v4.0.18 --storage-class office-synology-csi-nfs-test --deployment test-minio"
-    elif [[ "$1" = "k3s-HA" ]]; then
+    elif [[ "$1" = "k3s-ha" ]]; then
       cd vbash
-      ek k3s-HA
+      ek k3s-ha
       if [ -n "$2" ]; then
         cd vkube-data
-        cd k3s-HA
+        cd k3s-ha
         cd apps
         cd "$2"
         ls
         echo "kubectl apply -k <kustomization directory>"
       else
-        echo "Examples: ./vkube --cluster-plan k3s-HA k3s install --core --storage"
-        echo "./vkube --cluster-plan k3s-HA k3s install --storage-classes-only"
-        echo "./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class office-synology-csi-nfs-tmp"
-        echo "./vkube --cluster-plan k3s-HA k3s storage-speed --storage-class longhorn-nvme --distr busybox"
+        echo "Examples: ./vkube --cluster-plan k3s-ha k3s install --core --storage"
+        echo "./vkube --cluster-plan k3s-ha k3s install --storage-classes-only"
+        echo "./vkube --cluster-plan k3s-ha k3s storage-speed --storage-class office-synology-csi-nfs-tmp"
+        echo "./vkube --cluster-plan k3s-ha k3s storage-speed --storage-class longhorn-nvme --distr busybox"
       fi
     elif [[ "$1" = "vkube" ]]; then
       cd vbash
@@ -172,9 +172,9 @@ homelab() {
       echo "Examples: bashly generate"
     else
       if [ -n "$1" ]; then
-        echo "Warning: name of preconfigured environment '$1'. Expected: 'vkube', 'k3d-test', 'k3s-HA'"
+        echo "Warning: name of preconfigured environment '$1'. Expected: 'vkube', 'k3d-test', 'k3s-ha'"
       else
-        echo "Not preconfigured environment is selected. Use 'vkube', 'k3d-test', 'k3s-HA' as parameter for 'homelab' script"
+        echo "Not preconfigured environment is selected. Use 'vkube', 'k3d-test', 'k3s-ha' as parameter for 'homelab' script"
       fi
     fi
   fi

@@ -14,7 +14,7 @@ setup() {
   DETIK_CLIENT_NAME="kubectl" 
 
   set -e # exit on error
-  source ../vkube-k3s.bash
+  source ../vkube-lib.bash
   
   # if [ -z "$SSH_AUTH_SOCK" ]; then
   #   eval "$(ssh-agent -s)" # start ssh agent
@@ -246,7 +246,7 @@ setup() {
     assert_success
 
     # test namespace is deleted
-    run vkube-k3s.is-namespace-exist "default"
+    run vkube-lib.is-namespace-exist "default"
     [ "$status" -eq 0 ]
   }
   # bats test_tags=tag:busybox
@@ -290,7 +290,7 @@ setup() {
     run try "at most 10 times every 5s to get pods named '^alpine' and verify that 'status' is 'running'"
     assert_success
 
-    run vkube-k3s.is-namespace-exist "alpine"
+    run vkube-lib.is-namespace-exist "alpine"
     [ "$status" -eq 0 ]
   }
   # bats test_tags=tag:alpine
@@ -310,7 +310,7 @@ setup() {
     run try "at most 10 times every 5s to get pods named '^alpine2' and verify that 'status' is 'running'"
     assert_success
 
-    run vkube-k3s.is-namespace-exist "alpine"
+    run vkube-lib.is-namespace-exist "alpine"
     [ "$status" -eq 0 ]
   }
   # bats test_tags=tag:alpine
@@ -326,7 +326,7 @@ setup() {
     run verify "there are 0 pods named '^alpine'"
     assert_success
 
-    run vkube-k3s.is-namespace-exist "alpine"
+    run vkube-lib.is-namespace-exist "alpine"
     [ "$status" -eq 0 ]
   }
   # bats test_tags=tag:alpine
@@ -338,7 +338,7 @@ setup() {
 
     assert_output --partial "Deployment 'alpine' is not installed yet in namespace 'alpine'"
 
-    run vkube-k3s.is-namespace-exist "alpine"
+    run vkube-lib.is-namespace-exist "alpine"
     [ "$status" -eq 0 ]
   }
   # bats test_tags=tag:alpine
@@ -350,7 +350,7 @@ setup() {
 
     assert_output --partial "Deployment 'alpine2' is not installed yet in namespace 'default'"
 
-    run vkube-k3s.is-namespace-exist "alpine"
+    run vkube-lib.is-namespace-exist "alpine"
     [ "$status" -eq 0 ]
   }
   # bats test_tags=tag:alpine
@@ -360,7 +360,7 @@ setup() {
     assert_success
     #echo "output=$output" >&3
 
-    run vkube-k3s.is-namespace-exist "alpine"
+    run vkube-lib.is-namespace-exist "alpine"
     [ "$status" -eq 1 ]
   }
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Gitea install
-# ./103-gitea/install.sh -s ./k3s-HA.yaml -i v1.7.2
+# ./103-gitea/install.sh -s ./k3s-ha.yaml -i v1.7.2
 # Gitea uninstall
 # ./103-gitea/install.sh -u v1.7.2
 # Gitea upgrade

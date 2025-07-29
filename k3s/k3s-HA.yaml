@@ -1,4 +1,4 @@
-cluster_name: k3s-HA
+cluster_name: k3s-ha
 #cluster_token: kuku
 #cluster_token_file: ~/cluster_token_file
 amount_nodes: 3 #3
@@ -22,7 +22,7 @@ kube_vip_lb_range: 192.168.100.101-192.168.100.200
 # https://github.com/kubernetes-csi/csi-driver-smb
 csi_driver_smb_use: 1
 csi_driver_smb_ver:
-csi_driver_smb_secret_folder: ${HOME}/.ssh/k3s-HA-csi-driver-smb_secrets/ # folder with username.txt and password.txt files
+csi_driver_smb_secret_folder: ${HOME}/.ssh/k3s-ha-csi-driver-smb_secrets/ # folder with username.txt and password.txt files
 
 # https://github.com/kubernetes-csi/csi-driver-nfs
 csi_driver_nfs_use: 1
