@@ -1,0 +1,157 @@
+name: cluster
+help: Kubernetes cluster
+
+commands:
+- name: install
+  help: Install cluster kubernetes, storage drivers, applications
+  flags:
+  - &core
+    long: --core
+    help: Core cluster components.
+  - &storage-classes-only
+    long: --storage-classes-only
+    help: Only storage classes for general storage drivers.
+    conflicts: [--storage --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn]
+    #conflicts: [--storage --local --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn]
+  - &storage
+    long: --storage
+    help: All general storage drivers according cluster plan.
+  - &velero
+    long: --velero
+    help: Velero is an open source tool to safely backup and restore, perform disaster recovery, and migrate Kubernetes cluster resources and persistent volumes.
+    conflicts: [--storage]
+  #- long: --local
+  #  help: Local storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --app flags are not set.
+  #  conflicts: [--storage]
+  - &csi-driver-nfs
+    long: --csi-driver-nfs
+    help: CSI driver NFS storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --app flags are not set.
+    conflicts: [--storage]
+  - &csi-driver-smb
+    long: --csi-driver-smb
+    help: CSI driver SMB storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --app flags are not set.
+    conflicts: [--storage]
+  - &csi-synology
+    long: --csi-synology
+    help: Synology CSI storage (NFS, SMB, ISCSI). Overriding storage use in cluster plan. Install all if --core, --storage, and --app flags are not set.
+    conflicts: [--storage]
+  - &csi-driver-direct-pv
+    long: --csi-driver-direct-pv
+    help: MinIO Direct PV storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --app flags are not set.
+    conflicts: [--storage]
+  - &longhorn
+    long: --longhorn
+    help: Longhorn storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --app flags are not set.
+    conflicts: [--storage]
+  - &apps
+    long: --apps
+    help: All applications from cluster plan.
+    conflicts: [--app]
+  - &app
+    long: --app
+    help: Only specified applications by name from cluster plan.
+    arg: app-name
+    repeatable: true
+    unique: true
+    conflicts: [--apps]
+
+- name: delete
+  help: Delete cluster kubernetes, storage drivers, applications
+  flags:
+  - *core
+  - *storage-classes-only
+  - *storage
+  - *velero
+  #- long: --local
+  #  help: Local storage. Overriding storage use in cluster plan. Install all if --core, --storage, and --app flags are not set.
+  #  conflicts: [--whole --storage]
+  - *csi-driver-nfs
+  - *csi-driver-smb
+  - *csi-synology
+  - *csi-driver-direct-pv
+  - *longhorn
+  - *apps
+  - *app
+
+- name: get
+  help: Get information
+  commands:
+  - name: storage-classes
+    help: All storage classes in cluster
+    flags:
+    - long: --no-headers
+      help: When using the default or custom-column output format, don't print headers (default print headers).
+      conflicts: [--no]
+    - long: --no
+      help: Exclude column
+      arg: column-name
+      allowed: [provisioner, reclaim, bind, expansion]
+      repeatable: true
+      unique: true
+      conflicts: [--no-headers]
+  - name: containers
+    help: All containers in cluster
+
+#- name: uninstall
+#  help: Uninstall cluster kubernetes
+  #args: *cluster_plan
+
+- name: storage-speed
+  help: Test speed for storage storage class
+  args:
+  - name: storage-class
+    repeatable: true
+    required: true
+  flags:
+  - long: --container-type
+    help: Container OS
+    arg: container
+    allowed: [alpine]
+    default: alpine
+
+
+# - name: storage-speed
+#   help: Test speed for storage storage class
+#   #arg: name
+#   #repeatable: true
+#   #required: true
+#   flags:
+#   - long: --storage-class
+#     help: Storage class name
+#     arg: name
+#     required: true
+#   - long: --container-type
+#     help: Container OS
+#     arg: container
+#     allowed: [alpine, ubuntu-xenial, busybox]
+#     default: alpine
+
+- name: upgrade
+  help: Upgrade cluster kubernetes
+  #args: *cluster_plan
+
+- name: backup
+  help: Backup cluster kubernetes
+
+- name: restore
+  help: Restore cluster kubernetes
+
+examples:
+- Install
+- ./vkube --help
+- ./vkube --cluster-plan k3s-ha cluster install # install all with subfolder 'k3s-ha' in folder './vkube-data', and 'k3s-ha.yaml' cluster plan
+- ./vkube --cluster-plan k3s-ha cluster install --core --storage # install only kubernetes and general storage drivers
+- ./vkube --cluster-plan k3s-ha cluster install --apps # install all apps from cluster plan
+- ./vkube --cluster-plan k3s-ha cluster install --app app1 --app app2 # install only app1 and app2 application from cluster plan
+- ./vkube --cluster-plan k3s-ha cluster install --csi-driver-smb # install only csi-driver-smb storage driver
+- ./vkube --cluster-plan k3s-ha cluster install --storage-classes-only # regenerate and install only storage classes
+- ./vkube --cluster-plan k3s-ha cluster storage-speed office-csi-driver-smb-tmp longhorn-nvme # run speed test for 'office-csi-driver-smb-tmp' and 'longhorn-nvme' storage classes
+- Delete
+- ./vkube --cluster-plan k3s-ha cluster delete --app app1 --app app2 # install only app1 and app2 application from cluster plan
+- Upgrade NIY
+- ./vkube cluster upgrade
+- Backup/Restore NIY
+- ./vkube cluster backup
+- ./vkube cluster restore
+
+

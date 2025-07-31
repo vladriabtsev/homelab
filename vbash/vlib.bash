@@ -754,7 +754,7 @@ function vlib.bashly-init-command() {
   
   vlib.trace "$(inspect_args)"
 }
-vlib._monitor_variable_change() {
+function vlib._monitor_variable_change() {
   local new_value
   local str="new_value=\"\${${_monitored_variable_name}}\""
   #vlib.trace-yellow "DEBUG str='$str'"

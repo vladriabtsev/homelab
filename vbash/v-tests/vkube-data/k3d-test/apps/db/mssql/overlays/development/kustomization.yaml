@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
+namespace: development
+namePrefix: pg17-
+nameSuffix: "-master-001"
+labels:
+  - pairs:
+      db: postgres
+      ver: "17"
+      sub: master
+    includeSelectors: true
+images:
+  - name: postgres
+    newName: postgres
+    newTag: latest
+resources:
+  - ../../base
+#patches:
+#  - path: limits.yaml

@@ -168,7 +168,9 @@ vkube_cluster_usage() {
   echo
   # :command.usage_commands
   printf "%s\n" "$(bold "Commands:")"
-  printf "  %s   Install cluster kubernetes\n" "$(green "install")      "
+  printf "  %s   Install cluster kubernetes, storage drivers, applications\n" "$(green "install")      "
+  printf "  %s   Delete cluster kubernetes, storage drivers, applications\n" "$(green "delete")       "
+  printf "  %s   Get information\n" "$(green "get")          "
   printf "  %s   Test speed for storage storage class\n" "$(green "storage-speed")"
   printf "  %s   Upgrade cluster kubernetes\n" "$(green "upgrade")      "
   printf "  %s   Backup cluster kubernetes\n" "$(green "backup")       "
@@ -186,17 +188,20 @@ vkube_cluster_usage() {
 
     # :command.usage_examples
     printf "%s\n" "$(bold "Examples:")"
+    printf "  Install\n"
     printf "  ./vkube --help\n"
     printf "  ./vkube --cluster-plan k3s-ha cluster install\n"
     printf "  ./vkube --cluster-plan k3s-ha cluster install --core --storage\n"
-    printf "  ./vkube --trace --cluster-plan ../k3s-ha.yaml cluster install\n"
+    printf "  ./vkube --cluster-plan k3s-ha cluster install --apps\n"
+    printf "  ./vkube --cluster-plan k3s-ha cluster install --app app1 --app app2\n"
     printf "  ./vkube --cluster-plan k3s-ha cluster install --csi-driver-smb\n"
     printf "  ./vkube --cluster-plan k3s-ha cluster install --storage-classes-only\n"
-    printf "  ./vkube --cluster-plan k3s-ha cluster storage-speed office-csi-driver-smb-tmp\n"
-    printf "  ./vkube --cluster-plan k3s-ha cluster storage-speed\n  office-synology-csi-smb-tmp\n"
-    printf "  ./vkube --cluster-plan k3s-ha cluster storage-speed\n  office-synology-csi-nfs-tmp\n"
-    printf "  ./vkube --cluster-plan k3s-ha cluster storage-speed longhorn-nvme --distr\n  busybox\n"
+    printf "  ./vkube --cluster-plan k3s-ha cluster storage-speed office-csi-driver-smb-tmp\n  longhorn-nvme\n"
+    printf "  Delete\n"
+    printf "  ./vkube --cluster-plan k3s-ha cluster delete --app app1 --app app2\n"
+    printf "  Upgrade NIY\n"
     printf "  ./vkube cluster upgrade\n"
+    printf "  Backup/Restore NIY\n"
     printf "  ./vkube cluster backup\n"
     printf "  ./vkube cluster restore\n"
     echo
@@ -206,7 +211,7 @@ vkube_cluster_usage() {
 
 # :command.usage
 vkube_cluster_install_usage() {
-  printf "vkube cluster install - Install cluster kubernetes\n\n"
+  printf "vkube cluster install - Install cluster kubernetes, storage drivers, applications\n\n"
 
   printf "%s\n" "$(bold "Usage:")"
   printf "  vkube cluster install [OPTIONS]\n"
@@ -220,12 +225,12 @@ vkube_cluster_install_usage() {
     # :command.usage_flags
     # :flag.usage
     printf "  %s\n" "$(magenta "--core")"
-    printf "    Install core cluster components. Install all if --core, --storage, and\n    --apps flags are not set.\n"
+    printf "    Core cluster components.\n"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--storage-classes-only")"
-    printf "    Generate only storage classes for general storage drivers. Dangerous if\n    these classes already in use.\n"
+    printf "    Only storage classes for general storage drivers.\n"
     printf "    %s\n" "Conflicts: --storage --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn"
     echo
 
@@ -242,38 +247,213 @@ vkube_cluster_install_usage() {
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--csi-driver-nfs")"
-    printf "    CSI driver NFS storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --apps flags are not set.\n"
+    printf "    CSI driver NFS storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --app flags are not set.\n"
     printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--csi-driver-smb")"
-    printf "    CSI driver SMB storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --apps flags are not set.\n"
+    printf "    CSI driver SMB storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --app flags are not set.\n"
     printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--csi-synology")"
-    printf "    Synology CSI storage (NFS, SMB, ISCSI). Overriding storage use in cluster\n    plan. Install all if --core, --storage, and --apps flags are not set.\n"
+    printf "    Synology CSI storage (NFS, SMB, ISCSI). Overriding storage use in cluster\n    plan. Install all if --core, --storage, and --app flags are not set.\n"
     printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--csi-driver-direct-pv")"
-    printf "    MinIO Direct PV storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --apps flags are not set.\n"
+    printf "    MinIO Direct PV storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --app flags are not set.\n"
     printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
     printf "  %s\n" "$(magenta "--longhorn")"
-    printf "    Longhorn storage. Overriding storage use in cluster plan. Install all if\n    --core, --storage, and --apps flags are not set.\n"
+    printf "    Longhorn storage. Overriding storage use in cluster plan. Install all if\n    --core, --storage, and --app flags are not set.\n"
     printf "    %s\n" "Conflicts: --storage"
     echo
 
     # :flag.usage
-    printf "  %s\n" "$(magenta "--app")"
-    printf "    All applications. Overriding storage use in cluster plan. Install all if\n    --core, --storage, and --apps flags are not set.\n"
+    printf "  %s\n" "$(magenta "--apps")"
+    printf "    All applications from cluster plan.\n"
+    printf "    %s\n" "Conflicts: --app"
     echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--app APP-NAME (repeatable)")"
+    printf "    Only specified applications by name from cluster plan.\n"
+    printf "    %s\n" "Conflicts: --apps"
+    echo
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_cluster_delete_usage() {
+  printf "vkube cluster delete - Delete cluster kubernetes, storage drivers, applications\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube cluster delete [OPTIONS]\n"
+  printf "  vkube cluster delete --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_flags
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--core")"
+    printf "    Core cluster components.\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--storage-classes-only")"
+    printf "    Only storage classes for general storage drivers.\n"
+    printf "    %s\n" "Conflicts: --storage --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--storage")"
+    printf "    All general storage drivers according cluster plan.\n"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--velero")"
+    printf "    Velero is an open source tool to safely backup and restore, perform disaster\n    recovery, and migrate Kubernetes cluster resources and persistent volumes.\n"
+    printf "    %s\n" "Conflicts: --storage"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--csi-driver-nfs")"
+    printf "    CSI driver NFS storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --app flags are not set.\n"
+    printf "    %s\n" "Conflicts: --storage"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--csi-driver-smb")"
+    printf "    CSI driver SMB storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --app flags are not set.\n"
+    printf "    %s\n" "Conflicts: --storage"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--csi-synology")"
+    printf "    Synology CSI storage (NFS, SMB, ISCSI). Overriding storage use in cluster\n    plan. Install all if --core, --storage, and --app flags are not set.\n"
+    printf "    %s\n" "Conflicts: --storage"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--csi-driver-direct-pv")"
+    printf "    MinIO Direct PV storage. Overriding storage use in cluster plan. Install all\n    if --core, --storage, and --app flags are not set.\n"
+    printf "    %s\n" "Conflicts: --storage"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--longhorn")"
+    printf "    Longhorn storage. Overriding storage use in cluster plan. Install all if\n    --core, --storage, and --app flags are not set.\n"
+    printf "    %s\n" "Conflicts: --storage"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--apps")"
+    printf "    All applications from cluster plan.\n"
+    printf "    %s\n" "Conflicts: --app"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--app APP-NAME (repeatable)")"
+    printf "    Only specified applications by name from cluster plan.\n"
+    printf "    %s\n" "Conflicts: --apps"
+    echo
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_cluster_get_usage() {
+  printf "vkube cluster get - Get information\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube cluster get COMMAND\n"
+  printf "  vkube cluster get [COMMAND] --help | -h\n"
+  echo
+  # :command.usage_commands
+  printf "%s\n" "$(bold "Commands:")"
+  printf "  %s   All storage classes in cluster\n" "$(green "storage-classes")"
+  printf "  %s   All containers in cluster\n" "$(green "containers")     "
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_cluster_get_storage_classes_usage() {
+  printf "vkube cluster get storage-classes - All storage classes in cluster\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube cluster get storage-classes [OPTIONS]\n"
+  printf "  vkube cluster get storage-classes --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
+
+    # :command.usage_flags
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--no-headers")"
+    printf "    When using the default or custom-column output format, don't print headers\n    (default print headers).\n"
+    printf "    %s\n" "Conflicts: --no"
+    echo
+
+    # :flag.usage
+    printf "  %s\n" "$(magenta "--no COLUMN-NAME (repeatable)")"
+    printf "    Exclude column\n"
+    printf "    %s\n" "Allowed: provisioner, reclaim, bind, expansion"
+    printf "    %s\n" "Conflicts: --no-headers"
+    echo
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "$(magenta "--help, -h")"
+    printf "    Show this help\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+vkube_cluster_get_containers_usage() {
+  printf "vkube cluster get containers - All containers in cluster\n\n"
+
+  printf "%s\n" "$(bold "Usage:")"
+  printf "  vkube cluster get containers\n"
+  printf "  vkube cluster get containers --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    printf "%s\n" "$(bold "Options:")"
 
     # :command.usage_fixed_flags
     printf "  %s\n" "$(magenta "--help, -h")"
@@ -828,6 +1008,57 @@ vkube_cluster_install_command() {
 }
 
 # :command.function
+vkube_cluster_delete_command() {
+
+  # src/cluster_delete_command.sh
+  #!/usr/bin/env bash
+
+  vlib.bashly-init-command
+
+  # shellcheck source=/dev/null
+  source "${VBASH}/vkube-lib.bash"
+  vkube-lib.command-init
+
+  #echo "      vkube-lib.install()" >&3
+  vkube-lib.delete
+
+}
+
+# :command.function
+vkube_cluster_get_storage_classes_command() {
+
+  # src/cluster_get_storage_classes_command.sh
+  #!/usr/bin/env bash
+
+  vlib.bashly-init-command
+
+  # shellcheck source=/dev/null
+  source "${VBASH}/vkube-lib.bash"
+  vkube-lib.command-init
+
+  #echo "      vkube-lib.install()" >&3
+  vkube-lib.get-cluster-storage-classes
+
+}
+
+# :command.function
+vkube_cluster_get_containers_command() {
+
+  # src/cluster_get_containers_command.sh
+  #!/usr/bin/env bash
+
+  vlib.bashly-init-command
+
+  # shellcheck source=/dev/null
+  source "${VBASH}/vkube-lib.bash"
+  vkube-lib.command-init
+
+  #echo "      vkube-lib.install()" >&3
+  vkube-lib.get-cluster-containers
+
+}
+
+# :command.function
 vkube_cluster_storage_speed_command() {
 
   # src/cluster_storage_speed_command.sh
@@ -1253,6 +1484,20 @@ vkube_cluster_parse_requirements() {
       shift $#
       ;;
 
+    delete)
+      action="delete"
+      shift
+      vkube_cluster_delete_parse_requirements "$@"
+      shift $#
+      ;;
+
+    get)
+      action="get"
+      shift
+      vkube_cluster_get_parse_requirements "$@"
+      shift $#
+      ;;
+
     storage-speed)
       action="storage-speed"
       shift
@@ -1451,12 +1696,443 @@ vkube_cluster_install_parse_requirements() {
         ;;
 
       # :flag.case
-      --app)
+      --apps)
+        # :flag.conflicts
+        if [[ -n "${args['--app']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--app" >&2
+          exit 1
+        fi
 
         # :flag.case_no_arg
-        args['--app']=1
+        args['--apps']=1
         shift
         ;;
+
+      # :flag.case
+      --app)
+        # :flag.conflicts
+        if [[ -n "${args['--apps']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--apps" >&2
+          exit 1
+        fi
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          escaped="$(printf '%q' "$2")"
+          if [[ -z ${args['--app']+x} ]]; then
+            args['--app']="$escaped"
+          elif [[ -z "${unique_lookup["--app:${escaped}"]:-}" ]]; then
+            args['--app']="${args['--app']} $escaped"
+          fi
+          unique_lookup["--app:${escaped}"]=1
+          shift
+          shift
+        else
+          printf "%s\n" "--app requires an argument: --app APP-NAME" >&2
+          exit 1
+        fi
+        ;;
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+vkube_cluster_delete_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_cluster_delete_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="cluster delete"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      # :flag.case
+      --core)
+
+        # :flag.case_no_arg
+        args['--core']=1
+        shift
+        ;;
+
+      # :flag.case
+      --storage-classes-only)
+        # :flag.conflicts
+        if [[ -n "${args['--storage --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage --csi-driver-nfs --csi-driver-smb --csi-synology --longhorn" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--storage-classes-only']=1
+        shift
+        ;;
+
+      # :flag.case
+      --storage)
+
+        # :flag.case_no_arg
+        args['--storage']=1
+        shift
+        ;;
+
+      # :flag.case
+      --velero)
+        # :flag.conflicts
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--velero']=1
+        shift
+        ;;
+
+      # :flag.case
+      --csi-driver-nfs)
+        # :flag.conflicts
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--csi-driver-nfs']=1
+        shift
+        ;;
+
+      # :flag.case
+      --csi-driver-smb)
+        # :flag.conflicts
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--csi-driver-smb']=1
+        shift
+        ;;
+
+      # :flag.case
+      --csi-synology)
+        # :flag.conflicts
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--csi-synology']=1
+        shift
+        ;;
+
+      # :flag.case
+      --csi-driver-direct-pv)
+        # :flag.conflicts
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--csi-driver-direct-pv']=1
+        shift
+        ;;
+
+      # :flag.case
+      --longhorn)
+        # :flag.conflicts
+        if [[ -n "${args['--storage']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--storage" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--longhorn']=1
+        shift
+        ;;
+
+      # :flag.case
+      --apps)
+        # :flag.conflicts
+        if [[ -n "${args['--app']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--app" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--apps']=1
+        shift
+        ;;
+
+      # :flag.case
+      --app)
+        # :flag.conflicts
+        if [[ -n "${args['--apps']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--apps" >&2
+          exit 1
+        fi
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          escaped="$(printf '%q' "$2")"
+          if [[ -z ${args['--app']+x} ]]; then
+            args['--app']="$escaped"
+          elif [[ -z "${unique_lookup["--app:${escaped}"]:-}" ]]; then
+            args['--app']="${args['--app']} $escaped"
+          fi
+          unique_lookup["--app:${escaped}"]=1
+          shift
+          shift
+        else
+          printf "%s\n" "--app requires an argument: --app APP-NAME" >&2
+          exit 1
+        fi
+        ;;
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+vkube_cluster_get_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_cluster_get_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action=${1:-}
+
+  case $action in
+    -*) ;;
+
+    storage-classes)
+      action="storage-classes"
+      shift
+      vkube_cluster_get_storage_classes_parse_requirements "$@"
+      shift $#
+      ;;
+
+    containers)
+      action="containers"
+      shift
+      vkube_cluster_get_containers_parse_requirements "$@"
+      shift $#
+      ;;
+
+    # :command.command_fallback
+    "")
+      vkube_cluster_get_usage >&2
+      exit 1
+      ;;
+
+    *)
+      printf "invalid command: %s\n" "$action" >&2
+      exit 1
+      ;;
+
+  esac
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+vkube_cluster_get_storage_classes_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_cluster_get_storage_classes_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="cluster get storage-classes"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      # :flag.case
+      --no-headers)
+        # :flag.conflicts
+        if [[ -n "${args['--no']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--no" >&2
+          exit 1
+        fi
+
+        # :flag.case_no_arg
+        args['--no-headers']=1
+        shift
+        ;;
+
+      # :flag.case
+      --no)
+        # :flag.conflicts
+        if [[ -n "${args['--no-headers']:-}" ]]; then
+          printf "conflicting options: %s cannot be used with %s\n" "$key" "--no-headers" >&2
+          exit 1
+        fi
+
+        # :flag.case_arg
+        if [[ -n ${2+x} ]]; then
+          escaped="$(printf '%q' "$2")"
+          if [[ -z ${args['--no']+x} ]]; then
+            args['--no']="$escaped"
+          elif [[ -z "${unique_lookup["--no:${escaped}"]:-}" ]]; then
+            args['--no']="${args['--no']} $escaped"
+          fi
+          unique_lookup["--no:${escaped}"]=1
+          shift
+          shift
+        else
+          printf "%s\n" "--no requires an argument: --no COLUMN-NAME" >&2
+          exit 1
+        fi
+        ;;
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+  # :command.whitelist_filter
+  input_array=''
+  eval "input_array=(${args[--no]})"
+  for i in "${input_array[@]}"; do
+    if [[ ! $i =~ ^(provisioner|reclaim|bind|expansion)$ ]]; then
+      printf "%s\n" "--no must be one of: provisioner, reclaim, bind, expansion" >&2
+      exit 1
+    fi
+  done
+
+}
+
+# :command.parse_requirements
+vkube_cluster_get_containers_parse_requirements() {
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        vkube_cluster_get_containers_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="cluster get containers"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
 
       -?*)
         printf "invalid option: %s\n" "$key" >&2
@@ -2412,6 +3088,10 @@ bashly-run() {
     "exec") vkube_exec_command ;;
     "cluster") vkube_cluster_command ;;
     "cluster install") vkube_cluster_install_command ;;
+    "cluster delete") vkube_cluster_delete_command ;;
+    "cluster get") vkube_cluster_get_command ;;
+    "cluster get storage-classes") vkube_cluster_get_storage_classes_command ;;
+    "cluster get containers") vkube_cluster_get_containers_command ;;
     "cluster storage-speed") vkube_cluster_storage_speed_command ;;
     "cluster upgrade") vkube_cluster_upgrade_command ;;
     "cluster backup") vkube_cluster_backup_command ;;

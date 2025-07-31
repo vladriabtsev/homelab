@@ -1,0 +1,352 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: local-path-test-pvc
+  namespace: storage-speedtest
+spec:
+  storageClassName: local-path
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5G
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: office-csi-driver-smb-del-test-pvc
+  namespace: storage-speedtest
+spec:
+  storageClassName: office-csi-driver-smb-del
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5G
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: office-synology-csi-smb-del-test-pvc
+  namespace: storage-speedtest
+spec:
+  storageClassName: office-synology-csi-smb-del
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5G
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: office-synology-csi-nfs-del-test-pvc
+  namespace: storage-speedtest
+spec:
+  storageClassName: office-synology-csi-nfs-del
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5G
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: longhorn-nvme-del-test-pvc
+  namespace: storage-speedtest
+spec:
+  storageClassName: longhorn-nvme-del
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5G
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: longhorn-ssd-del-test-pvc
+  namespace: storage-speedtest
+spec:
+  storageClassName: longhorn-ssd-del
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5G
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: multi-storage-classes10-write-read
+  namespace: storage-speedtest
+spec:
+  ttlSecondsAfterFinished: 60
+  template:
+    metadata:
+      name: multi-storage-classes10-write-read
+      namespace: storage-speedtest
+      labels:
+        app: multi-storage-classes10-storage-speedtest
+        job: write-read
+    spec:
+      containers:
+      - name: write-read
+        image: alpine:latest
+        command: [sh, -c]
+        args:
+        - |
+          echo 'alpine:'
+          apk update
+          apk add fio
+          echo
+          echo '###########################################'
+          echo '# Storage class: local-path'
+          echo '###########################################'
+          echo
+          echo '=============== dd results ================'
+          echo '  Sequential writing results:'
+          dd if=/dev/zero of=/mnt/pv-local-path/test.img bs=1G count=1 #oflag=dsync
+          echo '  Sequential reading results:'
+          # flush buffers or disk caches #
+          #echo 3 | tee /proc/sys/vm/drop_caches
+          dd if=/mnt/pv-local-path/test.img of=/dev/null bs=8k
+          echo
+          echo '============== fio results ================'
+          echo '-------------------------------------------'
+          fio --name=test-write --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-read --direct=1 --rw=read --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-local-path/test.img
+          
+          echo
+          echo '###########################################'
+          echo '# Storage class: office-csi-driver-smb-del'
+          echo '###########################################'
+          echo
+          echo '=============== dd results ================'
+          echo '  Sequential writing results:'
+          dd if=/dev/zero of=/mnt/pv-office-csi-driver-smb-del/test.img bs=1G count=1 #oflag=dsync
+          echo '  Sequential reading results:'
+          # flush buffers or disk caches #
+          #echo 3 | tee /proc/sys/vm/drop_caches
+          dd if=/mnt/pv-office-csi-driver-smb-del/test.img of=/dev/null bs=8k
+          echo
+          echo '============== fio results ================'
+          echo '-------------------------------------------'
+          fio --name=test-write --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-csi-driver-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-read --direct=1 --rw=read --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-csi-driver-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-csi-driver-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-csi-driver-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-csi-driver-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-csi-driver-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-csi-driver-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-csi-driver-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-csi-driver-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-csi-driver-smb-del/test.img
+          
+          echo
+          echo '###########################################'
+          echo '# Storage class: office-synology-csi-smb-del'
+          echo '###########################################'
+          echo
+          echo '=============== dd results ================'
+          echo '  Sequential writing results:'
+          dd if=/dev/zero of=/mnt/pv-office-synology-csi-smb-del/test.img bs=1G count=1 #oflag=dsync
+          echo '  Sequential reading results:'
+          # flush buffers or disk caches #
+          #echo 3 | tee /proc/sys/vm/drop_caches
+          dd if=/mnt/pv-office-synology-csi-smb-del/test.img of=/dev/null bs=8k
+          echo
+          echo '============== fio results ================'
+          echo '-------------------------------------------'
+          fio --name=test-write --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-read --direct=1 --rw=read --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-smb-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-smb-del/test.img
+          
+          echo
+          echo '###########################################'
+          echo '# Storage class: office-synology-csi-nfs-del'
+          echo '###########################################'
+          echo
+          echo '=============== dd results ================'
+          echo '  Sequential writing results:'
+          dd if=/dev/zero of=/mnt/pv-office-synology-csi-nfs-del/test.img bs=1G count=1 #oflag=dsync
+          echo '  Sequential reading results:'
+          # flush buffers or disk caches #
+          #echo 3 | tee /proc/sys/vm/drop_caches
+          dd if=/mnt/pv-office-synology-csi-nfs-del/test.img of=/dev/null bs=8k
+          echo
+          echo '============== fio results ================'
+          echo '-------------------------------------------'
+          fio --name=test-write --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-nfs-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-read --direct=1 --rw=read --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-nfs-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-nfs-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-nfs-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-nfs-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-nfs-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-nfs-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-nfs-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-nfs-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-office-synology-csi-nfs-del/test.img
+          
+          echo
+          echo '###########################################'
+          echo '# Storage class: longhorn-nvme-del'
+          echo '###########################################'
+          echo
+          echo '=============== dd results ================'
+          echo '  Sequential writing results:'
+          dd if=/dev/zero of=/mnt/pv-longhorn-nvme-del/test.img bs=1G count=1 #oflag=dsync
+          echo '  Sequential reading results:'
+          # flush buffers or disk caches #
+          #echo 3 | tee /proc/sys/vm/drop_caches
+          dd if=/mnt/pv-longhorn-nvme-del/test.img of=/dev/null bs=8k
+          echo
+          echo '============== fio results ================'
+          echo '-------------------------------------------'
+          fio --name=test-write --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-nvme-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-read --direct=1 --rw=read --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-nvme-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-nvme-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-nvme-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-nvme-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-nvme-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-nvme-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-nvme-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-nvme-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-nvme-del/test.img
+          
+          echo
+          echo '###########################################'
+          echo '# Storage class: longhorn-ssd-del'
+          echo '###########################################'
+          echo
+          echo '=============== dd results ================'
+          echo '  Sequential writing results:'
+          dd if=/dev/zero of=/mnt/pv-longhorn-ssd-del/test.img bs=1G count=1 #oflag=dsync
+          echo '  Sequential reading results:'
+          # flush buffers or disk caches #
+          #echo 3 | tee /proc/sys/vm/drop_caches
+          dd if=/mnt/pv-longhorn-ssd-del/test.img of=/dev/null bs=8k
+          echo
+          echo '============== fio results ================'
+          echo '-------------------------------------------'
+          fio --name=test-write --direct=1 --rw=write --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-ssd-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-read --direct=1 --rw=read --bs=1m --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-ssd-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-ssd-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-1 --iodepth=1 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-ssd-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-ssd-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-4 --iodepth=4 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-ssd-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-ssd-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-16 --iodepth=16 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-ssd-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randwrite-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randwrite --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-ssd-del/test.img
+          echo '-------------------------------------------'
+          fio --name=test-randread-32k-64 --iodepth=64 --ioengine=libaio --direct=1 --rw=randread --bs=32k --size=1g --numjobs=1 --time_based --runtime=10 --filename=/mnt/pv-longhorn-ssd-del/test.img
+          
+        volumeMounts:
+        - mountPath: "/mnt/pv-local-path"
+          name: test-volume-local-path
+        - mountPath: "/mnt/pv-office-csi-driver-smb-del"
+          name: test-volume-office-csi-driver-smb-del
+        - mountPath: "/mnt/pv-office-synology-csi-smb-del"
+          name: test-volume-office-synology-csi-smb-del
+        - mountPath: "/mnt/pv-office-synology-csi-nfs-del"
+          name: test-volume-office-synology-csi-nfs-del
+        - mountPath: "/mnt/pv-longhorn-nvme-del"
+          name: test-volume-longhorn-nvme-del
+        - mountPath: "/mnt/pv-longhorn-ssd-del"
+          name: test-volume-longhorn-ssd-del
+      restartPolicy: Never
+      volumes:
+      - name: test-volume-local-path
+        persistentVolumeClaim:
+          claimName: local-path-test-pvc
+
+      - name: test-volume-office-csi-driver-smb-del
+        persistentVolumeClaim:
+          claimName: office-csi-driver-smb-del-test-pvc
+
+      - name: test-volume-office-synology-csi-smb-del
+        persistentVolumeClaim:
+          claimName: office-synology-csi-smb-del-test-pvc
+
+      - name: test-volume-office-synology-csi-nfs-del
+        persistentVolumeClaim:
+          claimName: office-synology-csi-nfs-del-test-pvc
+
+      - name: test-volume-longhorn-nvme-del
+        persistentVolumeClaim:
+          claimName: longhorn-nvme-del-test-pvc
+
+      - name: test-volume-longhorn-ssd-del
+        persistentVolumeClaim:
+          claimName: longhorn-ssd-del-test-pvc
+

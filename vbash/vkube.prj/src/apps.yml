@@ -21,7 +21,6 @@ commands:
     - With disks for all storage classes. Example: '--all-storage-classes' flag.
     - With disks for several storage classes. Example: '-s class-name-1 -s class-name-2'
     - Without storage.
-  
   commands:
   - name: general
     help: |-

@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    spec:
+      containers:
+        - name: postgres
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "7000m"

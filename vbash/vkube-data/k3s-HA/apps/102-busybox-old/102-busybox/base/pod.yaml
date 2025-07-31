@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: busybox
+spec:
+  containers:
+  - name: busybox
+    image: busybox:stable
+    imagePullPolicy: IfNotPresent
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+    command:
+      - sleep
+      - "3600"
+  restartPolicy: Always

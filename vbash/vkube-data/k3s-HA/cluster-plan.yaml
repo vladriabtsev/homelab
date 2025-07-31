@@ -2,7 +2,7 @@ cluster_name: k3s-ha
 amount_nodes: 3 #3
 kubernetes_type: k3s # k3d, k8s
 # https://github.com/k3s-io/k3s/releases
-k3s_ver: v1.33.2+k3s1
+k3s_ver: v1.33.3+k3s1
 #cluster_token: kuku
 #cluster_token_file: ~/cluster_token_file
 
@@ -13,7 +13,7 @@ user_pc_stop_if_tools_need_install: # if need install local tools on user comput
 
 # https://github.com/kube-vip/kube-vip/releases
 kube_vip_use: 1
-kube_vip_ver: v0.9.2  # auto upgrade to latest if empty
+kube_vip_ver: v1.0.0 # v0.9.2  # auto upgrade to latest if empty
 #kube_vip_cloud_provider_ver: v0.0.10
 kube_vip_address: 192.168.100.50
 kube_vip_mode: ARP # ARP or BGP
@@ -190,8 +190,8 @@ storage_servers:
 # B A C K U P
 ##########################
 velero_use: 1 # https://velero.io/
-velero_ver: v1.16.1 # v1.15.2 # latest if empty
-velero_aws_plugin_ver: v1.12.1 # latest if empty (https://github.com/vmware-tanzu/velero-plugin-for-aws)
+velero_ver: v1.16.2 # v1.15.2 # latest if empty
+velero_aws_plugin_ver: v1.12.2 # latest if empty (https://github.com/vmware-tanzu/velero-plugin-for-aws)
 velero_namespace: # 'velero' is default
 velero_credentials_file_path: ${HOME}/.ssh/velero/credentials-velero # minio server credentials
 # https://min.io/docs/minio/linux/reference/minio-mc.html#quickstart
@@ -211,3 +211,87 @@ busybox_variant: musl # if not empty, busybox_ver has to be empty or 'stable.' E
 # https://github.com/kube-vip/kube-vip/releases
 pi_hole_use: 1
 pi_hole_ver: v5.18.3  # auto upgrade to latest if empty
+
+# Use '##vkube-data##' if command need relative pass to vkube data directory
+# Use '##create-ns## test-namespace' if need create namespace if it is not exists already
+cluster_apps:
+# - name: busybox
+#   use: 0
+#   ver: stable
+#   variant: musl
+#   commands:
+#   - '##create-ns## development'
+#   - 'kubectl apply -k ##vkube-data##/apps/102-busybox/overlay/development'
+# - name: jenkins
+#   commands:
+#   - '##create-ns## devops-tools'
+#   #- 'kubectl create -f ##vkube-data##/apps/109-jenkins/namespace.yaml'
+#   - 'kubectl create -f ##vkube-data##/apps/109-jenkins/jenkins-01-serviceAccount.yaml'
+#   - 'kubectl create -f ##vkube-data##/apps/109-jenkins/jenkins-02-volume.yaml'
+#   - 'kubectl create -f ##vkube-data##/apps/109-jenkins/jenkins-03-deployment.yaml'
+#   - 'kubectl create -f ##vkube-data##/apps/109-jenkins/jenkins-04-service.yaml'
+- name: msql-2019
+  install-commands:
+  - '##create-ns## mssql2019'
+  - 'kubectl apply -k ##vkube-data##/apps/db/mssql/overlays/development/2019'
+  delete-commands:
+  - 'kubectl delete -k ##vkube-data##/apps/db/mssql/overlays/development/2019 --ignore-not-found'
+  - 'kubectl delete namespace mssql2019 --wait --ignore-not-found'
+- name: msql-2022
+  install-commands:
+  - '##create-ns## mssql2022'
+  - 'kubectl apply -k ##vkube-data##/apps/db/mssql/overlays/development/2022'
+  delete-commands:
+  - 'kubectl delete -k ##vkube-data##/apps/db/mssql/overlays/development/2022 --ignore-not-found'
+  - 'kubectl delete namespace mssql2022 --wait --ignore-not-found'
+- name: msql-2025
+  install-commands:
+  - '##create-ns## mssql2025'
+  - 'kubectl apply -k ##vkube-data##/apps/db/mssql/overlays/development/2025'
+  delete-commands:
+  - 'kubectl delete -k ##vkube-data##/apps/db/mssql/overlays/development/2025 --ignore-not-found'
+  - 'kubectl delete namespace mssql2025 --wait --ignore-not-found'
+- name: postgre-15
+  install-commands:
+  - '##create-ns## pg15'
+  - 'kubectl apply -k ##vkube-data##/apps/db/postgresql/overlays/development/15'
+  delete-commands:
+  - 'kubectl delete -k ##vkube-data##/apps/db/postgresql/overlays/development/15 --ignore-not-found'
+  - 'kubectl delete namespace pg15 --wait --ignore-not-found'
+- name: postgre-16
+  install-commands:
+  - '##create-ns## pg16'
+  - 'kubectl apply -k ##vkube-data##/apps/db/postgresql/overlays/development/16'
+  delete-commands:
+  - 'kubectl delete -k ##vkube-data##/apps/db/postgresql/overlays/development/16 --ignore-not-found'
+  - 'kubectl delete namespace pg16 --wait --ignore-not-found'
+- name: postgre-17
+  install-commands:
+  - '##create-ns## pg17'
+  - 'kubectl apply -k ##vkube-data##/apps/db/postgresql/overlays/development/17'
+  delete-commands:
+  - 'kubectl delete -k ##vkube-data##/apps/db/postgresql/overlays/development/17 --ignore-not-found'
+  - 'kubectl delete namespace pg17 --wait --ignore-not-found'
+- name: gitea
+  install-commands:
+  - '##create-ns## gitea'
+  - 'helm repo update'
+  - 'helm install gitea gitea-charts/gitea -n gitea'
+  - 'kubectl create -f ##vkube-data##/apps/103-gitea/svc.yaml'
+  delete-commands:
+  - 'kubectl delete -f ##vkube-data##/apps/103-gitea/svc.yaml --ignore-not-found'
+  - 'helm uninstall gitea --wait --ignore-not-found'
+  - 'kubectl delete namespace gitea --ignore-not-found'
+- name: jenkins
+  install-commands:
+  - '##create-ns## devops-tools'
+  - 'kubectl create -f ##vkube-data##/apps/109-jenkins/jenkins-01-serviceAccount.yaml'
+  - 'kubectl create -f ##vkube-data##/apps/109-jenkins/jenkins-02-volume.yaml'
+  - 'kubectl create -f ##vkube-data##/apps/109-jenkins/jenkins-03-deployment.yaml'
+  - 'kubectl create -f ##vkube-data##/apps/109-jenkins/jenkins-04-service.yaml'
+  delete-commands:
+  - 'kubectl delete -f ##vkube-data##/apps/109-jenkins/jenkins-04-service.yaml --wait --ignore-not-found'
+  - 'kubectl delete -f ##vkube-data##/apps/109-jenkins/jenkins-03-deployment.yaml --wait --ignore-not-found'
+  - 'kubectl delete -f ##vkube-data##/apps/109-jenkins/jenkins-02-volume.yaml --wait --ignore-not-found'
+  - 'kubectl delete -f ##vkube-data##/apps/109-jenkins/jenkins-01-serviceAccount.yaml --wait --ignore-not-found'
+  - 'kubectl delete namespace devops-tools --wait --ignore-not-found'

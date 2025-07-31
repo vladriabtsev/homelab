@@ -144,8 +144,8 @@ storage_servers:
 # B A C K U P, expecting local minio server exists
 ##########################
 velero_use: 1 # https://velero.io/
-velero_ver: v1.16.1 # v1.15.2 # latest if empty
-velero_aws_plugin_ver: v1.12.1 # latest if empty (https://github.com/vmware-tanzu/velero-plugin-for-aws)
+velero_ver: v1.16.2 # v1.15.2 # latest if empty
+velero_aws_plugin_ver: v1.12.2 # latest if empty (https://github.com/vmware-tanzu/velero-plugin-for-aws)
 velero_namespace: # 'velero' is default
 velero_credentials_file_path: ${HOME}/.ssh/velero/credentials-velero # minio server credentials
 # https://min.io/docs/minio/linux/reference/minio-mc.html#quickstart
@@ -177,3 +177,18 @@ rancher_ver: v2.9.5 # auto upgrade to latest if empty
 metal_lb_ver: v0.14.9 # auto upgrade to latest if empty
 # https://github.com/argoproj/argo-cd
 argo_cd: v2.13.3 # auto upgrade to latest if empty
+
+# Use '##vkube-data##' if command need relative pass to vkube data directory
+# Use '##create-ns## test-namespace' if need create namespace if it is not exists already
+cluster_apps:
+- name: kubectll
+  install-commands:
+  - 'kubectll'
+- name: msql2025
+  install-commands:
+  - 'kubectl delete --ignore-not-found -k ##vkube-data##/apps/db/mssql/overlays/development/2025'
+  - '##create-ns## mssql2025'
+  #- 'kubectl create namespace mssql2025'
+  - 'kubectl apply -k ##vkube-data##/apps/db/mssql/overlays/development/2025'
+  delete-commands:
+  - 'kubectl delete namespace mssql2025 --ignore-not-found'

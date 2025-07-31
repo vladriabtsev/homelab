@@ -10,37 +10,28 @@ flags:
 #- import: src/common_flags.yml
 - long: --force
   help: Force operation without warning
-
 - long: --verbose
   help: Enabling verbose Mode (set -v, print every line before it's processed)
-
 - long: --xtrace
   help: Using xtrace Mode
-
 - long: --unset
   help: Identifying Unset Variables
-
 - long: --noerrexit
   help: No exit on error
-
 - long: --noexec
   help: No exec mode. Check syntax without execution
-
 - long: --trace
   conflicts: [--debug]
   help: Trace debugging by using trace custom code in script
-
 - long: --debug
   conflicts: [--xtrace, --verbose, --unset]
   help: Debugging using xtrace, verbose and unset variables modes (set -xvu)
-
 - long: --log
   conflicts: [--log-file]
   help: |-
     Turn ON logging to file. 
     
     Log file is stored in MY_LOG_DIR or in directory provided in LOG_FILE_PATH argument. Log file name will be generated in format './script_name-command_name.log'.
-
 - long: --log-file
   conflicts: [--log]
   help: |-
@@ -49,7 +40,6 @@ flags:
     Log file is stored in directory provided in LOG_FILE_PATH argument or in directory from environment variable MY_LOG_DIR.
 
     Log file name is provided explicitly in LOG_FILE_PATH argument.
-
   arg: log-file-path
 
 # https://github.com/kigster/bashmatic/tree/main
@@ -58,7 +48,6 @@ flags:
   help: Framework for commands (bashmatic, bsfl).
   arg: framework-type
   default: bashmatic
-
 - long: --cluster-plan
   help: |-
     Cluster plan:
@@ -72,7 +61,6 @@ flags:
 
     Folder 'vkube-data' is expecting to be in a same folder as 'vkube' command itself.
   arg: cluster-plan
-  #default: k3s-ha
 
 commands:
 - name: exec
