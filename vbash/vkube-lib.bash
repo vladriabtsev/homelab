@@ -1919,7 +1919,7 @@ function longhorn-install() {
 
     kubectl get nodes
     kubectl get svc -n longhorn-system
-    echo "Longhorn UI: check all disks on all nodes are available and schedulable !!!"
+    warn "Longhorn UI: check all disks on all nodes are available and schedulable !!!"
   fi
 
   # storage class generation

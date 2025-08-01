@@ -24,9 +24,10 @@ Refer https://devopscube.com/setup-jenkins-on-kubernetes-cluster/ for step by st
 * `kubectl create -f ./vkube-data/k3s-ha/apps/109-jenkins/jenkins-01-serviceAccount.yaml`
 * `kubectl create -f ./vkube-data/k3s-ha/apps/109-jenkins/jenkins-02-volume.yaml`
 * `kubectl create -f ./vkube-data/k3s-ha/apps/109-jenkins/jenkins-03-deployment.yaml`
-* password `5fbb443abf8147039f600790580264d7`
 * `kubectl create -f ./vkube-data/k3s-ha/apps/109-jenkins/jenkins-04-service.yaml`
-* vladadmin Q1..
+* Check jenkins container log for: 'Please use the following password to proceed to installation'
+* Enter admin password in WEB UI
+* Create first admin user
 
 Development
 
