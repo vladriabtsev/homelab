@@ -1,0 +1,450 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "Pod",
+            "metadata": {
+                "creationTimestamp": "2025-05-13T13:20:45Z",
+                "generateName": "csi-synology-synology-csi-controller-",
+                "generation": 1,
+                "labels": {
+                    "app": "controller",
+                    "app.kubernetes.io/instance": "csi-synology",
+                    "app.kubernetes.io/name": "synology-csi",
+                    "apps.kubernetes.io/pod-index": "0",
+                    "controller-revision-hash": "csi-synology-synology-csi-controller-6dd7678bfd",
+                    "helm.sh/template": "controller.yaml",
+                    "statefulset.kubernetes.io/pod-name": "csi-synology-synology-csi-controller-0"
+                },
+                "name": "csi-synology-synology-csi-controller-0",
+                "namespace": "kube-system",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "apps/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "StatefulSet",
+                        "name": "csi-synology-synology-csi-controller",
+                        "uid": "3d454d9b-4707-42ea-9e0b-0c775d18a1e4"
+                    }
+                ],
+                "resourceVersion": "1360",
+                "uid": "eca98be2-6ab5-447b-be3f-2909f057e0d1"
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "args": [
+                            "--csi-address=$(ADDRESS)",
+                            "--extra-create-metadata",
+                            "--timeout=60s",
+                            "--v=5"
+                        ],
+                        "env": [
+                            {
+                                "name": "ADDRESS",
+                                "value": "/var/lib/csi/sockets/pluginproxy/csi.sock"
+                            }
+                        ],
+                        "image": "registry.k8s.io/sig-storage/csi-provisioner:v3.6.0",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "csi-provisioner",
+                        "resources": {},
+                        "securityContext": {
+                            "allowPrivilegeEscalation": true,
+                            "capabilities": {
+                                "add": [
+                                    "SYS_ADMIN"
+                                ]
+                            },
+                            "privileged": true
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/lib/csi/sockets/pluginproxy",
+                                "name": "socket-dir"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-j6f88",
+                                "readOnly": true
+                            }
+                        ]
+                    },
+                    {
+                        "args": [
+                            "--csi-address=$(ADDRESS)",
+                            "--v=5"
+                        ],
+                        "env": [
+                            {
+                                "name": "ADDRESS",
+                                "value": "/var/lib/csi/sockets/pluginproxy/csi.sock"
+                            }
+                        ],
+                        "image": "registry.k8s.io/sig-storage/csi-attacher:v4.4.0",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "csi-attacher",
+                        "resources": {},
+                        "securityContext": {
+                            "allowPrivilegeEscalation": true,
+                            "capabilities": {
+                                "add": [
+                                    "SYS_ADMIN"
+                                ]
+                            },
+                            "privileged": true
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/lib/csi/sockets/pluginproxy",
+                                "name": "socket-dir"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-j6f88",
+                                "readOnly": true
+                            }
+                        ]
+                    },
+                    {
+                        "args": [
+                            "--csi-address=$(ADDRESS)",
+                            "--v=5"
+                        ],
+                        "env": [
+                            {
+                                "name": "ADDRESS",
+                                "value": "/var/lib/csi/sockets/pluginproxy/csi.sock"
+                            }
+                        ],
+                        "image": "registry.k8s.io/sig-storage/csi-resizer:v1.9.0",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "csi-resizer",
+                        "resources": {},
+                        "securityContext": {
+                            "allowPrivilegeEscalation": true,
+                            "capabilities": {
+                                "add": [
+                                    "SYS_ADMIN"
+                                ]
+                            },
+                            "privileged": true
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/lib/csi/sockets/pluginproxy",
+                                "name": "socket-dir"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-j6f88",
+                                "readOnly": true
+                            }
+                        ]
+                    },
+                    {
+                        "args": [
+                            "--client-info=/etc/synology/client-info.yaml",
+                            "--endpoint=$(CSI_ENDPOINT)",
+                            "--log-level=info",
+                            "--nodeid=NotUsed"
+                        ],
+                        "env": [
+                            {
+                                "name": "CSI_ENDPOINT",
+                                "value": "unix:///var/lib/csi/sockets/pluginproxy/csi.sock"
+                            }
+                        ],
+                        "image": "synology/synology-csi:v1.2.0",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "csi-plugin",
+                        "resources": {},
+                        "securityContext": {
+                            "allowPrivilegeEscalation": true,
+                            "capabilities": {
+                                "add": [
+                                    "SYS_ADMIN"
+                                ]
+                            },
+                            "privileged": true
+                        },
+                        "terminationMessagePath": "/dev/termination-log",
+                        "terminationMessagePolicy": "File",
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/etc/synology",
+                                "name": "client-info",
+                                "readOnly": true
+                            },
+                            {
+                                "mountPath": "/var/lib/csi/sockets/pluginproxy",
+                                "name": "socket-dir"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-j6f88",
+                                "readOnly": true
+                            }
+                        ]
+                    }
+                ],
+                "dnsPolicy": "ClusterFirst",
+                "enableServiceLinks": true,
+                "hostNetwork": true,
+                "hostname": "csi-synology-synology-csi-controller-0",
+                "nodeName": "k3s1",
+                "preemptionPolicy": "PreemptLowerPriority",
+                "priority": 0,
+                "restartPolicy": "Always",
+                "schedulerName": "default-scheduler",
+                "securityContext": {},
+                "serviceAccount": "csi-synology-synology-csi-controller",
+                "serviceAccountName": "csi-synology-synology-csi-controller",
+                "subdomain": "csi-synology-synology-csi-controller",
+                "terminationGracePeriodSeconds": 30,
+                "tolerations": [
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/not-ready",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    },
+                    {
+                        "effect": "NoExecute",
+                        "key": "node.kubernetes.io/unreachable",
+                        "operator": "Exists",
+                        "tolerationSeconds": 300
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "client-info",
+                        "secret": {
+                            "defaultMode": 420,
+                            "secretName": "csi-synology-synology-csi-client-info"
+                        }
+                    },
+                    {
+                        "emptyDir": {},
+                        "name": "socket-dir"
+                    },
+                    {
+                        "name": "kube-api-access-j6f88",
+                        "projected": {
+                            "defaultMode": 420,
+                            "sources": [
+                                {
+                                    "serviceAccountToken": {
+                                        "expirationSeconds": 3607,
+                                        "path": "token"
+                                    }
+                                },
+                                {
+                                    "configMap": {
+                                        "items": [
+                                            {
+                                                "key": "ca.crt",
+                                                "path": "ca.crt"
+                                            }
+                                        ],
+                                        "name": "kube-root-ca.crt"
+                                    }
+                                },
+                                {
+                                    "downwardAPI": {
+                                        "items": [
+                                            {
+                                                "fieldRef": {
+                                                    "apiVersion": "v1",
+                                                    "fieldPath": "metadata.namespace"
+                                                },
+                                                "path": "namespace"
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "status": {
+                "conditions": [
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2025-05-13T13:20:45Z",
+                        "status": "False",
+                        "type": "PodReadyToStartContainers"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2025-05-13T13:20:45Z",
+                        "status": "True",
+                        "type": "Initialized"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2025-05-13T13:20:45Z",
+                        "message": "containers with unready status: [csi-provisioner csi-attacher csi-resizer csi-plugin]",
+                        "reason": "ContainersNotReady",
+                        "status": "False",
+                        "type": "Ready"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2025-05-13T13:20:45Z",
+                        "message": "containers with unready status: [csi-provisioner csi-attacher csi-resizer csi-plugin]",
+                        "reason": "ContainersNotReady",
+                        "status": "False",
+                        "type": "ContainersReady"
+                    },
+                    {
+                        "lastProbeTime": null,
+                        "lastTransitionTime": "2025-05-13T13:20:45Z",
+                        "status": "True",
+                        "type": "PodScheduled"
+                    }
+                ],
+                "containerStatuses": [
+                    {
+                        "image": "registry.k8s.io/sig-storage/csi-attacher:v4.4.0",
+                        "imageID": "",
+                        "lastState": {},
+                        "name": "csi-attacher",
+                        "ready": false,
+                        "restartCount": 0,
+                        "started": false,
+                        "state": {
+                            "waiting": {
+                                "reason": "ContainerCreating"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/lib/csi/sockets/pluginproxy",
+                                "name": "socket-dir"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-j6f88",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    },
+                    {
+                        "image": "synology/synology-csi:v1.2.0",
+                        "imageID": "",
+                        "lastState": {},
+                        "name": "csi-plugin",
+                        "ready": false,
+                        "restartCount": 0,
+                        "started": false,
+                        "state": {
+                            "waiting": {
+                                "reason": "ContainerCreating"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/etc/synology",
+                                "name": "client-info",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            },
+                            {
+                                "mountPath": "/var/lib/csi/sockets/pluginproxy",
+                                "name": "socket-dir"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-j6f88",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    },
+                    {
+                        "image": "registry.k8s.io/sig-storage/csi-provisioner:v3.6.0",
+                        "imageID": "",
+                        "lastState": {},
+                        "name": "csi-provisioner",
+                        "ready": false,
+                        "restartCount": 0,
+                        "started": false,
+                        "state": {
+                            "waiting": {
+                                "reason": "ContainerCreating"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/lib/csi/sockets/pluginproxy",
+                                "name": "socket-dir"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-j6f88",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    },
+                    {
+                        "image": "registry.k8s.io/sig-storage/csi-resizer:v1.9.0",
+                        "imageID": "",
+                        "lastState": {},
+                        "name": "csi-resizer",
+                        "ready": false,
+                        "restartCount": 0,
+                        "started": false,
+                        "state": {
+                            "waiting": {
+                                "reason": "ContainerCreating"
+                            }
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/lib/csi/sockets/pluginproxy",
+                                "name": "socket-dir"
+                            },
+                            {
+                                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                                "name": "kube-api-access-j6f88",
+                                "readOnly": true,
+                                "recursiveReadOnly": "Disabled"
+                            }
+                        ]
+                    }
+                ],
+                "hostIP": "192.168.100.51",
+                "hostIPs": [
+                    {
+                        "ip": "192.168.100.51"
+                    }
+                ],
+                "phase": "Pending",
+                "podIP": "192.168.100.51",
+                "podIPs": [
+                    {
+                        "ip": "192.168.100.51"
+                    }
+                ],
+                "qosClass": "BestEffort",
+                "startTime": "2025-05-13T13:20:45Z"
+            }
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
+    }
+}

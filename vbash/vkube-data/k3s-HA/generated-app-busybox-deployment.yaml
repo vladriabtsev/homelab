@@ -1,0 +1,46 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: busybox
+  namespace: default
+  labels:
+    app: busybox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: busybox  
+  template:
+    metadata:
+      labels:
+        app: busybox
+    spec:
+      #securityContext: user for commands???
+      #  runAsUser: 1030  # Use UID of nsf_user on Synology
+      #  runAsGroup: 100  # Use GID user group on Synology
+      initContainers:
+      # https://kubernetes.io/docs/concepts/workloads/pods/init-containers/#differences-from-regular-containers
+      - name: init
+        image: busybox:musl
+        # https://www.busybox.net/downloads/BusyBox.html
+        # https://boxmatrix.info/wiki/BusyBox-Commands
+        command: [ sh, -c ]
+        args:
+        - |
+          #create mount directory
+          #apk add open-iscsi
+          #mkdir -p /usr/bin/env
+      containers:
+        - name: busybox
+          image: busybox:musl
+          imagePullPolicy: 'IfNotPresent'
+          command:
+            - 'sh'
+            - '-c'
+            - 'while true; do sleep 6000; done'
+          resources:
+            limits:
+              memory: '128Mi'
+              cpu: '100m'
+          volumeMounts:
+      volumes:

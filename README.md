@@ -10,10 +10,11 @@
 * [Gitea UI, ip:103](http://gitea.local)
 * [Jenkins UI, ip:109](http://jenkins.local)
 * DB DEV
-  * [PGADMIN, ip:111](http:pgadmin.local)
-  * [PG15, ip:112](pg15.local)
-  * [PG16, ip:113](pg16.local)
-  * [PG17, ip:114](pg17.local)
+  * TODO password [PGADMIN, ip:111](http:pgadmin.local)
+  * [PG15, ip:112](pg15.local) testuser, passWord1
+  * [PG16, ip:113](pg16.local) testuser, passWord1
+  * [PG17, ip:114](pg17.local) testuser, passWord1
+  * [Gitea-PG-HA, ip:116](pg-gitea-ha.local)
   * [mssql2019, ip:117](mssql2019.local)
   * [mssql2022, ip:118](mssql2022.local)
   * [mssql2025, ip:119](mssql2025.local)

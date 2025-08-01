@@ -68,7 +68,7 @@ https://github.com/kubernetes/minikube
 
 * [Kubernetes Secrets – How to Create, Use, and Manage](https://spacelift.io/blog/kubernetes-secrets)
 * [Kubernetes Secrets: How to Create, Use, and Manage Secrets in Kubernetes](https://medium.com/@subhampradhan966/kubernetes-secrets-how-to-create-use-and-manage-secrets-in-kubernetes-a23663a81d26)
-* [](https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b)
+* [Mastering Kubernetes Secrets: A Comprehensive Guide](https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b)
 
 ## Storage
 

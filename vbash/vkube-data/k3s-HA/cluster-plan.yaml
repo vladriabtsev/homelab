@@ -2,7 +2,7 @@ cluster_name: k3s-ha
 amount_nodes: 3 #3
 kubernetes_type: k3s # k3d, k8s
 # https://github.com/k3s-io/k3s/releases
-k3s_ver: v1.33.3+k3s1
+k3s_ver: v1.32.7+k3s1 # v1.33.3+k3s1
 #cluster_token: kuku
 #cluster_token_file: ~/cluster_token_file
 
@@ -230,42 +230,55 @@ cluster_apps:
 #   - 'kubectl create -f ##vkube-data##/apps/109-jenkins/jenkins-02-volume.yaml'
 #   - 'kubectl create -f ##vkube-data##/apps/109-jenkins/jenkins-03-deployment.yaml'
 #   - 'kubectl create -f ##vkube-data##/apps/109-jenkins/jenkins-04-service.yaml'
-- name: msql-2019
+- name: busybox
+  install-commands:
+  - '##create-ns## development'
+  - 'kubectl apply -k ##vkube-data##/apps/102-busybox/overlays/development'
+  delete-commands:
+  - 'kubectl delete -k ##vkube-data##/apps/102-busybox/overlays/development --ignore-not-found'
+- name: mssql2019
   install-commands:
   - '##create-ns## mssql2019'
   - 'kubectl apply -k ##vkube-data##/apps/db/mssql/overlays/development/2019'
   delete-commands:
   - 'kubectl delete -k ##vkube-data##/apps/db/mssql/overlays/development/2019 --ignore-not-found'
   - 'kubectl delete namespace mssql2019 --wait --ignore-not-found'
-- name: msql-2022
+- name: mssql2022
   install-commands:
   - '##create-ns## mssql2022'
   - 'kubectl apply -k ##vkube-data##/apps/db/mssql/overlays/development/2022'
   delete-commands:
   - 'kubectl delete -k ##vkube-data##/apps/db/mssql/overlays/development/2022 --ignore-not-found'
   - 'kubectl delete namespace mssql2022 --wait --ignore-not-found'
-- name: msql-2025
+- name: mssql2025
   install-commands:
   - '##create-ns## mssql2025'
   - 'kubectl apply -k ##vkube-data##/apps/db/mssql/overlays/development/2025'
   delete-commands:
   - 'kubectl delete -k ##vkube-data##/apps/db/mssql/overlays/development/2025 --ignore-not-found'
   - 'kubectl delete namespace mssql2025 --wait --ignore-not-found'
-- name: postgre-15
+- name: pgadmin
+  install-commands:
+  - '##create-ns## pgadmin'
+  - 'kubectl apply -k ##vkube-data##/apps/db/pg-admin/overlays/development'
+  delete-commands:
+  - 'kubectl delete -k ##vkube-data##/apps/db/pg-admin/overlays/development --ignore-not-found'
+  - 'kubectl delete namespace pgadmin --wait --ignore-not-found'
+- name: pg15
   install-commands:
   - '##create-ns## pg15'
   - 'kubectl apply -k ##vkube-data##/apps/db/postgresql/overlays/development/15'
   delete-commands:
   - 'kubectl delete -k ##vkube-data##/apps/db/postgresql/overlays/development/15 --ignore-not-found'
   - 'kubectl delete namespace pg15 --wait --ignore-not-found'
-- name: postgre-16
+- name: pg16
   install-commands:
   - '##create-ns## pg16'
   - 'kubectl apply -k ##vkube-data##/apps/db/postgresql/overlays/development/16'
   delete-commands:
   - 'kubectl delete -k ##vkube-data##/apps/db/postgresql/overlays/development/16 --ignore-not-found'
   - 'kubectl delete namespace pg16 --wait --ignore-not-found'
-- name: postgre-17
+- name: pg17
   install-commands:
   - '##create-ns## pg17'
   - 'kubectl apply -k ##vkube-data##/apps/db/postgresql/overlays/development/17'

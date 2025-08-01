@@ -7,3 +7,12 @@
 * `kubectl create namespace development`
 * `kubectl create secret generic SECRET_NAME --from-literal=root-user=USER --from-literal=root-password=PASSWORD --dry-run -o yaml | kubectl apply -f -`
 * `kubectl apply -k ./102-busybox/overlays/development`
+
+Connect to container shell
+
+* `kubectl exec -it <pod-name> -- /bin/sh`
+* `netstat -tulpn`
+* `ss -tulpn` - not installed
+* `lsof` - show all open files
+* `nc -vz host port`
+* `ssh -vvv [youruser]@[yourLinode]` debug

@@ -1,5 +1,12 @@
 # Postgre SQL
 
+High Availability
+
+* [Why PostgreSQL High Availability Matters and How to Achieve It](https://www.yugabyte.com/postgresql/postgresql-high-availability/)
+* [SETTING UP A POSTGRESQL HA CLUSTER](https://medium.com/@murat.bilal/setting-up-a-postgresql-ha-cluster-0a4348fca444)
+* Gitea
+  * [High Availability](https://gitea.com/stnguyenn/helm-chart/src/branch/main/docs/ha-setup.md)
+
 * [](https://medium.com/@PlanB./postgresql-on-kubernetes-dos-don-ts-and-operator-solutions-e680a3b9237d)
 * [How to Deploy PostgreSQL Statefulset in Kubernetes With High Availability](https://devopscube.com/deploy-postgresql-statefulset/)
 * [Running PostgreSQL in Kubernetes (Basic)](https://github.com/marcel-dempers/docker-development-youtube-series/blob/master/storage/databases/postgresql/4-k8s-basic/README.md)

@@ -3,11 +3,20 @@
 * [Gitea](https://about.gitea.com/)
 * [Gitea github](https://github.com/go-gitea/gitea)
 * [Awesome Gitea](https://gitea.com/gitea/awesome-gitea)
+* [Configuration Cheat Sheet](https://docs.gitea.com/administration/config-cheat-sheet)
+* [](https://gitea.com/gitea/helm-gitea/src/branch/gitea-ha/values.yaml)
+
 * [Gitea Helm Chart](https://gitea.com/gitea/helm-chart)
+* HA Dependencies
+  * PostgreSQL HA ([Bitnami PostgreSQL-HA](https://github.com/bitnami/charts/blob/main/bitnami/postgresql-ha/Chart.yaml))
+  * Valkey-Cluster ([Bitnami Valkey-Cluster](https://github.com/bitnami/charts/blob/main/bitnami/valkey-cluster/Chart.yaml))
+* Non-HA Dependencies
+  * PostgreSQL ([Bitnami PostgreSQL](https://github.com/bitnami/charts/blob/main/bitnami/postgresql/Chart.yaml))
+  * Valkey ([Bitnami Valkey](https://github.com/bitnami/charts/blob/main/bitnami/valkey/Chart.yaml))
 
 Services
 
-* Gitea
+* [Gitea](http://gitea.local)
 * PostgreSQL HA
 * Redis-Cluster
 
@@ -16,12 +25,16 @@ Services
 [Install on Kubernetes](https://docs.gitea.com/installation/install-on-kubernetes)
 
 Installation
-* helm repo add gitea-charts https://dl.gitea.com/charts/
-* helm repo update
-* kubectl create namespace gitea
-* helm install gitea gitea-charts/gitea -n gitea
-* helm uninstall gitea
-* kubectl apply -f ./vkube-data/k3s-ha/apps/103-gitea/svc.yaml
+
+* `helm repo add gitea-charts https://dl.gitea.com/charts/`
+* `helm repo update`
+* `kubectl create namespace gitea`
+* `helm install gitea gitea-charts/gitea -n gitea`
+* `helm uninstall gitea`
+* `kubectl apply -f ./vkube-data/k3s-ha/apps/103-gitea/svc.yaml`
+
+* `kubectl create secret generic my-secret --from-file=${HOME}/.ssh/my/username.txt --from-file=${HOME}/.ssh/my/password.txt`
+* `kubectl create secret generic my-secret --from-file=${HOME}/.ssh/my/username.txt --from-file=${HOME}/.ssh/my/password.txt`
 
 vlad Q0 ???
 
