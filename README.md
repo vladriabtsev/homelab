@@ -11,14 +11,18 @@
 * [Gitea PG HA, ip:103](gitea-pg-ha.local)
 * [Gitea Redis, ip:103](gitea-redis.local)
 * [Jenkins UI, ip:109](http://jenkins.local)
+* TODO password [PGADMIN, ip:111](http://pgadmin.local)
 * DB DEV
-  * TODO password [PGADMIN, ip:111](http:pgadmin.local)
   * [PG15, ip:112](pg15.local) testuser, passWord1
   * [PG16, ip:113](pg16.local) testuser, passWord1
   * [PG17, ip:114](pg17.local) testuser, passWord1
-  * [mssql2019, ip:117](mssql2019.local)
-  * [mssql2022, ip:118](mssql2022.local)
-  * [mssql2025, ip:119](mssql2025.local)
+  * [mssql2019, ip:117](mssql2019.local) sa, passWord1
+  * [mssql2022, ip:118](mssql2022.local) sa, passWord1
+  * [mssql2025, ip:119](mssql2025.local) sa, passWord1
+
+TODO
+
+* https://www.border0.com
 
 ## Backups
 
