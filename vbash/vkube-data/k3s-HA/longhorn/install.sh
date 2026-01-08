@@ -1,6 +1,6 @@
 #!/bin/bash
 # Longhorn install
-# ./101-longhorn/install.sh -s ./k3s-ha.yaml -i v1.7.2
+# ./101-longhorn/install.sh -s ./k3s-HA.yaml -i v1.7.2
 # Longhorn uninstall
 # ./101-longhorn/install.sh -u v1.7.2
 # Longhorn upgrade

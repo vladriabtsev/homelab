@@ -25,6 +25,7 @@ Services
 [Install on Kubernetes](https://docs.gitea.com/installation/install-on-kubernetes)
 
 Installation
+<<<<<<< HEAD
 
 * `helm repo add gitea-charts https://dl.gitea.com/charts/`
 * `helm repo update`
@@ -35,6 +36,14 @@ Installation
 
 * `kubectl create secret generic my-secret --from-file=${HOME}/.ssh/my/username.txt --from-file=${HOME}/.ssh/my/password.txt`
 * `kubectl create secret generic my-secret --from-file=${HOME}/.ssh/my/username.txt --from-file=${HOME}/.ssh/my/password.txt`
+=======
+* helm repo add gitea-charts https://dl.gitea.com/charts/
+* helm repo update
+* kubectl create namespace gitea
+* helm install gitea gitea-charts/gitea -n gitea
+* helm uninstall gitea
+* kubectl apply -f ./vkube-data/k3s-HA/apps/103-gitea/svc.yaml
+>>>>>>> parent of 97ee52a (wip)
 
 vlad Q0 ???
 

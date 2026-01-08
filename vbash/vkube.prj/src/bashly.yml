@@ -72,12 +72,12 @@ commands:
     help: Bash command to execute
     default: "ls"
 
-- import: src/cluster.yml
+- import: src/k3s.yml
 - import: src/apps.yml
 
 examples:
 - ./vkube --help
-- ./vkube cluster install k3s-ha # with subfolder 'k3s-ha' in folder './vkube-data', and 'k3s-ha.yaml' cluster plan
-- ./vkube cluster install ../k3s-ha.yaml # with explicit 'k3s-ha.yaml' cluster plan and path to data folder
-- ./vkube cluster backup
+- ./vkube k3s install k3s-HA # with subfolder 'k3s-HA' in folder './vkube-data', and 'k3s-HA.yaml' cluster plan
+- ./vkube k3s install ../k3s-HA.yaml # with explicit 'k3s-HA.yaml' cluster plan and path to data folder
+- ./vkube k3s backup
 - ./vkube synology-csi install

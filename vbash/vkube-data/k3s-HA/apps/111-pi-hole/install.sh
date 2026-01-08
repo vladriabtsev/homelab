@@ -1,6 +1,6 @@
 #!/bin/bash
 # pi-hole install
-# ./101-pi-hole/install.sh -s ./k3s-ha.yaml -i v1.7.2
+# ./101-pi-hole/install.sh -s ./k3s-HA.yaml -i v1.7.2
 # pi-hole uninstall
 # ./101-pi-hole/install.sh -u v1.7.2
 # pi-hole upgrade

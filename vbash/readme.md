@@ -49,7 +49,7 @@ Generate updated bashly script:
 * [Edit files](https://bashly.dev/)
 * `bashly generate`
 
-Run `../vkube cluster install ../k3s-ha.yaml`
+Run `../vkube k3s install ../k3s-HA.yaml`
 
 ### [Synology CSI Driver for Kubernetes](https://github.com/SynologyOpenSource/synology-csi)
 

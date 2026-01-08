@@ -133,7 +133,7 @@ complete -F __start_velero v
 
 homelab() {
   # $1 - environment: k3s-test, k3s-HA
-  cd /mnt/d//dev/homelab
+  cd /mnt/d/dev/homelab
   cp ~/.bashrc .bashrc
   source ealias.sh
   source k8s.sh

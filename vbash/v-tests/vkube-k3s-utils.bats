@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
-# k8s bash tests: ./bats/bin/bats ./vkube-lib-utils.bats --filter-status failed
-# k8s bash tests: ./bats/bin/bats ./vkube-lib-utils.bats --filter-tags tag:test
+# k8s bash tests: ./bats/bin/bats ./vkube-k3s-utils.bats --filter-status failed
+# k8s bash tests: ./bats/bin/bats ./vkube-k3s-utils.bats --filter-tags tag:test
 
 setup() {
   load 'test_helper/bats-support/load' # this is required by bats-assert!
@@ -9,7 +9,7 @@ setup() {
   
   set -e
   source ../vlib.bash
-  source ../vkube-lib.bash
+  source ../vkube-k3s.bash
 
   # get the containing directory of this file
   # use $BATS_TEST_FILENAME instead of ${BASH_SOURCE[0]} or $0,
