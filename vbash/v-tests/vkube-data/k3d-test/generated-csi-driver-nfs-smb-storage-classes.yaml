@@ -1,4 +1,36 @@
-apiVersion: storage.k8s.io/v1 # line:2227
+apiVersion: storage.k8s.io/v1 # line:2238
+kind: StorageClass
+metadata:
+  name: office-csi-driver-smb-tmp
+  labels:
+    vkube/storage-type: csi-driver-smb
+provisioner: smb.csi.k8s.io # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/docs/csi-debug.md
+parameters: # https://github.com/kubernetes-csi/csi-driver-smb/blob/master/docs/driver-parameters.md
+  source: //office/csi-driver-smb
+  # source: //smb-server.default.svc.cluster.local/share
+  # if csi.storage.k8s.io/provisioner-secret is provided, will create a sub directory
+  # with PV name under source
+  csi.storage.k8s.io/provisioner-secret-name: storage-office-csi-driver-smb
+  csi.storage.k8s.io/provisioner-secret-namespace: csi-smb
+  csi.storage.k8s.io/node-stage-secret-name: storage-office-csi-driver-smb
+  csi.storage.k8s.io/node-stage-secret-namespace: csi-smb
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+mountOptions: # https://linux.die.net/man/8/mount.cifs
+# https://www.filecloud.com/supportdocs/fcdoc/latest/server/filecloud-administrator-guide/installing-filecloud-server/mounting-cifs-and-nfs-shares/mount-a-cifs-share-on-ubuntu-for-filecloud
+  - dir_mode=0777
+  - file_mode=0777
+  - uid=1001
+  - gid=1001
+  - ip=192.168.100.227
+  - vers=3.0
+  - noperm
+  - mfsymlinks
+  - cache=strict
+  - noserverino  # required to prevent data corruption
+---
+apiVersion: storage.k8s.io/v1 # line:2168
 kind: StorageClass
 metadata:
   name: office-csi-driver-nfs-retain

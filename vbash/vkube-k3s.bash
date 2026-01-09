@@ -749,7 +749,7 @@ function vkube-k3s.install() {
         ;;
         k3d )
           h2 "Install K3d cluster '$cluster_name' with $amount_nodes nodes. Cluster plan from '$cluster_plan_file' file. (Line:$LINENO)"
-          run "line '$LINENO';k3d cluster create $cluster_name --wait"
+          run "line '$LINENO';k3d cluster create $cluster_name --image rancher/k3s:$k3s_ver --wait"
           #export KUBECONFIG=~/.kube/$cluster_name
         ;;
         # k83 )
@@ -1992,10 +1992,7 @@ function install-storage() {
       # https://microk8s.io/docs/how-to-nfs
       vlib.check-github-release-version 'csi_driver_nfs' https://api.github.com/repos/kubernetes-csi/csi-driver-nfs/releases 'csi_driver_nfs_ver'
       if [[ $(kubectl get pods -lapp=csi-nfs-controller,app.kubernetes.io/version=${csi_driver_nfs_ver:1} -n ${csi_driver_nfs_namespace} 2> /dev/null | wc -l) -eq 0 ]]; then
-        run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist $csi_driver_nfs_namespace"
-        run "line '$LINENO';helm repo add csi-driver-nfs https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/master/charts"
-        run "line '$LINENO';helm install csi-driver-nfs csi-driver-nfs/csi-driver-nfs -n ${csi_driver_nfs_namespace} --version $csi_driver_nfs_ver"
-        # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-nfs" --watch
+        run "line '$LINENO';curl -skSL https://raw.githubusercontent.com/kubernetes-csi/csi-driver-nfs/$csi_driver_nfs_ver/deploy/install-driver.sh | bash -s $csi_driver_nfs_ver --"
       else
         inf "... already installed. (Line:$LINENO)\n"
       fi
@@ -2008,26 +2005,7 @@ function install-storage() {
       vlib.check-github-release-version 'csi_driver_smb' https://api.github.com/repos/kubernetes-csi/csi-driver-smb/releases 'csi_driver_smb_ver'
       if [[ $(kubectl get pods -lapp=csi-smb-controller,app.kubernetes.io/version=${csi_driver_smb_ver:1} -n ${csi_driver_smb_namespace} 2> /dev/null | wc -l) -eq 0 ]]; then
         run "line '$LINENO';vkube-k3s.namespace-create-if-not-exist $csi_driver_smb_namespace"
-        #       if [[ -n $csi_driver_smb_secret_folder ]]; then
-        #         eval "csi_driver_smb_secret_folder=$csi_driver_smb_secret_folder"
-        #         vkube-k3s.vkube-k3s.check-dir-data-for-secrets "$csi_driver_smb_secret_folder"
-        #         run "line '$LINENO';kubectl create secret generic smb-csi-creds -n ${csi_driver_smb_namespace} --from-file=$csi_driver_smb_secret_folder"
-        #       elif [[ -n $csi_driver_smb_secret_pass_folder ]]; then
-        #         vkube-k3s.secret-create-from-pass-folder "$csi_driver_smb_secret_folder"
-        #       else
-        #         err_and_exit "Both 'csi_driver_smb_secret_folder' and 'csi_driver_smb_secret_pass_folder' are empty in cluster plan '$cluster_plan_file'"
-        #       fi
-        run "line '$LINENO';helm repo add csi-driver-smb https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/master/charts"
-        run "line '$LINENO';helm install csi-driver-smb csi-driver-smb/csi-driver-smb -n ${csi_driver_smb_namespace} --version $csi_driver_smb_ver"
-        # kubectl --namespace=kube-system get pods --selector="app.kubernetes.io/name=csi-driver-smb" --watch
-        # https://kubernetes.io/docs/concepts/configuration/secret/
-        # https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
-        # https://medium.com/@ravipatel.it/mastering-kubernetes-secrets-a-comprehensive-guide-b0304818e32b
-        # run "line '$LINENO';if ! test -e $csi_driver_smb_secret_folder; then  mkdir $csi_driver_smb_secret_folder; fi"
-        # if kubectl get secret -n $csi_synology_namespace smb-csi-creds > /dev/null ; then
-        #   run "line '$LINENO';kubectl delete secret -n $csi_synology_namespace smb-csi-creds"
-        # fi
-        # run "line '$LINENO';kubectl create secret generic smb-csi-creds -n ${csi_driver_smb_namespace} --from-file=$csi_driver_smb_secret_folder"
+        run "line '$LINENO';curl -skSL https://raw.githubusercontent.com/kubernetes-csi/csi-driver-smb/$csi_driver_smb_ver/deploy/install-driver.sh | bash -s $csi_driver_smb_ver --"
       else
         inf "... already installed. (Line:$LINENO)\n"
       fi

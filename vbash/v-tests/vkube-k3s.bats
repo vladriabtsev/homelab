@@ -64,6 +64,7 @@ setup() {
 # https://rnemet.dev/posts/k3d/
 # docker exec k3d-test-server-0 crictl images
 
+# ./bats/bin/bats ./vkube-k3s.bats --filter-tags tag:secret
 #region secret
   #bats test_tags=tag:secret
   @test "vkube-k3s.secret-create-from-folder: without namespace" {

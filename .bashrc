@@ -138,10 +138,10 @@ homelab() {
   source ealias.sh
   source k8s.sh
   #sudo cp k8s.sh /usr/local/bin/
-#  if [ -z "$SSH_AUTH_SOCK" ]; then
-#    eval "$(ssh-agent -s)" # start ssh agent
-#    ssh-add ~/.ssh/id_rsa
-#  fi
+  if [ -z "$SSH_AUTH_SOCK" ]; then
+    eval "$(ssh-agent -s)" # start ssh agent
+    ssh-add ~/.ssh/id_rsa
+  fi
   if [ -n "$1" ]; then
     if [[ "$1" = "k3d-test" ]]; then
       cd vbash
@@ -149,7 +149,8 @@ homelab() {
       echo "For k3d-test: ./bats/bin/bats ./"
       echo "./bats/bin/bats ./vkube-k3s.bats --filter-tags tag:tagname"
       echo "  Tag names: secret, core, storage, storage-separate, storage-speed"
-      echo "../vkube --trace  --cluster-plan k3d-test app install minio --release v4.0.18 --storage-class office-synology-csi-nfs-test --deployment test-minio"
+      echo "../vkube --trace  --cluster-plan k3d-test k3s"
+      #echo "../vkube --trace  --cluster-plan k3d-test app install minio --release v4.0.18 --storage-class office-synology-csi-nfs-test --deployment test-minio"
     elif [[ "$1" = "k3s-HA" ]]; then
       cd vbash
       ek k3s-HA

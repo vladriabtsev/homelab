@@ -1264,7 +1264,7 @@ function vlib.is-dir-exists-with-trace {
 #region secret
 function vlib.is-pass-dir-exists {
   ################################################################
-  #     'pass' password manager
+  #     'pass' password manager https://www.passwordstore.org/
   [ -z "$1" ] && err_and_exit "Function 'vlib.is-pass-dir-exists' is expecting 'pass' password manager path parameter"
   (pass "$1" > /dev/null ) || return 1
   local _secret="$(pass "$1")"
@@ -1273,7 +1273,7 @@ function vlib.is-pass-dir-exists {
 }
 function vlib.is-pass-dir-exists-with-trace {
   ################################################################
-  #     'pass' password manager
+  #     'pass' password manager https://www.passwordstore.org/
   [ -z "$1" ] && err_and_exit "Function 'vlib.is-pass-dir-exists' is expecting 'pass' password manager path parameter"
   (vlib.is-pass-dir-exists "$1") || err_and_exit "Can't find '$1' record in 'pass' password store."
   local _secret="$(pass "$1")"
@@ -1281,6 +1281,7 @@ function vlib.is-pass-dir-exists-with-trace {
   return 0
 }
 function vlib.secret-get-text-from-pass {
+  # https://www.passwordstore.org/
   # Usage returned_value="$(vlib.secret-get-text-from-pass pass-path)"
   [ -z "$1" ] && err_and_exit "Function 'vlib.secret-get-text-from-pass' is expecting 'pass' password manager path parameter"
   local _secret

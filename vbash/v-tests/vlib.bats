@@ -56,6 +56,7 @@ testvercomp() {
   [ "$status" -eq 0 ]
 }
 
+# ./bats/bin/bats ./vlib.bats --filter-tags tag:patch
 # bats test_tags=tag:patch
 @test "json: node patch" {
   skip
@@ -70,6 +71,7 @@ testvercomp() {
   [ ${#storageClass} -gt 10 ]
 }
 
+# ./bats/bin/bats ./vlib.bats --filter-tags tag:var
 #region var
   # bats test_tags=tag:var
   @test "is-not-empty: without parameter" {
@@ -120,6 +122,7 @@ testvercomp() {
   }
 #endregion var
 
+# ./bats/bin/bats ./vlib.bats --filter-tags tag:echo
 #region echo
   # bats test_tags=tag:echo
   @test "echo: terminal echo without text" {
@@ -251,6 +254,7 @@ testvercomp() {
   }
 #endregion echo
 
+# ./bats/bin/bats ./vlib.bats --filter-tags tag:text
 #region text
   # bats test_tags=tag:text
   @test "text: count lines" {
@@ -357,6 +361,7 @@ testvercomp() {
   }
 #endregion text
 
+# ./bats/bin/bats ./vlib.bats --filter-tags tag:kubectl-version
 #region command version
   # bats test_tags=tag:kubectl-version
   @test "kubectl version" {
@@ -373,6 +378,7 @@ testvercomp() {
 
 #endregion command version
 
+# ./bats/bin/bats ./vlib.bats --filter-tags tag:wait
 #region wait-for 
   # bats test_tags=tag:wait
   @test "wait-for-success: error if without parameters" {
@@ -458,6 +464,7 @@ testvercomp() {
   }
 #endregion wait-for 
 
+# ./bats/bin/bats ./vlib.bats --filter-tags tag:file
 #region file
   # bats test_tags=tag:file
   @test "vlib.is-file-exists: error without parameters" {
@@ -509,6 +516,7 @@ testvercomp() {
   }
 #endregion file
 
+# ./bats/bin/bats ./vlib.bats --filter-tags tag:dir
 #region dir
   # bats test_tags=tag:dir
   @test "vlib.is-dir-exists: error without parameters" {
@@ -581,6 +589,7 @@ testvercomp() {
   }
 #endregion dir
 
+# ./bats/bin/bats ./vlib.bats --filter-tags tag:pass
 #region 'pass' password manager
   # bats test_tags=tag:pass
   @test "vlib.is-pass-dir-exists: error without parameters" {
@@ -653,6 +662,7 @@ testvercomp() {
   }
 #endregion 'pass' password manager
 
+# ./bats/bin/bats ./vlib.bats --filter-tags tag:exec-command-try
 #region 'try-exec-command'
   # bats test_tags=tag:exec-command-try
   @test "vlib.exec-command: ls expecting success" {
@@ -668,6 +678,7 @@ testvercomp() {
   }
 #endregion 'try-exec-command'
 
+# ./bats/bin/bats ./vlib.bats --filter-tags tag:exec-command-and-trace
 #region 'exec-command-and-trace'
   # bats test_tags=tag:exec-command-and-trace
   @test "vlib.exec-command-and-trace: ls expecting success" {
