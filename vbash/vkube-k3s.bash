@@ -314,6 +314,7 @@ function vkube-k3s.install-k3-tools() {
     fi
   else
     # Install k3sup
+    #ver_curr="$k3sup_ver"
     if ! command -v k3sup version &> /dev/null; then
       if [ -n "$user_pc_stop_if_tools_need_install" ] && [ $user_pc_stop_if_tools_need_install -eq 1 ]; then
         _flag_precheck=1

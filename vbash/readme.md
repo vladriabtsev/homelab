@@ -34,8 +34,30 @@
 * [K9s installation](https://k9scli.io/topics/install/)
   * `brew install derailed/k9s/k9s`
 
-
-?????????????????
+* Install k3s-HA
+  * `../vkube k3s install --core --storage`
+  * Open Longhorn dashboard: 192.168.100.101. Set schedulable disks.
+* Install DB servers `cd D:\dev\homelab\vbash\vkube-data\k3s-HA\apps`
+  * MsSQL
+    * 2019
+      * `kubectl create namespace mssql2019`
+      * `kubectl apply -k ./db/mssql/overlays/development/2019`
+    * 2022
+      * `kubectl create namespace mssql2022`
+      * `kubectl apply -k ./db/mssql/overlays/development/2022`
+    * 2025
+      * `kubectl create namespace mssql2025`
+      * `kubectl apply -k ./db/mssql/overlays/development/2025`
+  * Postgre
+    * 16
+      * `kubectl create namespace pg16`
+      * `kubectl apply -k ./db/postgresql/overlays/development/16`
+    * 17
+      * `kubectl create namespace pg17`
+      * `kubectl apply -k ./db/postgresql/overlays/development/17`
+    * 18
+      * `kubectl create namespace pg18`
+      * `kubectl apply -k ./db/postgresql/overlays/development/18`
 
 
 Export path to bash scripts:

@@ -2,20 +2,20 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 # kubectl apply -k ./
 # https://kubectl.docs.kubernetes.io/references/kustomize/kustomization/
-namespace: pg15
-namePrefix: pg15-
+namespace: pg18
+namePrefix: pg18-
 nameSuffix: "-master"
 labels:
   - pairs:
       db: postgres
-      ver: "15"
+      ver: "18"
       sub: master
     includeSelectors: true
 images: # https://hub.docker.com/_/postgres
   - name: postgres
-    newTag: "15"
+    newTag: "18"
 resources:
-  - ../../../base
+  - ../../../base18
   - svc.yaml
 # patches:
 #   - target:
@@ -24,4 +24,4 @@ resources:
 #     patch: |
 #       - op: replace
 #         path: /spec/ports/0/port
-#         value: 30115
+#         value: 30117

@@ -29,7 +29,7 @@ data:
 
     host all all all scram-sha-256
   postgresql.conf: |
-    data_directory = '/var/lib/postgresql/data'
+    data_directory = '/var/lib/postgresql/18/docker'
     hba_file = '/config/pg_hba.conf'
     #ident_file = '/config/pg_ident.conf'
 

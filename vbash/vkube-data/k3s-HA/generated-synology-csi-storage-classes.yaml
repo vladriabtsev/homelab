@@ -1,4 +1,4 @@
-apiVersion: storage.k8s.io/v1 # line:1448
+apiVersion: storage.k8s.io/v1 # line:1233
 kind: StorageClass
 metadata:
   name: office-synology-csi-smb-del
@@ -14,7 +14,7 @@ parameters: # https://github.com/SynologyOpenSource/synology-csi
 reclaimPolicy: Delete
 allowVolumeExpansion: false
 ---
-apiVersion: storage.k8s.io/v1 # line:1448
+apiVersion: storage.k8s.io/v1 # line:1233
 kind: StorageClass
 metadata:
   name: office-synology-csi-smb-ret
@@ -30,7 +30,7 @@ parameters: # https://github.com/SynologyOpenSource/synology-csi
 reclaimPolicy: Retain
 allowVolumeExpansion: false
 ---
-apiVersion: storage.k8s.io/v1 # line:1448
+apiVersion: storage.k8s.io/v1 # line:1233
 kind: StorageClass
 metadata:
   name: office-synology-csi-smb-ret-exp
@@ -46,7 +46,7 @@ parameters: # https://github.com/SynologyOpenSource/synology-csi
 reclaimPolicy: Retain
 allowVolumeExpansion: true
 ---
-apiVersion: storage.k8s.io/v1 # line:1470
+apiVersion: storage.k8s.io/v1 # line:1255
 kind: StorageClass
 metadata:
   name: office-synology-csi-nfs-del
@@ -63,7 +63,7 @@ mountOptions:
 reclaimPolicy: Delete
 allowVolumeExpansion: false
 ---
-apiVersion: storage.k8s.io/v1 # line:1470
+apiVersion: storage.k8s.io/v1 # line:1255
 kind: StorageClass
 metadata:
   name: office-synology-csi-nfs-ret
@@ -80,7 +80,7 @@ mountOptions:
 reclaimPolicy: Retain
 allowVolumeExpansion: false
 ---
-apiVersion: storage.k8s.io/v1 # line:1470
+apiVersion: storage.k8s.io/v1 # line:1255
 kind: StorageClass
 metadata:
   name: office-synology-csi-nfs-ret-exp

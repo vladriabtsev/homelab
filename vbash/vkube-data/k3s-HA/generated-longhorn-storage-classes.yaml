@@ -1,4 +1,4 @@
-apiVersion: storage.k8s.io/v1 # line:1821
+apiVersion: storage.k8s.io/v1 # line:1572
 kind: StorageClass
 metadata:
   name: longhorn-nvme-ret
@@ -17,7 +17,7 @@ parameters:
   diskSelector: nvme
   nodeSelector: storage
 ---
-apiVersion: storage.k8s.io/v1 # line:1821
+apiVersion: storage.k8s.io/v1 # line:1572
 kind: StorageClass
 metadata:
   name: longhorn-nvme-exp-ret
@@ -36,7 +36,7 @@ parameters:
   diskSelector: nvme
   nodeSelector: storage
 ---
-apiVersion: storage.k8s.io/v1 # line:1821
+apiVersion: storage.k8s.io/v1 # line:1572
 kind: StorageClass
 metadata:
   name: longhorn-nvme-del
@@ -55,7 +55,7 @@ parameters:
   diskSelector: nvme
   nodeSelector: storage
 ---
-apiVersion: storage.k8s.io/v1 # line:1821
+apiVersion: storage.k8s.io/v1 # line:1572
 kind: StorageClass
 metadata:
   name: longhorn-nvme-exp-del
@@ -74,7 +74,7 @@ parameters:
   diskSelector: nvme
   nodeSelector: storage
 ---
-apiVersion: storage.k8s.io/v1 # line:1821
+apiVersion: storage.k8s.io/v1 # line:1572
 kind: StorageClass
 metadata:
   name: longhorn-ssd-ret
@@ -93,7 +93,7 @@ parameters:
   diskSelector: ssd
   nodeSelector: storage
 ---
-apiVersion: storage.k8s.io/v1 # line:1821
+apiVersion: storage.k8s.io/v1 # line:1572
 kind: StorageClass
 metadata:
   name: longhorn-ssd-exp-ret
@@ -112,7 +112,7 @@ parameters:
   diskSelector: ssd
   nodeSelector: storage
 ---
-apiVersion: storage.k8s.io/v1 # line:1821
+apiVersion: storage.k8s.io/v1 # line:1572
 kind: StorageClass
 metadata:
   name: longhorn-ssd-del
@@ -131,7 +131,7 @@ parameters:
   diskSelector: ssd
   nodeSelector: storage
 ---
-apiVersion: storage.k8s.io/v1 # line:1821
+apiVersion: storage.k8s.io/v1 # line:1572
 kind: StorageClass
 metadata:
   name: longhorn-ssd-exp-del
