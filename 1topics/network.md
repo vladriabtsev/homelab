@@ -29,6 +29,7 @@ Firewall Rules:
   * allow DNS
   * Allow SSH from 'admins' PCs
 * WIFI: 192.168.13.1, DHCP 51-254, only Internet
+  * dns 1.1.1.1, 1.0.0.1 - adguard on cloudflare https://developers.cloudflare.com/1.1.1.1/ip-addresses/
   * allow SMB on LAN2
   * block All on LAN, LAN2, K3s
 * K3s: 192.168.100.1, DHCP 232-254
@@ -63,7 +64,7 @@ https://datacentersupport.lenovo.com/us/en/products/servers/thinkserver/ts140/do
 
 ### Acanac router
 
-192.168.11.1 Acanac router
+192.168.11.1 Acanac router admin Q123.
 192.168.11.2 ER605 router, WAN port
 
 ### WIFI network 192.168.13.0
@@ -93,6 +94,7 @@ Switch to:
 	192.168.2.77 updated BIOS TD340
 	192.168.2.78 updated BIOS TD340, Windows 10 2004, desktop-dev
 	192.168.2.79 updated 2021 BIOS TS140, Windows 10, desktop-dad3
+					openSuse Leap 16.0, root Q1
 	192.168.100.79 updated 2021 BIOS TS140, Windows 10, desktop-dad3
 	192.168.2.81 on ch1
 	192.168.2.82 on ch2

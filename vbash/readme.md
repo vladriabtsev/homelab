@@ -36,28 +36,38 @@
 
 * Install k3s-HA
   * `../vkube k3s install --core --storage`
-  * Open Longhorn dashboard: 192.168.100.101. Set schedulable disks.
+  * [Open Longhorn dashboard:](http://longhorn.local/) (192.168.100.101). Set schedulable disks.
 * Install DB servers `cd D:\dev\homelab\vbash\vkube-data\k3s-HA\apps`
   * MsSQL
     * 2019
       * `kubectl create namespace mssql2019`
       * `kubectl apply -k ./db/mssql/overlays/development/2019`
+      * Host: `mssql2019.local(192.168.100.117)` Username: `testuser` Password: `passWord1`
     * 2022
       * `kubectl create namespace mssql2022`
       * `kubectl apply -k ./db/mssql/overlays/development/2022`
+      * Host: `mssql2022.local(192.168.100.118)` Username: `testuser` Password: `passWord1`
     * 2025
       * `kubectl create namespace mssql2025`
       * `kubectl apply -k ./db/mssql/overlays/development/2025`
+      * Host: `mssql2025.local(192.168.100.119)` Username: `testuser` Password: `passWord1`
   * Postgre
     * 16
       * `kubectl create namespace pg16`
       * `kubectl apply -k ./db/postgresql/overlays/development/16`
+      * Host: `pg16.local(192.168.100.112)` Username: `testuser` Password: `passWord1`
     * 17
       * `kubectl create namespace pg17`
       * `kubectl apply -k ./db/postgresql/overlays/development/17`
+      * Host: `pg17.local(192.168.100.113)` Username: `testuser` Password: `passWord1`
     * 18
       * `kubectl create namespace pg18`
       * `kubectl apply -k ./db/postgresql/overlays/development/18`
+      * Host: `pg18.local(192.168.100.114)` Username: `testuser` Password: `passWord1`
+    * pg-admin
+      * `kubectl create namespace pgadmin`
+      * `kubectl apply -k ./db/pg-admin/overlays/development`
+      * [Host:](http://pgadmin.local/) `192.168.100.111` Username: `vlad.riabtsev@live.ca` Password: `passWord1`
 
 
 Export path to bash scripts:

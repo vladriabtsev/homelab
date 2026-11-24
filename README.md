@@ -1,5 +1,14 @@
 # Homelab
 
+## Utils
+
+* Disk clean up
+  * https://github.com/bleachbit/bleachbit
+
+* Data backup
+  * https://syncthing.net/
+  * https://github.com/researchxxl/syncthing-android
+
 ## Network services
 
 * [My Wiki](http://office.local/mediawiki)
